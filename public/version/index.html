@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>則仁中心 — 支錢系統版本記錄</title>
+<meta name="description" content="則仁中心零用金支錢系統嘅版本更新記錄。">
+<meta name="theme-color" content="#2563eb">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="/version-data.js"></script>
+<style>
+  body { font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif; }
+</style>
+</head>
+<body class="bg-slate-100 text-slate-800">
+
+<header class="sticky top-0 z-20 bg-white border-b border-slate-200 shadow-sm">
+  <div class="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+    <div class="min-w-0">
+      <h1 class="text-base sm:text-lg font-bold text-slate-900 leading-tight">📋 支錢系統版本記錄</h1>
+      <p class="text-xs text-slate-500">香港扶幼會 則仁中心 · 零用金支錢系統更新狀況</p>
+    </div>
+    <button onclick="location.href='/'" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition shrink-0">← 入口頁</button>
+  </div>
+</header>
+
+<main class="max-w-3xl mx-auto px-4 py-6">
+  <div id="ver_list" class="space-y-4"></div>
+  <p class="text-xs text-slate-400 text-center mt-8">創作者：何文諾社工（香港扶幼會則仁中心）</p>
+</main>
+
+<script>
+const COLOR = {
+  emerald: 'bg-emerald-600',
+  blue: 'bg-blue-600',
+  slate: 'bg-slate-400'
+};
+const box = document.getElementById('ver_list');
+box.innerHTML = (window.VERSIONS || []).map(e => `
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+    <div class="flex gap-3">
+      <span class="shrink-0 text-xs font-bold text-white ${COLOR[e.color] || COLOR.blue} rounded-full px-2.5 py-1 h-fit">${e.v}</span>
+      <div class="min-w-0">
+        <div class="font-bold text-slate-900">${e.title} <span class="text-xs font-normal text-slate-400">${e.date}</span></div>
+        <ul class="text-xs text-slate-500 mt-1.5 list-disc pl-4 space-y-1">
+          ${e.items.map(i => `<li>${i}</li>`).join('')}
+        </ul>
+      </div>
+    </div>
+  </div>`).join('');
+</script>
+</body>
+</html>

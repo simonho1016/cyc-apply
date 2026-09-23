@@ -133,6 +133,7 @@
 </style>
 </head>
 <body>
+  <div id="simBanner" hidden style="background:#fef3c7;border-bottom:1px solid #f59e0b;color:#92400e;font-size:12px;padding:8px 16px;text-align:center"></div>
   <main class="box">
     <p class="org">香港扶幼會則仁中心</p>
     <h1 class="title">零用金支錢系統</h1>
@@ -180,7 +181,7 @@
       <p class="note">支錢系統獨立運作，資料均儲存於雲端。</p>
     </section>
 
-    <p class="foot">創作者：何文諾社工（香港扶幼會則仁中心）</p>
+    <p class="foot"><a href="/version/" style="color:inherit">📋 版本記錄</a> · 創作者：何文諾社工（香港扶幼會則仁中心）</p>
   </main>
 
 <script>
@@ -212,6 +213,20 @@ function roleFor(email, rolesMap) {
   return (r === 'admin' || r === 'cashier') ? r : 'normal';
 }
 const ROLE_LABEL = { admin: 'admin', cashier: '支錢負責', normal: '普通' };
+
+// ── 模擬檢視：真 admin 可以用其他角色視角預覽（cyc-sim 只影響呢個分頁） ──
+function realRole() {
+  const a = portalAuth();
+  return (a && (a.role === 'admin' || a.role === 'cashier')) ? a.role : 'normal';
+}
+function simInfo() {
+  if (realRole() !== 'admin') return null;
+  try {
+    const s = JSON.parse(sessionStorage.getItem('cyc-sim') || 'null');
+    return (s && (s.role === 'admin' || s.role === 'cashier' || s.role === 'normal')) ? s : null;
+  } catch (e) { return null; }
+}
+function effectiveRole() { const s = simInfo(); return s ? s.role : realRole(); }
 const SUPABASE_URL = 'https://abtsyfbbtpvozywqaofs.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_beq8adbuLrISIgnpbAaLEw_Da1Fva-r';
 
@@ -237,6 +252,7 @@ function portalLogout() {
   try {
     sessionStorage.removeItem(AUTH_SESSION_KEY);
     sessionStorage.removeItem('cyc-admin-auth');   // 舊版遺留，順手清
+    sessionStorage.removeItem('cyc-sim');
   } catch (e) {}
 }
 
@@ -281,16 +297,29 @@ function showLock(msg) {
 function showMain() {
   $('lockView').hidden = true;
   $('mainView').hidden = false;
-  // 按角色收放功能卡：普通只可以用零用金申請；支錢負責冇後台管理
-  const role = (portalAuth() || {}).role || 'normal';
+  // 按角色收放功能卡：普通只可以用零用金申請；支錢負責冇後台管理（模擬檢視時用模擬角色）
+  const role = effectiveRole();
   $('cardVaultLink').style.display = role === 'normal' ? 'none' : '';
   $('cardAdminLink').style.display = role === 'admin' ? '' : 'none';
+  // 模擬檢視提示橫額
+  const s = simInfo();
+  if (s) {
+    const who = s.name || s.email || '';
+    $('simBanner').hidden = false;
+    $('simBanner').innerHTML = '🔭 模擬檢視中：以「' + ROLE_LABEL[s.role] + '」' + (who ? '（' + who + '）' : '') + ' 視角瀏覽 · 操作會真實生效，請小心 · <button id="simStopBtn" style="text-decoration:underline;font-weight:700;background:none;border:none;cursor:pointer;color:inherit">取消模擬</button>';
+    $('simStopBtn').addEventListener('click', () => { sessionStorage.removeItem('cyc-sim'); location.reload(); });
+  } else {
+    $('simBanner').hidden = true;
+  }
   tickSession();
 }
 function tickSession() {
   const a = portalAuth();
   if (!a) { showLock('登入狀態已清除，請重新登入。'); return; }
-  const who = a.email ? `${a.name || a.email}（${ROLE_LABEL[a.role] || '普通'}）` : '系統密碼（admin）';
+  const s = simInfo();
+  const who = s
+    ? `${s.name || s.email || a.name || a.email}（${ROLE_LABEL[s.role]}·模擬中）`
+    : (a.email ? `${a.name || a.email}（${ROLE_LABEL[a.role] || '普通'}）` : '已登入');
   $('sessionPill').textContent = `已登入 · ${who}`;
 }
 setInterval(tickSession, 15000);

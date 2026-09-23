@@ -48,11 +48,14 @@
     </div>
     <div class="flex items-center gap-2">
       <button onclick="location.href='https://cycportal.netlify.app/'" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">⌂ 宿舍服務主頁</button>
-      <button onclick="location.href='/admin/'" class="px-3 py-2 rounded-lg text-sm font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition">📊 後台管理</button>
+      <button id="t_admin" onclick="location.href='/admin/'" class="px-3 py-2 rounded-lg text-sm font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition">📊 後台管理</button>
       <button id="adminLogout" class="hidden px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">← 入口頁</button>
     </div>
   </div>
 </header>
+
+<!-- 模擬檢視提示（admin 用其他角色視角預覽時顯示） -->
+<div id="simBanner" class="hidden bg-amber-100 border-b border-amber-300 text-amber-800 text-xs px-4 py-2 text-center"></div>
 
 <main class="max-w-4xl mx-auto px-4 py-6">
 
@@ -269,6 +272,7 @@ function showMain(){
     ['cardVault', 'cardBal', 'cardSeed'].forEach(id => { const el = $(id); if (el) el.classList.add('hidden'); });
     $('receipt_next').disabled = true;
     $('receipt_next_save').classList.add('hidden');
+    $('t_admin').classList.add('hidden');   // 支錢負責冇後台管理
   }
   renderVault();
 }
@@ -598,9 +602,10 @@ $('seed_save').addEventListener('click', async () => {
 });
 
 // ---- 初始化 ----
-// 角色：admin（永久 admin 電郵／後台指派／後台密碼）全用；cashier（支錢負責）直入，但只可以用「舍友存入」；normal 唔入得
+// 角色：admin（永久 admin 電郵／後台指派）全用；cashier（支錢負責）直入，但只可以用「舍友存入」；normal 唔入得
+// 模擬檢視：真 admin 可以用其他角色視角預覽（cyc-sim 只影響呢個分頁）
 const ADMIN_EMAILS = ['ho.ml@sbccyc.org.hk', 'ho.lh@sbccyc.org.hk'];
-function sessionRole(){
+function realRole(){
   try {
     const a = JSON.parse(sessionStorage.getItem('cyc-portal-auth') || 'null');
     if (!a || !Number.isFinite(a.exp) || Date.now() >= a.exp) return 'normal';
@@ -608,8 +613,27 @@ function sessionRole(){
     return (a.role === 'admin' || a.role === 'cashier') ? a.role : 'normal';
   } catch { return 'normal'; }
 }
+function simInfo(){
+  if (realRole() !== 'admin') return null;
+  try {
+    const s = JSON.parse(sessionStorage.getItem('cyc-sim') || 'null');
+    return (s && (s.role === 'admin' || s.role === 'cashier' || s.role === 'normal')) ? s : null;
+  } catch { return null; }
+}
+function sessionRole(){ const s = simInfo(); return s ? s.role : realRole(); }
 function isGoogleAdmin(){ return sessionRole() === 'admin'; }
 function isFullAdmin(){ return sessionRole() === 'admin'; }
+// 模擬檢視提示橫額
+(function(){
+  const s = simInfo();
+  if (!s) return;
+  const RL = { admin: 'admin', cashier: '支錢負責', normal: '普通' };
+  const who = s.name || s.email || '';
+  const b = $('simBanner');
+  b.classList.remove('hidden');
+  b.innerHTML = '🔭 模擬檢視中：以「' + RL[s.role] + '」' + (who ? '（' + who + '）' : '') + ' 視角瀏覽 · 操作會真實生效，請小心 · <button id="simStopBtn" class="underline font-bold">取消模擬</button>';
+  document.getElementById('simStopBtn').addEventListener('click', () => { sessionStorage.removeItem('cyc-sim'); location.reload(); });
+})();
 if (isFullAdmin() || sessionRole() === 'cashier') showMain();
 else $('gateScreen').classList.remove('hidden');
 </script>

@@ -211,6 +211,30 @@
         <button id="role_save" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition">儲存</button>
       </div>
     </div>
+
+    <!-- 模擬檢視（admin 專用）：用其他角色視角預覽系統 -->
+    <div class="card bg-white p-5 space-y-3">
+      <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wide">🔭 模擬檢視</h3>
+      <p class="text-xs text-slate-500">用其他角色嘅視角睇系統實際畫面，方便檢查權限設定。模擬只影響你呢個瀏覽器分頁；期間畫面頂部會有黃色提示橫額，撳「取消模擬」即還原。<b>注意：模擬期間嘅操作（支錢、存入等）會真實生效</b>；簽名檔喺模擬時唔會自動解鎖。</p>
+      <div class="flex gap-2 flex-wrap items-center">
+        <select id="sim_role" class="rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white outline-none">
+          <option value="normal">普通</option>
+          <option value="cashier">支錢負責</option>
+          <option value="admin">admin</option>
+        </select>
+        <input id="sim_email" type="text" autocomplete="off" class="flex-1 min-w-44 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="模擬電郵（可留空，用嚟試預設支款人）">
+        <input id="sim_name" type="text" autocomplete="off" class="w-32 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="顯示名稱（可留空）">
+        <button id="sim_start" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-amber-600 hover:bg-amber-700 transition">開始模擬</button>
+        <button id="sim_stop" class="hidden px-5 py-2 rounded-lg text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">取消模擬</button>
+      </div>
+      <p id="sim_status" class="text-xs text-amber-700"></p>
+      <div id="sim_links" class="hidden flex gap-2 flex-wrap text-sm">
+        <span class="text-xs text-slate-500 py-1">用模擬視角開啟：</span>
+        <a href="/" target="_blank" class="px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium transition">前置頁</a>
+        <a href="/apply/" target="_blank" class="px-3 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium transition">零用金申請</a>
+        <a href="/vault/" target="_blank" class="px-3 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 font-medium transition">夾萬・現存</a>
+      </div>
+    </div>
   </section>
 </main>
 
@@ -924,6 +948,34 @@ $('role_save').addEventListener('click', async () => {
     loadRoles();
   } catch (e) { alert('儲存失敗：' + e.message); }
 });
+
+// ---- 模擬檢視：寫入 cyc-sim，各頁面（前置頁／支錢／夾萬）會用呢個角色渲染 ----
+function refreshSimUI(){
+  let s = null;
+  try { s = JSON.parse(sessionStorage.getItem('cyc-sim') || 'null'); } catch {}
+  const active = !!(s && (s.role === 'admin' || s.role === 'cashier' || s.role === 'normal'));
+  $('sim_stop').classList.toggle('hidden', !active);
+  $('sim_links').classList.toggle('hidden', !active);
+  $('sim_links').classList.toggle('flex', active);
+  $('sim_status').textContent = active
+    ? `模擬中：「${ROLE_LABELS[s.role]}」${s.name || s.email ? `（${s.name || s.email}）` : ''} — 用呢個分頁開嘅連結都會以模擬視角顯示。`
+    : '';
+}
+$('sim_start').addEventListener('click', () => {
+  const role = $('sim_role').value;
+  const email = $('sim_email').value.trim().toLowerCase();
+  const name = $('sim_name').value.trim();
+  if (email && !email.endsWith('@sbccyc.org.hk')) { alert('模擬電郵請用 @sbccyc.org.hk（或者留空）。'); return; }
+  sessionStorage.setItem('cyc-sim', JSON.stringify({ role, email, name }));
+  toast(`已開始模擬「${ROLE_LABELS[role]}」視角。`);
+  refreshSimUI();
+});
+$('sim_stop').addEventListener('click', () => {
+  sessionStorage.removeItem('cyc-sim');
+  toast('已取消模擬。');
+  refreshSimUI();
+});
+refreshSimUI();
 
 // ---- 初始化 ----
 // 角色：永久 admin 電郵、後台指派嘅 admin 直入；其餘要入後台密碼

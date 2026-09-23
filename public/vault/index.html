@@ -142,7 +142,7 @@
         <h3 class="text-sm font-bold text-emerald-600 uppercase tracking-wide">💵 舍友存入</h3>
         <span class="text-xs text-slate-500">下一個收款編號：<input id="receipt_next" type="number" min="1" step="1" class="w-24 rounded-lg border border-slate-300 px-2 py-1 text-sm outline-none"> <button id="receipt_next_save" class="px-2 py-1 rounded-lg text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">儲存</button></span>
       </div>
-      <p class="text-xs text-slate-500">舍友存入款項時喺度登記：結存即時增加、款項落入<b>該社細夾萬（代管現金）</b>，並自動開出收款編號（CYC xxxxxx，接續舊系統編號）。收款編號只會喺存入時出現。</p>
+      <p class="text-xs text-slate-500">舍友存入款項時喺度登記：結存即時增加、款項落入你揀嘅<b>結算戶口</b>（預設代管現金・細夾萬），並自動開出收款編號（CYC xxxxxx，接續舊系統編號）。收款編號只會喺存入時出現。「列印票據」功能待開放。</p>
       <div class="flex items-end gap-2 flex-wrap">
         <label class="block">
           <span class="text-xs font-medium text-slate-500">社別</span>
@@ -160,6 +160,22 @@
           <input id="dep_amt" type="number" step="0.01" min="0" class="mt-1 w-28 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="0.00">
         </label>
         <label class="block">
+          <span class="text-xs font-medium text-slate-500">類別</span>
+          <select id="dep_cat" class="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white outline-none">
+            <option>家長存入</option>
+            <option>社工存入</option>
+            <option>承存結餘</option>
+            <option>調節</option>
+          </select>
+        </label>
+        <label class="block">
+          <span class="text-xs font-medium text-slate-500">結算戶口</span>
+          <select id="dep_acct" class="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white outline-none">
+            <option value="small">代管現金（細夾萬）</option>
+            <option value="big">現存現金（大夾萬）</option>
+          </select>
+        </label>
+        <label class="block">
           <span class="text-xs font-medium text-slate-500">經手職員</span>
           <input id="dep_staff" type="text" maxlength="20" class="mt-1 w-28 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="你嘅姓名">
         </label>
@@ -168,6 +184,7 @@
           <input id="dep_note" type="text" maxlength="50" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none">
         </label>
         <button id="dep_go" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition">存入並開收據</button>
+        <button disabled title="待開放" class="px-5 py-2 rounded-lg text-sm font-bold text-slate-400 bg-slate-100 cursor-not-allowed">確定並列印票據（待開放）</button>
       </div>
       <p id="dep_result" class="text-sm font-bold text-emerald-700"></p>
     </div>
@@ -500,9 +517,12 @@ $('dep_go').addEventListener('click', async () => {
   if (amt <= 0) { alert('請輸入存入金額。'); $('dep_amt').focus(); return; }
   const staff = $('dep_staff').value.trim();
   if (!staff) { alert('請填經手職員姓名。'); $('dep_staff').focus(); return; }
+  const depCat = $('dep_cat').value;                    // 家長存入／社工存入／承存結餘／調節
+  const depAcct = $('dep_acct').value;                  // big（現存現金）/ small（代管現金）
+  const acctLabel = depAcct === 'big' ? '現存現金（大夾萬）' : '代管現金（細夾萬）';
   const v = await getSafeVault();
-  if (!v.init) { alert('請先設定四個夾萬現存數（存入嘅款項要落入細夾萬）。'); return; }
-  if (!confirm(`確定 ${hName} ${mName} 存入 ${money(amt)}？\n會開出收款編號，結存同${hName}細夾萬即時增加。`)) return;
+  if (!v.init) { alert('請先設定四個夾萬現存數（存入嘅款項要落入結算戶口）。'); return; }
+  if (!confirm(`確定 ${hName} ${mName} 存入 ${money(amt)}？\n類別：${depCat}　結算戶口：${acctLabel}\n會開出收款編號，結存同戶口即時增加。`)) return;
   $('dep_go').disabled = true;
   try {
     // 1) 收款編號
@@ -515,15 +535,16 @@ $('dep_go').addEventListener('click', async () => {
       const { error } = await sb.from('settings').upsert({ key: 'member_bal', value: map });
       if (error) throw new Error(error.message);
     }
-    // 3) 細夾萬 +
+    // 3) 結算戶口 +
     const next = { zhong_big: v.zhong_big, zhong_small: v.zhong_small, xiao_big: v.xiao_big, xiao_small: v.xiao_small };
-    next[k + '_small'] = r2(next[k + '_small'] + amt);
+    next[k + '_' + depAcct] = r2(next[k + '_' + depAcct] + amt);
     await saveSafeVault(next);
-    // 4) 流水賬
+    // 4) 流水賬（類別記落 note 開頭，月結／將來每日表用）
+    const noteTxt = depCat + ($('dep_note').value.trim() ? '；' + $('dep_note').value.trim() : '');
     await ledgerInsert([{ house: k, kind: 'deposit', member_id: mid, member_name: mName, amount: amt,
       member_delta: amt, member_bal_after: map[mid],
-      account: 'small', account_delta: amt, account_bal_after: next[k + '_small'],
-      receipt_no: receipt, staff, note: $('dep_note').value.trim() }]);
+      account: depAcct, account_delta: amt, account_bal_after: next[k + '_' + depAcct],
+      receipt_no: receipt, staff, note: noteTxt }]);
     // 5) 編號 +1（最後先加，失敗咗都唔會嘥編號）
     await setReceiptNext(n + 1);
     $('dep_result').textContent = `✅ 已開收據 ${receipt}：${mName} 存入 ${money(amt)}，新結存 ${money(map[mid])}。`;

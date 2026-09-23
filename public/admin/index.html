@@ -207,6 +207,22 @@
         <button id="pw_save" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-slate-700 hover:bg-slate-800 transition">儲存</button>
       </div>
     </div>
+
+    <!-- 權限管理（Google 登入職員角色） -->
+    <div class="card bg-white p-5 space-y-3">
+      <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wide">權限管理</h3>
+      <p class="text-xs text-slate-500">用 Google 登入嘅職員預設係「<b>普通</b>」：只可以支錢同檢視文件。喺度可以將個別 @sbccyc.org.hk 電郵升做「<b>支錢負責</b>」（支錢、舍友存入、製作及下載文件）或「<b>admin</b>」（所有權限）。ho.ml／ho.lh@sbccyc.org.hk 係永久 admin，唔使亦唔可以喺度設定。設定喺職員下次登入時生效。</p>
+      <div id="role_list" class="space-y-2 text-sm"></div>
+      <div class="flex gap-2 flex-wrap items-center">
+        <input id="role_email" type="email" autocomplete="off" class="flex-1 min-w-48 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="職員電郵（xxx@sbccyc.org.hk）">
+        <select id="role_role" class="rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white outline-none">
+          <option value="cashier">支錢負責</option>
+          <option value="admin">admin</option>
+          <option value="normal">普通（移除設定）</option>
+        </select>
+        <button id="role_save" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition">儲存</button>
+      </div>
+    </div>
   </section>
 </main>
 
@@ -307,6 +323,7 @@ function showMain(){
   $('mainScreen').classList.remove('hidden');
   $('adminLogout').classList.remove('hidden');
   loadData();
+  loadRoles();
 }
 
 // ---- 數據 ----
@@ -931,12 +948,48 @@ $('pw_save').addEventListener('click', async () => {
   toast('已更改後台密碼。');
 });
 
+// ---- 權限管理（settings 嘅 roles：電郵 → cashier/admin；冇設定嘅網域職員預設普通） ----
+const ROLE_LABELS = { admin: 'admin', cashier: '支錢負責', normal: '普通' };
+async function loadRoles(){
+  const box = $('role_list');
+  box.innerHTML = '<p class="text-xs text-slate-400">載入中…</p>';
+  try {
+    const { data, error } = await sb.from('settings').select('value').eq('key', 'roles').maybeSingle();
+    if (error) throw error;
+    const map = (data && data.value && typeof data.value === 'object' && !Array.isArray(data.value)) ? data.value : {};
+    const entries = Object.entries(map).sort((a, b) => a[0].localeCompare(b[0]));
+    box.innerHTML = entries.length
+      ? entries.map(([em, r]) => `<div class="flex items-center justify-between gap-2 border border-slate-200 rounded-lg px-3 py-2"><span class="truncate">${escapeHtml(em)}</span><span class="shrink-0 text-xs font-bold ${r === 'admin' ? 'text-indigo-600' : 'text-emerald-600'}">${ROLE_LABELS[r] || escapeHtml(String(r))}</span></div>`).join('')
+      : '<p class="text-xs text-slate-400">未有特別設定：除永久 admin 外，所有 @sbccyc.org.hk 職員都係「普通」。</p>';
+  } catch (e) { box.innerHTML = `<p class="text-xs text-red-500">讀取失敗：${escapeHtml(e.message)}</p>`; }
+}
+$('role_save').addEventListener('click', async () => {
+  const em = $('role_email').value.trim().toLowerCase();
+  const role = $('role_role').value;
+  if (!em || !em.endsWith('@sbccyc.org.hk')) { alert('請輸入 @sbccyc.org.hk 電郵。'); return; }
+  if (ADMIN_EMAILS.includes(em)) { alert('呢個係永久 admin，唔使設定。'); return; }
+  try {
+    const { data, error } = await sb.from('settings').select('value').eq('key', 'roles').maybeSingle();
+    if (error) throw error;
+    const map = (data && data.value && typeof data.value === 'object' && !Array.isArray(data.value)) ? { ...data.value } : {};
+    if (role === 'normal') delete map[em]; else map[em] = role;
+    const { error: e2 } = await sb.from('settings').upsert({ key: 'roles', value: map });
+    if (e2) throw e2;
+    $('role_email').value = '';
+    toast(role === 'normal' ? `已移除 ${em} 嘅特別設定（回復普通權限）。` : `已設定 ${em} 為「${ROLE_LABELS[role]}」，下次登入生效。`);
+    loadRoles();
+  } catch (e) { alert('儲存失敗：' + e.message); }
+});
+
 // ---- 初始化 ----
-// Google 網域登入嘅 admin（ho.ml@sbccyc.org.hk）免密直入後台
+// 角色：永久 admin 電郵、後台指派嘅 admin 直入；其餘要入後台密碼
+const ADMIN_EMAILS = ['ho.ml@sbccyc.org.hk', 'ho.lh@sbccyc.org.hk'];
 function isGoogleAdmin(){
   try {
     const a = JSON.parse(sessionStorage.getItem('cyc-portal-auth') || 'null');
-    return !!(a && a.admin === true && a.email === 'ho.ml@sbccyc.org.hk' && Number.isFinite(a.exp) && Date.now() < a.exp);
+    if (!a || !Number.isFinite(a.exp) || Date.now() >= a.exp) return false;
+    if (a.email && ADMIN_EMAILS.includes(a.email)) return true;
+    return a.role === 'admin' && typeof a.p === 'string' && a.p.startsWith('google:');
   } catch { return false; }
 }
 if (hasAdminAuth() || isGoogleAdmin()) showMain();

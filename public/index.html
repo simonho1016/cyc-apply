@@ -192,11 +192,32 @@
 <script>
 'use strict';
 // ── 登入：Google 網域認證（@sbccyc.org.hk）為主，系統密碼做後備；唔設時限，用到登出或關閉分頁 ──
-// ho.ml@sbccyc.org.hk 係 admin：入 /admin/ 同 /vault/ 唔使再入後台密碼
+// ho.ml／ho.lh@sbccyc.org.hk 係永久 admin：入 /admin/ 同 /vault/ 唔使再入後台密碼
 const AUTH_SESSION_KEY = 'cyc-portal-auth', AUTH_TTL = 365 * 24 * 60 * 60 * 1000; // 實際唔會過期；sessionStorage 關分頁即清
 const GOOGLE_CLIENT_ID = '141456186458-t5ihfut5sir6fl0l3kqbi72hehekerlr.apps.googleusercontent.com';
 const ALLOWED_DOMAIN = 'sbccyc.org.hk';
-const ADMIN_EMAIL = 'ho.ml@sbccyc.org.hk';
+const ADMIN_EMAILS = ['ho.ml@sbccyc.org.hk', 'ho.lh@sbccyc.org.hk']; // 永久 admin，唔可以被後台移除
+
+// ── 三級角色：admin（所有權限）／cashier（支錢負責：支錢、存入、製作及下載文件）／normal（普通：支錢、檢視文件）──
+// 其餘 @sbccyc.org.hk 職員預設 normal；admin 可以喺後台「權限管理」將個別電郵升做 cashier
+async function getRolesMap() {
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/settings?key=eq.roles&select=value', {
+      cache: 'no-store',
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY },
+    });
+    if (!res.ok) return {};
+    const rows = await res.json();
+    const v = rows && rows[0] && rows[0].value;
+    return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
+  } catch (e) { return {}; }
+}
+function roleFor(email, rolesMap) {
+  if (ADMIN_EMAILS.includes(email)) return 'admin';
+  const r = rolesMap && rolesMap[email];
+  return (r === 'admin' || r === 'cashier') ? r : 'normal';
+}
+const ROLE_LABEL = { admin: 'admin', cashier: '支錢負責', normal: '普通' };
 const SUPABASE_URL = 'https://abtsyfbbtpvozywqaofs.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_beq8adbuLrISIgnpbAaLEw_Da1Fva-r';
 const DEFAULT_PW = '8888';
@@ -217,8 +238,9 @@ function portalLogin(p, extra) {
   const exp = Date.now() + AUTH_TTL;
   try {
     sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify({ p, exp, ...(extra || {}) }));
-    // 順便開埋後台 session：同一組密碼／Google admin，入 /admin/ 同 /vault/ 唔使再入一次
-    sessionStorage.setItem('cyc-admin-auth', JSON.stringify({ exp }));
+    // 只有 admin 先順便開後台 session；其餘角色入 /admin/ 同 /vault/ 要另外入後台密碼
+    if (extra && extra.role === 'admin') sessionStorage.setItem('cyc-admin-auth', JSON.stringify({ exp }));
+    else sessionStorage.removeItem('cyc-admin-auth');
   } catch (e) {}
 }
 function portalLogout() {
@@ -235,7 +257,7 @@ function decodeJwt(t) {
     return JSON.parse(decodeURIComponent(atob(part).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
   } catch (e) { return null; }
 }
-function handleGoogleCred(res) {
+async function handleGoogleCred(res) {
   const payload = decodeJwt(res && res.credential);
   if (!payload) { $('lockMsg').textContent = '登入資料讀取失敗，請再試一次。'; return; }
   if (!payload.exp || payload.exp * 1000 < Date.now()) { $('lockMsg').textContent = '登入已過期，請再試一次。'; return; }
@@ -245,7 +267,8 @@ function handleGoogleCred(res) {
     $('lockMsg').textContent = `只限 @${ALLOWED_DOMAIN} 帳戶登入（你用緊 ${email || '未知帳戶'}）。`;
     return;
   }
-  portalLogin('google:' + email, { email, name: payload.name || email, admin: email === ADMIN_EMAIL });
+  const role = roleFor(email, await getRolesMap());
+  portalLogin('google:' + email, { email, name: payload.name || email, admin: role === 'admin', role });
   showMain();
 }
 // GIS script 係 async，載入完成先整登入掣
@@ -281,7 +304,7 @@ function showMain() {
 function tickSession() {
   const a = portalAuth();
   if (!a) { showLock('登入狀態已清除，請重新登入。'); return; }
-  const who = a.email ? `${a.name || a.email}${a.admin ? '（admin）' : ''}` : '系統密碼登入';
+  const who = a.email ? `${a.name || a.email}（${ROLE_LABEL[a.role] || '普通'}）` : '系統密碼（admin）';
   $('sessionPill').textContent = `已登入 · ${who}`;
 }
 setInterval(tickSession, 15000);
@@ -314,7 +337,7 @@ $('lockForm').addEventListener('submit', async e => {
   const outcome = await verifyPassword(p);
   $('lockGo').disabled = false;
   if (outcome === 'ok') {
-    portalLogin(p);
+    portalLogin(p, { role: 'admin' });   // 系統密碼即後台密碼，持匙人視作 admin
     $('lockInput').value = '';
     showMain();
   } else if (outcome === 'wrong') {
@@ -326,7 +349,7 @@ $('lockForm').addEventListener('submit', async e => {
 });
 $('lockSkipBtn').addEventListener('click', () => {
   if (!lastTry) return;
-  portalLogin(lastTry);
+  portalLogin(lastTry, { role: 'admin' });   // 略過驗證只係斷線應急；各頁面仍會各自驗證
   $('lockInput').value = '';
   showMain();
 });
@@ -335,11 +358,11 @@ $('logoutBtn').addEventListener('click', () => {
   showLock('已登出。');
 });
 
-// 進入各頁面時，把密碼及進入時間附加在網址 hash（只留在瀏覽器，不會送上伺服器）
+// 進入各頁面：同網域共用 sessionStorage，直接跳轉（唔再經網址 hash 傳密碼，避免沖走角色資料）
 function openSystem(url) {
   const a = portalAuth();
   if (!a) { showLock('登入狀態已清除，請重新登入。'); return; }
-  location.href = url + '#key=' + encodeURIComponent(a.p) + '&t=' + Date.now();
+  location.href = url;
 }
 document.querySelectorAll('.card[data-url]').forEach(card => {
   card.addEventListener('click', () => openSystem(card.dataset.url));

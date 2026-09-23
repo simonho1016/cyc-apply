@@ -70,8 +70,8 @@
   <!-- ====================== 主畫面 ====================== -->
   <section id="mainScreen" class="hidden space-y-6">
 
-    <!-- 夾萬現存 -->
-    <div class="card bg-white p-5 space-y-3">
+    <!-- 夾萬現存（admin 專用） -->
+    <div class="card bg-white p-5 space-y-3" id="cardVault">
       <div class="flex items-center justify-between flex-wrap gap-2">
         <h3 class="text-sm font-bold text-amber-600 uppercase tracking-wide">🏦 夾萬現存</h3>
         <span id="vault_check" class="text-xs text-slate-500"></span>
@@ -122,8 +122,8 @@
       </div>
     </div>
 
-    <!-- 舍友現存 -->
-    <div class="card bg-white p-5 space-y-3">
+    <!-- 舍友現存（admin 專用） -->
+    <div class="card bg-white p-5 space-y-3" id="cardBal">
       <div class="flex items-center justify-between flex-wrap gap-2">
         <h3 class="text-sm font-bold text-indigo-600 uppercase tracking-wide">👥 舍友現存</h3>
         <span id="member_bal_total" class="text-xs text-slate-500"></span>
@@ -189,8 +189,8 @@
       <p id="dep_result" class="text-sm font-bold text-emerald-700"></p>
     </div>
 
-    <!-- 結存起點（首次月結用，只可以設一次） -->
-    <div class="card bg-white p-5 space-y-3">
+    <!-- 結存起點（首次月結用，只可以設一次；admin 專用） -->
+    <div class="card bg-white p-5 space-y-3" id="cardSeed">
       <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wide">🚩 結存起點</h3>
       <p class="text-xs text-slate-500">由舊系統轉過嚟嗰陣，喺度入返各舍友嘅承前結存同四個夾萬嘅起始現存（以轉換日為準）。<b>只可以設定一次</b>：流水賬一有記錄就會鎖定。設定後月結紀錄先計到「承前結存」。</p>
       <div class="flex items-center gap-3 flex-wrap">
@@ -283,7 +283,7 @@ $('adminLogout').addEventListener('click', () => {
   location.reload();
 });
 setInterval(() => {
-  if (!$('mainScreen').classList.contains('hidden') && !hasAdminAuth() && !isGoogleAdmin()) {
+  if (!$('mainScreen').classList.contains('hidden') && !isFullAdmin() && sessionRole() !== 'cashier') {
     alert('登入狀態已清除，請重新登入。');
     location.reload();
   }
@@ -293,6 +293,12 @@ function showMain(){
   $('gateScreen').classList.add('hidden');
   $('mainScreen').classList.remove('hidden');
   $('adminLogout').classList.remove('hidden');
+  if (!isFullAdmin()) {
+    // 支錢負責（cashier）：只可以用「舍友存入」；夾萬改數、過錢、舍友現存修正、結存起點、收款編號設定全部收起
+    ['cardVault', 'cardBal', 'cardSeed'].forEach(id => { const el = $(id); if (el) el.classList.add('hidden'); });
+    $('receipt_next').disabled = true;
+    $('receipt_next_save').classList.add('hidden');
+  }
   renderVault();
 }
 
@@ -621,14 +627,19 @@ $('seed_save').addEventListener('click', async () => {
 });
 
 // ---- 初始化 ----
-// Google 網域登入嘅 admin（ho.ml@sbccyc.org.hk）免密直入
-function isGoogleAdmin(){
+// 角色：admin（永久 admin 電郵／後台指派／後台密碼）全用；cashier（支錢負責）直入，但只可以用「舍友存入」；normal 唔入得
+const ADMIN_EMAILS = ['ho.ml@sbccyc.org.hk', 'ho.lh@sbccyc.org.hk'];
+function sessionRole(){
   try {
     const a = JSON.parse(sessionStorage.getItem('cyc-portal-auth') || 'null');
-    return !!(a && a.admin === true && a.email === 'ho.ml@sbccyc.org.hk' && Number.isFinite(a.exp) && Date.now() < a.exp);
-  } catch { return false; }
+    if (!a || !Number.isFinite(a.exp) || Date.now() >= a.exp) return 'normal';
+    if (a.email && ADMIN_EMAILS.includes(a.email)) return 'admin';
+    return (a.role === 'admin' || a.role === 'cashier') ? a.role : 'normal';
+  } catch { return 'normal'; }
 }
-if (hasAdminAuth() || isGoogleAdmin()) showMain();
+function isGoogleAdmin(){ return sessionRole() === 'admin'; }
+function isFullAdmin(){ return hasAdminAuth() || sessionRole() === 'admin'; }
+if (isFullAdmin() || sessionRole() === 'cashier') showMain();
 else $('gateScreen').classList.remove('hidden');
 </script>
 </body>

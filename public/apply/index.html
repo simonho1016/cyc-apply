@@ -178,8 +178,8 @@
     <div class="flex items-center gap-2 flex-wrap justify-end">
       <button id="f_history" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">📁 已列印記錄</button>
       <button id="f_settings" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">⚙️ 系統設定</button>
-      <button onclick="location.href='/admin/'" class="px-3 py-2 rounded-lg text-sm font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition">📊 後台管理</button>
-      <button onclick="location.href='/vault/'" class="px-3 py-2 rounded-lg text-sm font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 transition">🏦 夾萬・現存</button>
+      <button id="t_admin" onclick="location.href='/admin/'" class="px-3 py-2 rounded-lg text-sm font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition">📊 後台管理</button>
+      <button id="t_vault" onclick="location.href='/vault/'" class="px-3 py-2 rounded-lg text-sm font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 transition">🏦 夾萬・現存</button>
       <button onclick="location.href='https://cycportal.netlify.app/'" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">⌂ 宿舍服務主頁</button>
       <button id="homeBtn" class="hidden px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">← 返回</button>
       <button id="calcBtn" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition flex items-center gap-1">
@@ -432,7 +432,18 @@ create policy "anon access" on settings
       <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wide">版本記錄</h3>
       <div class="text-sm space-y-3">
         <div class="flex gap-3">
-          <span class="shrink-0 text-xs font-bold text-white bg-emerald-600 rounded-full px-2.5 py-1 h-fit">v1.6.0</span>
+          <span class="shrink-0 text-xs font-bold text-white bg-emerald-600 rounded-full px-2.5 py-1 h-fit">v1.7.0</span>
+          <div>
+            <div class="font-bold text-slate-900">全面 Google 認證・按身份預設支款人 <span class="text-xs font-normal text-slate-400">2026-09-23</span></div>
+            <ul class="text-xs text-slate-500 mt-1 list-disc pl-4 space-y-0.5">
+              <li>取消後台認證密碼：全系統只可以用 @sbccyc.org.hk Google 帳戶登入，後台／夾萬頁唔再接受密碼</li>
+              <li>普通權限只可以用零用金申請（填單、簽名、列印、檢視記錄）；系統設定改為 admin 專用</li>
+              <li>ho.ml 登入預設支款人「何文諾」、ho.lh 預設「何樂軒」，本人簽名檔自動解鎖；揀其他人簽名檔仍要對方密碼</li>
+            </ul>
+          </div>
+        </div>
+        <div class="flex gap-3">
+          <span class="shrink-0 text-xs font-bold text-white bg-blue-600 rounded-full px-2.5 py-1 h-fit">v1.6.0</span>
           <div>
             <div class="font-bold text-slate-900">三級權限：admin／支錢負責／普通 <span class="text-xs font-normal text-slate-400">2026-09-23</span></div>
             <ul class="text-xs text-slate-500 mt-1 list-disc pl-4 space-y-0.5">
@@ -756,20 +767,39 @@ const CFG = {
 };
 function staffPwOf(name){ const s = CFG.staff.find(s => s.name === name); return s ? s.pw : null; }
 
-// ---- 角色權限（前置頁登入時寫入 session）：admin 全用；cashier 可存檔/下載/重印；normal 只支錢同檢視 ----
+// ---- 角色權限（前置頁登入時寫入 session）：admin 全用；cashier 可存檔/下載/重印/存入；normal 只用零用金申請 ----
 function sessionRole(){
   try {
     const a = JSON.parse(sessionStorage.getItem('cyc-portal-auth') || 'null');
     return (a && (a.role === 'admin' || a.role === 'cashier')) ? a.role : 'normal';
   } catch { return 'normal'; }
 }
+function sessionEmail(){
+  try {
+    const a = JSON.parse(sessionStorage.getItem('cyc-portal-auth') || 'null');
+    return (a && a.email) || '';
+  } catch { return ''; }
+}
 const CAN_MANAGE_FILES = sessionRole() !== 'normal';   // 製作／存檔／下載文件權限
 
-// 普通權限：收起電子存檔掣，流程提示照改
-if (!CAN_MANAGE_FILES) {
+// 按角色收放工具列：普通只見申請同記錄；支錢負責冇系統設定同後台
+const ROLE_NOW = sessionRole();
+if (ROLE_NOW === 'normal') {
   $('f_archive').classList.add('hidden');
   $('roleHint').textContent = '填單 → 簽名 → 列印（普通權限：電子存檔及下載由支錢負責同事處理）';
+  $('f_settings').classList.add('hidden');
+  $('t_admin').classList.add('hidden');
+  $('t_vault').classList.add('hidden');
+} else if (ROLE_NOW === 'cashier') {
+  $('f_settings').classList.add('hidden');
+  $('t_admin').classList.add('hidden');
 }
+
+// ---- 按登入電郵預設支款人（其他同事嘅對照表稍後加入） ----
+const EMAIL_STAFF_MAP = {
+  'ho.ml@sbccyc.org.hk': '何文諾',
+  'ho.lh@sbccyc.org.hk': '何樂軒'
+};
 
 // 填充支款人下拉（填單用）
 function fillStaffSelects(){
@@ -1919,10 +1949,18 @@ $('saveStaffBtn').addEventListener('click', async () => {
 // ---- 入場密碼（已取消，統一由入口頁登入） ----
 
 // ====================== 初始化 ======================
+// 本人用 Google 登入（電郵有對照）時：預設支款人係自己，簽名檔自動解鎖（Google 已核實身份）；揀其他人嘅簽名檔仍然要對方密碼
+function prefillStaffFromLogin(){
+  const name = EMAIL_STAFF_MAP[sessionEmail()];
+  if (!name || !CFG.staff.some(s => s.name === name)) return;
+  sessionStorage.setItem('staff-ok-' + name, JSON.stringify({ exp: Date.now() + STAFF_OK_MS }));
+  $('f_staff').value = name;
+  onStaffChange();
+}
 if (!dbConfigured) $('demoBanner').classList.remove('hidden');
 enterForm();           // 直入填單頁，唔使全員登入
 fitSheet();
-loadSettings();
+loadSettings().then(prefillStaffFromLogin);
 window.addEventListener('load', fitSheet);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitSheet);
 </script>

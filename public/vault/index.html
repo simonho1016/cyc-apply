@@ -49,21 +49,19 @@
     <div class="flex items-center gap-2">
       <button onclick="location.href='https://cycportal.netlify.app/'" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">⌂ 宿舍服務主頁</button>
       <button onclick="location.href='/admin/'" class="px-3 py-2 rounded-lg text-sm font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition">📊 後台管理</button>
-      <button id="adminLogout" class="hidden px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">登出</button>
+      <button id="adminLogout" class="hidden px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">← 入口頁</button>
     </div>
   </div>
 </header>
 
 <main class="max-w-4xl mx-auto px-4 py-6">
 
-  <!-- ====================== 密碼閘（同後台同一組密碼） ====================== -->
+  <!-- ====================== 權限不足（只限 Google admin／支錢負責） ====================== -->
   <section id="gateScreen" class="hidden max-w-sm mx-auto mt-10">
-    <div class="card bg-white p-6 space-y-4">
-      <h2 class="text-sm font-bold text-amber-600 uppercase tracking-wide">夾萬・現存登入</h2>
-      <p class="text-xs text-slate-500">呢頁載有夾萬同舍友結存，請輸入後台密碼。</p>
-      <input id="gate_pw" type="password" autocomplete="off" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 outline-none" placeholder="後台密碼">
-      <p id="gate_err" class="text-xs text-red-500 h-4"></p>
-      <button id="gate_btn" class="w-full py-2.5 rounded-lg bg-amber-600 text-white font-bold hover:bg-amber-700 transition">進入</button>
+    <div class="card bg-white p-6 space-y-4 text-center">
+      <h2 class="text-sm font-bold text-amber-600 uppercase tracking-wide">需要 admin 或支錢負責權限</h2>
+      <p class="text-xs text-slate-500">夾萬・現存頁只限 admin 同支錢負責同事使用。請返回入口頁，用已獲授權嘅 @sbccyc.org.hk Google 帳戶登入。</p>
+      <button onclick="location.href='/'" class="w-full py-2.5 rounded-lg bg-amber-600 text-white font-bold hover:bg-amber-700 transition">返回入口頁</button>
     </div>
   </section>
 
@@ -240,7 +238,6 @@ const $ = id => document.getElementById(id);
 const SUPABASE_URL = 'https://abtsyfbbtpvozywqaofs.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_beq8adbuLrISIgnpbAaLEw_Da1Fva-r';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-const DEFAULT_ADMIN_PW = '8888';
 
 let toastTimer;
 function toast(msg){
@@ -254,34 +251,8 @@ const money = n => '$' + Number(n || 0).toFixed(2);
 const r2 = n => Math.round(n * 100) / 100;
 function houseOf(h){ return h === '孝社' ? 'xiao' : 'zhong'; }
 
-// ---- 後台密碼（同 /admin/ 共用，唔設時限：用到登出或關閉分頁為止） ----
-const ADMIN_AUTH_MS = 365 * 24 * 60 * 60 * 1000;
-function setAdminAuth(){ sessionStorage.setItem('cyc-admin-auth', JSON.stringify({ exp: Date.now() + ADMIN_AUTH_MS })); }
-function hasAdminAuth(){
-  try {
-    const v = JSON.parse(sessionStorage.getItem('cyc-admin-auth') || 'null');
-    return !!(v && Number.isFinite(v.exp) && Date.now() < v.exp);
-  } catch { return false; }
-}
-async function getAdminPw(){
-  try {
-    const { data, error } = await sb.from('settings').select('value').eq('key', 'admin_pw').maybeSingle();
-    if (!error && data && typeof data.value === 'string' && data.value) return data.value;
-  } catch {}
-  return DEFAULT_ADMIN_PW;
-}
-async function tryGate(){
-  const pw = $('gate_pw').value;
-  const real = await getAdminPw();
-  if (pw === real) { setAdminAuth(); showMain(); }
-  else $('gate_err').textContent = '密碼錯誤。';
-}
-$('gate_btn').addEventListener('click', tryGate);
-$('gate_pw').addEventListener('keydown', e => { if (e.key === 'Enter') tryGate(); });
-$('adminLogout').addEventListener('click', () => {
-  sessionStorage.removeItem('cyc-admin-auth');
-  location.reload();
-});
+// ---- 出入閘：只限 Google admin／支錢負責（密碼閘已取消） ----
+$('adminLogout').addEventListener('click', () => { location.href = '/'; });
 setInterval(() => {
   if (!$('mainScreen').classList.contains('hidden') && !isFullAdmin() && sessionRole() !== 'cashier') {
     alert('登入狀態已清除，請重新登入。');
@@ -638,7 +609,7 @@ function sessionRole(){
   } catch { return 'normal'; }
 }
 function isGoogleAdmin(){ return sessionRole() === 'admin'; }
-function isFullAdmin(){ return hasAdminAuth() || sessionRole() === 'admin'; }
+function isFullAdmin(){ return sessionRole() === 'admin'; }
 if (isFullAdmin() || sessionRole() === 'cashier') showMain();
 else $('gateScreen').classList.remove('hidden');
 </script>

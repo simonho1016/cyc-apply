@@ -137,18 +137,12 @@
     <p class="org">香港扶幼會則仁中心</p>
     <h1 class="title">零用金支錢系統</h1>
 
-    <!-- 登入閘：Google 網域認證（@sbccyc.org.hk），密碼做後備 -->
+    <!-- 登入閘：只限 Google 網域認證（@sbccyc.org.hk） -->
     <section class="lock" id="lockView" hidden>
       <div class="lock-icon" aria-hidden="true">$</div>
       <p>支錢系統載有舍友個人資料及金錢記錄，只供獲授權的職員使用。<br>請用 <strong>@sbccyc.org.hk</strong> 嘅 Google 帳戶登入；登入狀態會保持到撳「登出」或關閉分頁為止。</p>
       <div id="gbtnWrap" style="display:flex;justify-content:center;margin:4px 0 6px"></div>
       <p class="lock-msg" id="lockMsg" role="status"></p>
-      <p class="lock-skip"><button type="button" id="pwToggle">改用系統密碼登入</button></p>
-      <form class="lock-row" id="lockForm" hidden>
-        <input type="password" id="lockInput" autocomplete="current-password" placeholder="系統密碼" maxlength="200" aria-label="系統密碼">
-        <button type="submit" class="btn gold" id="lockGo">進入</button>
-      </form>
-      <p class="lock-skip" id="lockSkip" hidden>未能連線驗證。<button type="button" id="lockSkipBtn">略過驗證直接進入</button>（密碼錯誤時各頁面會要求重新登入）</p>
     </section>
 
     <!-- 功能選擇（登入後顯示） -->
@@ -167,14 +161,14 @@
           <span class="card-url">/apply/</span>
         </div>
 
-        <div class="card card-vault" data-url="/vault/" role="link" tabindex="0" aria-label="夾萬・現存">
+        <div class="card card-vault" id="cardVaultLink" data-url="/vault/" role="link" tabindex="0" aria-label="夾萬・現存">
           <span class="card-icon" aria-hidden="true">🏦</span>
           <span class="card-name">夾萬・現存</span>
           <span class="card-desc">忠孝大細夾萬現存、過錢，<br>舍友結存管理及對數。</span>
           <span class="card-url">/vault/</span>
         </div>
 
-        <div class="card card-admin" data-url="/admin/" role="link" tabindex="0" aria-label="後台管理">
+        <div class="card card-admin" id="cardAdminLink" data-url="/admin/" role="link" tabindex="0" aria-label="後台管理">
           <span class="card-icon" aria-hidden="true">📊</span>
           <span class="card-name">後台管理</span>
           <span class="card-desc">支錢數據統計、匯出 CSV／ZIP，<br>結算及刪除記錄。</span>
@@ -191,7 +185,7 @@
 
 <script>
 'use strict';
-// ── 登入：Google 網域認證（@sbccyc.org.hk）為主，系統密碼做後備；唔設時限，用到登出或關閉分頁 ──
+// ── 登入：只限 Google 網域認證（@sbccyc.org.hk）；唔設時限，用到登出或關閉分頁 ──
 // ho.ml／ho.lh@sbccyc.org.hk 係永久 admin：入 /admin/ 同 /vault/ 唔使再入後台密碼
 const AUTH_SESSION_KEY = 'cyc-portal-auth', AUTH_TTL = 365 * 24 * 60 * 60 * 1000; // 實際唔會過期；sessionStorage 關分頁即清
 const GOOGLE_CLIENT_ID = '141456186458-t5ihfut5sir6fl0l3kqbi72hehekerlr.apps.googleusercontent.com';
@@ -220,7 +214,6 @@ function roleFor(email, rolesMap) {
 const ROLE_LABEL = { admin: 'admin', cashier: '支錢負責', normal: '普通' };
 const SUPABASE_URL = 'https://abtsyfbbtpvozywqaofs.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_beq8adbuLrISIgnpbAaLEw_Da1Fva-r';
-const DEFAULT_PW = '8888';
 
 const $ = id => document.getElementById(id);
 
@@ -238,15 +231,12 @@ function portalLogin(p, extra) {
   const exp = Date.now() + AUTH_TTL;
   try {
     sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify({ p, exp, ...(extra || {}) }));
-    // 只有 admin 先順便開後台 session；其餘角色入 /admin/ 同 /vault/ 要另外入後台密碼
-    if (extra && extra.role === 'admin') sessionStorage.setItem('cyc-admin-auth', JSON.stringify({ exp }));
-    else sessionStorage.removeItem('cyc-admin-auth');
   } catch (e) {}
 }
 function portalLogout() {
   try {
     sessionStorage.removeItem(AUTH_SESSION_KEY);
-    sessionStorage.removeItem('cyc-admin-auth');
+    sessionStorage.removeItem('cyc-admin-auth');   // 舊版遺留，順手清
   } catch (e) {}
 }
 
@@ -276,29 +266,25 @@ let gisTimer = setInterval(() => {
   if (!(window.google && google.accounts && google.accounts.id)) return;
   clearInterval(gisTimer);
   if (GOOGLE_CLIENT_ID === '未設定') {
-    $('lockMsg').textContent = 'Google 登入未設定（Client ID 未填），請暫用系統密碼。';
-    $('lockForm').hidden = false;
-    $('pwToggle').hidden = true;
+    $('lockMsg').textContent = 'Google 登入未設定（Client ID 未填），請聯絡系統管理員。';
     return;
   }
   google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCred });
   google.accounts.id.renderButton($('gbtnWrap'), { theme: 'outline', size: 'large', text: 'signin_with', locale: 'zh-HK' });
 }, 300);
-$('pwToggle').addEventListener('click', () => {
-  $('lockForm').hidden = !$('lockForm').hidden;
-  if (!$('lockForm').hidden) $('lockInput').focus();
-});
 
 function showLock(msg) {
   $('mainView').hidden = true;
   $('lockView').hidden = false;
   $('lockMsg').textContent = msg || '';
-  $('lockSkip').hidden = true;
-  $('lockInput').focus();
 }
 function showMain() {
   $('lockView').hidden = true;
   $('mainView').hidden = false;
+  // 按角色收放功能卡：普通只可以用零用金申請；支錢負責冇後台管理
+  const role = (portalAuth() || {}).role || 'normal';
+  $('cardVaultLink').style.display = role === 'normal' ? 'none' : '';
+  $('cardAdminLink').style.display = role === 'admin' ? '' : 'none';
   tickSession();
 }
 function tickSession() {
@@ -309,50 +295,6 @@ function tickSession() {
 }
 setInterval(tickSession, 15000);
 
-// 驗證密碼：讀 Supabase settings 嘅 admin_pw（同後台同一組密碼）
-async function verifyPassword(p) {
-  try {
-    const res = await fetch(SUPABASE_URL + '/rest/v1/settings?key=eq.admin_pw&select=value', {
-      cache: 'no-store',
-      headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY },
-    });
-    if (!res.ok) return 'unknown';
-    const rows = await res.json();
-    const real = (rows && rows[0] && typeof rows[0].value === 'string' && rows[0].value) || DEFAULT_PW;
-    return p === real ? 'ok' : 'wrong';
-  } catch (e) {
-    return 'unknown';
-  }
-}
-
-let lastTry = '';
-$('lockForm').addEventListener('submit', async e => {
-  e.preventDefault();
-  const p = $('lockInput').value.trim();
-  if (!p) { $('lockMsg').textContent = '請先輸入密碼。'; return; }
-  lastTry = p;
-  $('lockGo').disabled = true;
-  $('lockMsg').textContent = '正在驗證…';
-  $('lockSkip').hidden = true;
-  const outcome = await verifyPassword(p);
-  $('lockGo').disabled = false;
-  if (outcome === 'ok') {
-    portalLogin(p, { role: 'admin' });   // 系統密碼即後台密碼，持匙人視作 admin
-    $('lockInput').value = '';
-    showMain();
-  } else if (outcome === 'wrong') {
-    $('lockMsg').textContent = '密碼不正確，請再試一次。';
-  } else {
-    $('lockMsg').textContent = '未能連線驗證密碼，請檢查網絡。';
-    $('lockSkip').hidden = false;
-  }
-});
-$('lockSkipBtn').addEventListener('click', () => {
-  if (!lastTry) return;
-  portalLogin(lastTry, { role: 'admin' });   // 略過驗證只係斷線應急；各頁面仍會各自驗證
-  $('lockInput').value = '';
-  showMain();
-});
 $('logoutBtn').addEventListener('click', () => {
   portalLogout();
   showLock('已登出。');

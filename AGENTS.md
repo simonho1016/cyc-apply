@@ -23,7 +23,13 @@
 ## Supabase
 
 - URL `https://abtsyfbbtpvozywqaofs.supabase.co`，anon key 寫喺各頁 `SUPABASE_ANON_KEY`。
-- 表：`applications`（serial、payee_sign、pdf_path、settled_at、settled_by、safe_pay 等）、`settings`（key-value）。
+- 表：`applications`（serial、payee_sign、pdf_path、settled_at、settled_by、safe_pay 等）、`settings`（key-value）、**`ledger`（流水賬，月結紀錄嘅根基）**。
+- ledger 欄位：`house(zhong/xiao)、kind(opening/deposit/expense/settle/transfer/adjust/rollback)、member_id、member_name、amount、member_delta、account(big/small)、account_delta、member_bal_after、account_bal_after、receipt_no、serial、staff、staff2、note、created_at`。
+  - 每個銀錢變動寫一筆：`member_bal_after`／`account_bal_after` 係事件後結存快照，月結嘅「承前結存」＝月起前最後一筆嘅快照。
+  - transfer 過錢寫兩筆（big 出、small 入）；支出（expense）即時記 member_delta，夾萬支付先帶 account_delta；墊支單由 admin 結算嗰陣記 settle（account_delta）；刪單記 rollback 回補。
+- 收款編號：`settings` key=`receipt_counter`（整數，下一個號），格式 `CYC xxxxxx`，只限存入；預設由 101334 接續舊系統，vault 頁可改。
+- 結存起點：vault 頁「🚩 結存起點」一次性寫 opening 流水（ledger 有記錄後鎖定）。
+- 月結輸出：admin「🧾 零用月結紀錄（社別）」，照舊系統格式（現存現金＝大夾萬、代管現金＝細夾萬），A4 直向列印。
 - Storage：bucket `apply-archive`，路徑只准英數（zhong/xiao/payeeId）。
 - 主網站（舍務抽籤、舍友名單）用**另一個** Supabase project，唔好搞亂。
 

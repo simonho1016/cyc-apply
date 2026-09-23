@@ -105,14 +105,20 @@
         <button id="vault_save" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-amber-600 hover:bg-amber-700 transition">儲存夾萬現存</button>
         <span class="text-xs text-slate-400">直接改數會覆蓋現存；日常過錢請用下面「大 → 細」。</span>
       </div>
-      <div class="flex items-center gap-2 flex-wrap border-t border-slate-100 pt-3">
-        <span class="text-xs font-medium text-slate-500">大夾萬過錢俾細夾萬：</span>
-        <select id="vault_xfer_house" class="rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white outline-none">
-          <option value="zhong">忠社</option>
-          <option value="xiao">孝社</option>
-        </select>
-        <input id="vault_xfer_amt" type="number" step="0.01" min="0" class="w-28 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="金額">
-        <button id="vault_xfer" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-slate-700 hover:bg-slate-800 transition">大 → 細 過錢</button>
+      <div class="border-t border-slate-100 pt-3 space-y-2">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-xs font-medium text-slate-500">大夾萬過錢俾細夾萬：</span>
+          <select id="vault_xfer_house" class="rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white outline-none">
+            <option value="zhong">忠社</option>
+            <option value="xiao">孝社</option>
+          </select>
+          <input id="vault_xfer_amt" type="number" step="0.01" min="0" class="w-28 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="金額">
+          <input id="vault_xfer_by" type="text" maxlength="20" class="w-24 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="轉賬人">
+          <input id="vault_xfer_to" type="text" maxlength="20" class="w-24 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="收款人">
+          <input id="vault_xfer_note" type="text" maxlength="50" class="flex-1 min-w-28 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="備註（可留空）">
+          <button id="vault_xfer" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-slate-700 hover:bg-slate-800 transition">大 → 細 過錢</button>
+        </div>
+        <p class="text-xs text-slate-400">過錢會記入流水賬，月結紀錄嘅「戶口轉賬紀錄」會列出轉賬人同收款人。</p>
       </div>
     </div>
 
@@ -130,8 +136,85 @@
       </div>
     </div>
 
+    <!-- 舍友存入（開收據） -->
+    <div class="card bg-white p-5 space-y-3">
+      <div class="flex items-center justify-between flex-wrap gap-2">
+        <h3 class="text-sm font-bold text-emerald-600 uppercase tracking-wide">💵 舍友存入</h3>
+        <span class="text-xs text-slate-500">下一個收款編號：<input id="receipt_next" type="number" min="1" step="1" class="w-24 rounded-lg border border-slate-300 px-2 py-1 text-sm outline-none"> <button id="receipt_next_save" class="px-2 py-1 rounded-lg text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">儲存</button></span>
+      </div>
+      <p class="text-xs text-slate-500">舍友存入款項時喺度登記：結存即時增加、款項落入<b>該社細夾萬（代管現金）</b>，並自動開出收款編號（CYC xxxxxx，接續舊系統編號）。收款編號只會喺存入時出現。</p>
+      <div class="flex items-end gap-2 flex-wrap">
+        <label class="block">
+          <span class="text-xs font-medium text-slate-500">社別</span>
+          <select id="dep_house" class="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white outline-none">
+            <option value="zhong">忠社</option>
+            <option value="xiao">孝社</option>
+          </select>
+        </label>
+        <label class="block">
+          <span class="text-xs font-medium text-slate-500">舍友</span>
+          <select id="dep_member" class="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white outline-none"></select>
+        </label>
+        <label class="block">
+          <span class="text-xs font-medium text-slate-500">存入金額</span>
+          <input id="dep_amt" type="number" step="0.01" min="0" class="mt-1 w-28 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="0.00">
+        </label>
+        <label class="block">
+          <span class="text-xs font-medium text-slate-500">經手職員</span>
+          <input id="dep_staff" type="text" maxlength="20" class="mt-1 w-28 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="你嘅姓名">
+        </label>
+        <label class="block flex-1 min-w-36">
+          <span class="text-xs font-medium text-slate-500">備註（可留空）</span>
+          <input id="dep_note" type="text" maxlength="50" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none">
+        </label>
+        <button id="dep_go" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition">存入並開收據</button>
+      </div>
+      <p id="dep_result" class="text-sm font-bold text-emerald-700"></p>
+    </div>
+
+    <!-- 結存起點（首次月結用，只可以設一次） -->
+    <div class="card bg-white p-5 space-y-3">
+      <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wide">🚩 結存起點</h3>
+      <p class="text-xs text-slate-500">由舊系統轉過嚟嗰陣，喺度入返各舍友嘅承前結存同四個夾萬嘅起始現存（以轉換日為準）。<b>只可以設定一次</b>：流水賬一有記錄就會鎖定。設定後月結紀錄先計到「承前結存」。</p>
+      <div class="flex items-center gap-3 flex-wrap">
+        <button id="seed_open" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-slate-700 hover:bg-slate-800 transition">設定結存起點</button>
+        <span id="seed_status" class="text-xs text-slate-500"></span>
+      </div>
+    </div>
+
   </section>
 </main>
+
+<!-- 結存起點 modal -->
+<div id="seedModal" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/50"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="card bg-white p-6 w-full max-w-lg space-y-4 max-h-[90vh] overflow-y-auto">
+      <h3 class="font-bold text-slate-900">🚩 設定結存起點</h3>
+      <label class="block">
+        <span class="text-xs font-medium text-slate-500">起點日期（轉換日，月結會用呢日之前嘅數做承前）</span>
+        <input id="seed_date" type="date" class="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none">
+      </label>
+      <div>
+        <p class="text-xs font-bold text-slate-500 mb-1">四個夾萬起始現存</p>
+        <div class="grid grid-cols-2 gap-2 text-sm">
+          <label class="block"><span class="text-xs text-slate-500">忠社大夾萬</span><input id="seed_zb" type="number" step="0.01" min="0" class="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1.5 outline-none"></label>
+          <label class="block"><span class="text-xs text-slate-500">忠社細夾萬</span><input id="seed_zs" type="number" step="0.01" min="0" class="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1.5 outline-none"></label>
+          <label class="block"><span class="text-xs text-slate-500">孝社大夾萬</span><input id="seed_xb" type="number" step="0.01" min="0" class="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1.5 outline-none"></label>
+          <label class="block"><span class="text-xs text-slate-500">孝社細夾萬</span><input id="seed_xs" type="number" step="0.01" min="0" class="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1.5 outline-none"></label>
+        </div>
+      </div>
+      <div>
+        <p class="text-xs font-bold text-slate-500 mb-1">各舍友承前結存</p>
+        <div id="seed_members" class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-sm"></div>
+      </div>
+      <div class="flex gap-2">
+        <button id="seed_cancel" class="flex-1 py-2.5 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">取消</button>
+        <button id="seed_save" class="flex-1 py-2.5 rounded-lg text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition">確認設定</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div id="toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl text-white text-sm shadow-lg"></div>
 
@@ -152,6 +235,7 @@ function toast(msg){
 function escapeHtml(s){ return (s || '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 const money = n => '$' + Number(n || 0).toFixed(2);
 const r2 = n => Math.round(n * 100) / 100;
+function houseOf(h){ return h === '孝社' ? 'xiao' : 'zhong'; }
 
 // ---- 後台密碼（同 /admin/ 共用，15 分鐘有效） ----
 const ADMIN_AUTH_MS = 900000;
@@ -239,10 +323,29 @@ async function saveSafeVault(v){
   if (error) throw new Error(error.message);
 }
 
+// ---- 流水賬（ledger 表：月結紀錄嘅根基；寫入失敗唔阻主流程，但要提示）----
+const LEDGER_SQL = 'create table if not exists ledger (id uuid primary key default gen_random_uuid(), created_at timestamptz default now(), house text, kind text, member_id text, member_name text, amount numeric default 0, member_delta numeric default 0, account text, account_delta numeric default 0, member_bal_after numeric, account_bal_after numeric, receipt_no text, serial text, staff text, staff2 text, note text); alter table ledger enable row level security; create policy "anon ledger all" on ledger for all to anon using (true) with check (true); create index if not exists ledger_house_time on ledger (house, created_at);';
+let ledgerWarned = false;
+async function ledgerInsert(rows){
+  try {
+    const { error } = await sb.from('ledger').insert(rows);
+    if (error) throw new Error(error.message);
+  } catch (e) {
+    console.warn('ledger 寫入失敗', e);
+    if (!ledgerWarned) {
+      ledgerWarned = true;
+      alert('⚠️ 流水賬寫入失敗：' + e.message + '\n\n如果係未開 ledger 表，請去 Supabase → SQL Editor 跑：\n' + LEDGER_SQL + '\n\n（主流程不受影響，但月結紀錄會缺少呢筆數）');
+    }
+  }
+}
+
 // ---- 主渲染：夾萬 input + 舍友現存清單 + 對照行 ----
 async function renderVault(){
   const [v, bal, membersDb] = await Promise.all([getSafeVault(), getSettingValue('member_bal'), getSettingValue('members')]);
   const members = (membersDb && membersDb['忠社'] && membersDb['孝社']) ? membersDb : DEFAULT_MEMBERS;
+  CUR_MEMBERS = members;
+  fillDepMembers();
+  getReceiptNext().then(n => { $('receipt_next').value = n; });
   const balMap = (bal && typeof bal === 'object') ? bal : {};
   // 夾萬 input
   $('vault_zhong_big').value = v.init ? v.zhong_big.toFixed(2) : '';
@@ -261,7 +364,7 @@ async function renderVault(){
         const amt = Number(balMap[k]) || 0;
         balTotal = r2(balTotal + amt);
         houseTotals[h] = r2(houseTotals[h] + amt);
-        return `<label class="flex items-center gap-2 py-0.5">
+        return `<label class="flex items-center gap-2 py-0.5" data-house="${h}" data-name="${escapeHtml(m.name)}">
           <span class="flex-1 min-w-0 truncate">${escapeHtml(m.name)} <span class="text-xs text-slate-400">${escapeHtml(m.id || '')}</span></span>
           <input type="number" step="0.01" class="mbal_in w-24 rounded-lg border border-slate-300 px-2 py-1 text-sm outline-none" data-key="${escapeHtml(k)}" value="${amt ? amt.toFixed(2) : ''}" placeholder="0.00">
         </label>`;
@@ -288,7 +391,7 @@ async function renderVault(){
   }
 }
 
-// ---- 儲存夾萬現存 ----
+// ---- 儲存夾萬現存（人手改數 → 每個有變嘅夾萬記一筆 adjust 流水）----
 $('vault_save').addEventListener('click', async () => {
   const v = {
     zhong_big: Number($('vault_zhong_big').value) || 0,
@@ -297,16 +400,26 @@ $('vault_save').addEventListener('click', async () => {
     xiao_small: Number($('vault_xiao_small').value) || 0
   };
   try {
+    const prev = await getSafeVault();
     await saveSafeVault(v);
+    const rows = [];
+    const now = new Date().toISOString();
+    [['zhong','big','大夾萬'],['zhong','small','細夾萬'],['xiao','big','大夾萬'],['xiao','small','細夾萬']].forEach(([h, a, label]) => {
+      const key = h + '_' + a, nv = v[key], ov = prev.init ? prev[key] : 0;
+      if (Math.abs(nv - ov) >= 0.005) rows.push({ created_at: now, house: h, kind: 'adjust', account: a, account_delta: r2(nv - ov), account_bal_after: nv, note: '人手修正' + label });
+    });
+    if (rows.length) await ledgerInsert(rows);
     toast('已儲存夾萬現存。');
     renderVault();
   } catch (e) { alert('儲存失敗：' + e.message); }
 });
 
-// ---- 大 → 細 過錢（同社之內） ----
+// ---- 大 → 細 過錢（同社之內）；記流水賬：大夾萬一筆出、細夾萬一筆入 ----
 $('vault_xfer').addEventListener('click', async () => {
   const amt = Number($('vault_xfer_amt').value) || 0;
   if (amt <= 0) { alert('請輸入過錢金額。'); $('vault_xfer_amt').focus(); return; }
+  const by = $('vault_xfer_by').value.trim(), to = $('vault_xfer_to').value.trim();
+  if (!by || !to) { alert('請填轉賬人同收款人（月結紀錄需要）。'); return; }
   const k = $('vault_xfer_house').value;             // zhong / xiao
   const hName = k === 'xiao' ? '孝社' : '忠社';
   const v = await getSafeVault();
@@ -317,22 +430,173 @@ $('vault_xfer').addEventListener('click', async () => {
   next[k + '_small'] = r2(next[k + '_small'] + amt);
   try {
     await saveSafeVault(next);
-    $('vault_xfer_amt').value = '';
+    const now = new Date().toISOString();
+    await ledgerInsert([
+      { created_at: now, house: k, kind: 'transfer', amount: amt, account: 'big',   account_delta: -amt, account_bal_after: next[k + '_big'],   staff: by, staff2: to, note: $('vault_xfer_note').value.trim() },
+      { created_at: now, house: k, kind: 'transfer', amount: amt, account: 'small', account_delta: amt,  account_bal_after: next[k + '_small'], staff: by, staff2: to, note: $('vault_xfer_note').value.trim() }
+    ]);
+    $('vault_xfer_amt').value = ''; $('vault_xfer_note').value = '';
     toast(`已由${hName}大夾萬過 ${money(amt)} 俾${hName}細夾萬。`);
     renderVault();
   } catch (e) { alert('過錢失敗：' + e.message); }
 });
 
-// ---- 儲存舍友現存 ----
+// ---- 儲存舍友現存（人手改數 → 每個有變嘅舍友記一筆 adjust 流水）----
 $('member_bal_save').addEventListener('click', async () => {
+  const prev = await getSettingValue('member_bal') || {};
   const out = {};
   document.querySelectorAll('.mbal_in').forEach(inp => { out[inp.dataset.key] = Number(inp.value) || 0; });
   try {
     const { error } = await sb.from('settings').upsert({ key: 'member_bal', value: out });
     if (error) throw new Error(error.message);
+    const rows = [];
+    const now = new Date().toISOString();
+    document.querySelectorAll('.mbal_in').forEach(inp => {
+      const k = inp.dataset.key, nv = Number(inp.value) || 0, ov = Number(prev[k]) || 0;
+      if (Math.abs(nv - ov) >= 0.005) {
+        const lb = inp.closest('label');
+        rows.push({ created_at: now, house: houseOf(lb ? lb.dataset.house : ''), kind: 'adjust', member_id: k, member_name: lb ? lb.dataset.name : k, member_delta: r2(nv - ov), member_bal_after: nv, note: '人手修正結存' });
+      }
+    });
+    if (rows.length) await ledgerInsert(rows);
     toast('已儲存舍友現存。');
     renderVault();
   } catch (e) { alert('儲存失敗：' + e.message); }
+});
+
+// ---- 收款編號（settings key: receipt_counter，整數；預設由 101334 接續舊系統 CYC 編號） ----
+const RECEIPT_START = 101334;
+async function getReceiptNext(){
+  const n = Number(await getSettingValue('receipt_counter'));
+  return Number.isFinite(n) && n >= 1 ? Math.floor(n) : RECEIPT_START;
+}
+async function setReceiptNext(n){
+  const { error } = await sb.from('settings').upsert({ key: 'receipt_counter', value: Math.floor(n) });
+  if (error) throw new Error(error.message);
+}
+$('receipt_next_save').addEventListener('click', async () => {
+  const n = Number($('receipt_next').value);
+  if (!Number.isFinite(n) || n < 1) { alert('請輸入有效編號。'); return; }
+  if (!confirm(`確定將下一個收款編號改為 CYC ${Math.floor(n)}？`)) return;
+  try { await setReceiptNext(n); toast('已儲存收款編號。'); } catch (e) { alert('儲存失敗：' + e.message); }
+});
+
+// ---- 舍友存入 ----
+let CUR_MEMBERS = null;   // renderVault 填入 {忠社:[...], 孝社:[...]}
+function fillDepMembers(){
+  const h = $('dep_house').value === 'xiao' ? '孝社' : '忠社';
+  const list = (CUR_MEMBERS && CUR_MEMBERS[h]) || [];
+  $('dep_member').innerHTML = list.map(m => `<option value="${escapeHtml(m.id || m.name)}" data-name="${escapeHtml(m.name)}">${escapeHtml(m.name)} ${escapeHtml(m.id || '')}</option>`).join('');
+}
+$('dep_house').addEventListener('change', fillDepMembers);
+
+$('dep_go').addEventListener('click', async () => {
+  const k = $('dep_house').value;                    // zhong / xiao
+  const hName = k === 'xiao' ? '孝社' : '忠社';
+  const sel = $('dep_member').selectedOptions[0];
+  if (!sel) { alert('請揀舍友。'); return; }
+  const mid = sel.value, mName = sel.dataset.name;
+  const amt = Number($('dep_amt').value) || 0;
+  if (amt <= 0) { alert('請輸入存入金額。'); $('dep_amt').focus(); return; }
+  const staff = $('dep_staff').value.trim();
+  if (!staff) { alert('請填經手職員姓名。'); $('dep_staff').focus(); return; }
+  const v = await getSafeVault();
+  if (!v.init) { alert('請先設定四個夾萬現存數（存入嘅款項要落入細夾萬）。'); return; }
+  if (!confirm(`確定 ${hName} ${mName} 存入 ${money(amt)}？\n會開出收款編號，結存同${hName}細夾萬即時增加。`)) return;
+  $('dep_go').disabled = true;
+  try {
+    // 1) 收款編號
+    const n = await getReceiptNext();
+    const receipt = 'CYC ' + n;
+    // 2) 舍友結存 +
+    const map = (await getSettingValue('member_bal')) || {};
+    map[mid] = r2((Number(map[mid]) || 0) + amt);
+    {
+      const { error } = await sb.from('settings').upsert({ key: 'member_bal', value: map });
+      if (error) throw new Error(error.message);
+    }
+    // 3) 細夾萬 +
+    const next = { zhong_big: v.zhong_big, zhong_small: v.zhong_small, xiao_big: v.xiao_big, xiao_small: v.xiao_small };
+    next[k + '_small'] = r2(next[k + '_small'] + amt);
+    await saveSafeVault(next);
+    // 4) 流水賬
+    await ledgerInsert([{ house: k, kind: 'deposit', member_id: mid, member_name: mName, amount: amt,
+      member_delta: amt, member_bal_after: map[mid],
+      account: 'small', account_delta: amt, account_bal_after: next[k + '_small'],
+      receipt_no: receipt, staff, note: $('dep_note').value.trim() }]);
+    // 5) 編號 +1（最後先加，失敗咗都唔會嘥編號）
+    await setReceiptNext(n + 1);
+    $('dep_result').textContent = `✅ 已開收據 ${receipt}：${mName} 存入 ${money(amt)}，新結存 ${money(map[mid])}。`;
+    $('dep_amt').value = ''; $('dep_note').value = '';
+    $('receipt_next').value = n + 1;
+    toast(`已開收據 ${receipt}`);
+    renderVault();
+  } catch (e) { alert('存入失敗：' + e.message); }
+  $('dep_go').disabled = false;
+});
+
+// ---- 結存起點（只可以設一次：流水賬有記錄就鎖定） ----
+$('seed_open').addEventListener('click', async () => {
+  $('seed_status').textContent = '檢查中…';
+  try {
+    const { count, error } = await sb.from('ledger').select('id', { count: 'exact', head: true });
+    if (error) throw new Error(error.message);
+    if (count > 0) {
+      $('seed_status').textContent = '🔒 已鎖定：流水賬已有記錄，起點只能設一次。';
+      alert('流水賬已有記錄，結存起點唔可以再設。\n如果起點入錯咗，請聯絡系統負責人喺 Supabase 直接修改 ledger 表。');
+      return;
+    }
+  } catch (e) {
+    $('seed_status').textContent = '⚠️ 未能檢查流水賬：' + e.message + '（如未開 ledger 表，請先跑 SQL）';
+    return;
+  }
+  $('seed_status').textContent = '';
+  // 預填：日期＝今日；夾萬＝而家畫面嘅數；舍友＝而家結存
+  $('seed_date').value = new Date().toLocaleDateString('sv');
+  $('seed_zb').value = $('vault_zhong_big').value; $('seed_zs').value = $('vault_zhong_small').value;
+  $('seed_xb').value = $('vault_xiao_big').value; $('seed_xs').value = $('vault_xiao_small').value;
+  $('seed_members').innerHTML = ['忠社', '孝社'].map(h => `
+    <div>
+      <div class="text-xs font-bold ${h === '忠社' ? 'text-rose-600' : 'text-blue-600'} mb-1">■ ${h}</div>
+      ${((CUR_MEMBERS && CUR_MEMBERS[h]) || []).map(m => `
+        <label class="flex items-center gap-2 py-0.5">
+          <span class="flex-1 min-w-0 truncate">${escapeHtml(m.name)} <span class="text-xs text-slate-400">${escapeHtml(m.id || '')}</span></span>
+          <input type="number" step="0.01" class="seed_m w-24 rounded-lg border border-slate-300 px-2 py-1 text-sm outline-none" data-key="${escapeHtml(m.id || m.name)}" data-name="${escapeHtml(m.name)}" data-house="${h}" placeholder="0.00">
+        </label>`).join('')}
+    </div>`).join('');
+  // 預填現有結存
+  document.querySelectorAll('.seed_m').forEach(inp => {
+    const cur = document.querySelector(`.mbal_in[data-key="${CSS.escape(inp.dataset.key)}"]`);
+    if (cur && cur.value) inp.value = cur.value;
+  });
+  $('seedModal').classList.remove('hidden');
+});
+$('seed_cancel').addEventListener('click', () => $('seedModal').classList.add('hidden'));
+$('seed_save').addEventListener('click', async () => {
+  const d = $('seed_date').value;
+  if (!d) { alert('請揀起點日期。'); return; }
+  if (!confirm('確定設定結存起點？設定後流水賬開始記數，呢個起點唔可以再改。')) return;
+  const ts = new Date(d + 'T00:00:00').toISOString();
+  const rows = [];
+  const vaultVals = { zhong_big: Number($('seed_zb').value) || 0, zhong_small: Number($('seed_zs').value) || 0, xiao_big: Number($('seed_xb').value) || 0, xiao_small: Number($('seed_xs').value) || 0 };
+  ['zhong', 'xiao'].forEach(h => ['big', 'small'].forEach(a => {
+    rows.push({ created_at: ts, house: h, kind: 'opening', account: a, account_delta: 0, account_bal_after: vaultVals[h + '_' + a], note: '結存起點' });
+  }));
+  const bal = {};
+  document.querySelectorAll('.seed_m').forEach(inp => {
+    const v = Number(inp.value) || 0;
+    bal[inp.dataset.key] = v;
+    rows.push({ created_at: ts, house: houseOf(inp.dataset.house), kind: 'opening', member_id: inp.dataset.key, member_name: inp.dataset.name, member_delta: 0, member_bal_after: v, note: '結存起點' });
+  });
+  try {
+    await ledgerInsert(rows);
+    const { error: e1 } = await sb.from('settings').upsert({ key: 'member_bal', value: bal });
+    if (e1) throw new Error(e1.message);
+    await saveSafeVault(vaultVals);
+    $('seedModal').classList.add('hidden');
+    toast('已設定結存起點，流水賬開始記數。');
+    renderVault();
+  } catch (e) { alert('設定失敗：' + e.message); }
 });
 
 // ---- 初始化 ----

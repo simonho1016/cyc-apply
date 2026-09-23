@@ -432,9 +432,23 @@ create policy "anon access" on settings
       <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wide">版本記錄</h3>
       <div class="text-sm space-y-3">
         <div class="flex gap-3">
-          <span class="shrink-0 text-xs font-bold text-white bg-emerald-600 rounded-full px-2.5 py-1 h-fit">v1.3.0</span>
+          <span class="shrink-0 text-xs font-bold text-white bg-emerald-600 rounded-full px-2.5 py-1 h-fit">v1.4.0</span>
           <div>
-            <div class="font-bold text-slate-900">現時版本 <span class="text-xs font-normal text-slate-400">2026-09-17</span></div>
+            <div class="font-bold text-slate-900">月結紀錄・存入收據 <span class="text-xs font-normal text-slate-400">2026-09-23</span></div>
+            <ul class="text-xs text-slate-500 mt-1 list-disc pl-4 space-y-0.5">
+              <li>新增流水賬（ledger）：支出、存入、過錢、結算、刪單回補、人手修正全部逐筆記錄，支撐月結紀錄嘅承前結存</li>
+              <li>「🏦 夾萬・現存」頁新增「💵 舍友存入」：登記存入即開收款編號（CYC xxxxxx，接續舊系統編號，可以人手設定下一個編號），結存同細夾萬即時增加</li>
+              <li>過錢要填轉賬人同收款人，月結紀錄嘅「戶口轉賬紀錄」會列出</li>
+              <li>「🏦 夾萬・現存」頁新增「🚩 結存起點」：由舊系統轉入嗰陣一次性設定各舍友承前結存同四個夾萬起始現存（只可以設一次）</li>
+              <li>後台新增「🧾 零用月結紀錄（社別）」：揀社別同月份即可預覽及列印同舊系統一樣格式嘅月結單（戶口資料、轉賬紀錄、舍友戶口紀錄、三級簽署欄）</li>
+              <li>支錢系統抽離成獨立網站 cycapply.netlify.app，有自己嘅前置登入頁</li>
+            </ul>
+          </div>
+        </div>
+        <div class="flex gap-3">
+          <span class="shrink-0 text-xs font-bold text-white bg-blue-600 rounded-full px-2.5 py-1 h-fit">v1.3.0</span>
+          <div>
+            <div class="font-bold text-slate-900">簽名板自動轉橫 <span class="text-xs font-normal text-slate-400">2026-09-17</span></div>
             <ul class="text-xs text-slate-500 mt-1 list-disc pl-4 space-y-0.5">
               <li>簽名板自動轉橫：直機開簽名板時成個畫面自動轉橫（將手機向左轉就係正確方向），轉咗橫機會自動跟返正；確認／取消簽名後自動轉返直</li>
               <li>簽名方向固定：簽名板方向由系統控制，放入 PDF 時唔使再靠「高過闊」估方向（舊自動轉正邏輯已移除）；「🔄 旋轉」掣保留做手動校正</li>
@@ -1037,6 +1051,20 @@ async function getSafeVault(){
   };
 }
 function houseKey(h){ return h === '孝社' ? 'xiao' : 'zhong'; }
+// ---- 流水賬（ledger 表：月結紀錄嘅根基；寫入失敗唔阻支錢流程）----
+let ledgerWarned = false;
+async function ledgerInsert(rows){
+  try {
+    const { error } = await sb.from('ledger').insert(rows);
+    if (error) throw new Error(error.message);
+  } catch (e) {
+    console.warn('ledger 寫入失敗', e);
+    if (!ledgerWarned) {
+      ledgerWarned = true;
+      toast('⚠️ 流水賬寫入失敗（月結會缺呢筆數），請通知負責同事檢查 ledger 表。');
+    }
+  }
+}
 // 夾萬支付：檢查該社細夾萬夠唔夠錢，夠先俾印／存；成功後即扣數
 async function checkSafePay(house, amount){
   const v = await getSafeVault();
@@ -1053,6 +1081,7 @@ async function deductSafe(house, amount){
   v[k] = Math.round((v[k] - amount) * 100) / 100;
   delete v.init;
   await DB.setSetting('safe_vault', { zhong_big: v.zhong_big, zhong_small: v.zhong_small, xiao_big: v.xiao_big, xiao_small: v.xiao_small });
+  return v[k];   // 回傳扣完嘅細夾萬現存（寫流水賬用）
 }
 
 // ---- 舍友現存自動扣數（settings key: member_bal = { 舍友id: 結存 }；後台／夾萬頁未儲存過就唔扣，保持兼容）----
@@ -1073,15 +1102,15 @@ async function checkMemberBal(payeeId, payee, amount){
   }
   return true;
 }
-// 成功支錢後扣數；回傳係咪真係扣咗
+// 成功支錢後扣數；回傳扣完嘅結存（名單外／未啟用就回傳 null）
 async function deductMemberBal(payeeId, payee, amount){
   const { map, init } = await getMemberBal();
-  if (!init) return false;
+  if (!init) return null;
   const k = payeeId || payee;
-  if (!(k in map)) return false;
+  if (!(k in map)) return null;
   map[k] = Math.round(((Number(map[k]) || 0) - amount) * 100) / 100;
   await DB.setSetting('member_bal', map);
-  return true;
+  return map[k];
 }
 
 // ---- 表單驗證（列印同電子存檔共用） ----
@@ -1128,9 +1157,18 @@ $('f_print').addEventListener('click', async () => {
       serial: d.serial, payee_sign: sig, ...settlePatch,
       staff: staffUser, decided_at: new Date().toISOString()
     });
-    if (d.safePay) await deductSafe(d.house, parseFloat(d.amount));
-    let balMsg = '';
-    try { if (await deductMemberBal(d.payeeId, d.payee, parseFloat(d.amount))) balMsg = '舍友結存已自動扣減。'; } catch {}
+    let safeAfter = null;
+    if (d.safePay) { try { safeAfter = await deductSafe(d.house, parseFloat(d.amount)); } catch {} }
+    let balMsg = '', balAfter = null;
+    try { balAfter = await deductMemberBal(d.payeeId, d.payee, parseFloat(d.amount)); if (balAfter !== null) balMsg = '舍友結存已自動扣減。'; } catch {}
+    // 流水賬：支出（月結紀錄用）
+    ledgerInsert([{
+      house: houseKey(d.house), kind: 'expense', member_id: d.payeeId || '', member_name: d.payee,
+      amount: parseFloat(d.amount),
+      member_delta: balAfter !== null ? -parseFloat(d.amount) : 0, member_bal_after: balAfter,
+      account: d.safePay ? 'small' : null, account_delta: d.safePay ? -parseFloat(d.amount) : 0, account_bal_after: safeAfter,
+      serial: d.serial || '', staff: staffUser
+    }]);
     toast('已列印並儲存記錄（序號 ' + d.serial + '）。' + (d.safePay ? '夾萬支付，已自動結算扣數。' : '') + balMsg);
   } catch (e) {
     alert('PDF 已生成，但儲存記錄失敗：' + e.message);
@@ -1212,9 +1250,18 @@ $('f_archive').addEventListener('click', async () => {
       serial: d.serial, payee_sign: sig, pdf_path: pdfPath, ...settlePatch,
       staff: staffUser, decided_at: new Date().toISOString()
     });
-    if (d.safePay) await deductSafe(d.house, parseFloat(d.amount));
-    let balMsg = '';
-    try { if (await deductMemberBal(d.payeeId, d.payee, parseFloat(d.amount))) balMsg = '舍友結存已自動扣減。'; } catch {}
+    let safeAfter = null;
+    if (d.safePay) { try { safeAfter = await deductSafe(d.house, parseFloat(d.amount)); } catch {} }
+    let balMsg = '', balAfter = null;
+    try { balAfter = await deductMemberBal(d.payeeId, d.payee, parseFloat(d.amount)); if (balAfter !== null) balMsg = '舍友結存已自動扣減。'; } catch {}
+    // 流水賬：支出（月結紀錄用）
+    ledgerInsert([{
+      house: houseKey(d.house), kind: 'expense', member_id: d.payeeId || '', member_name: d.payee,
+      amount: parseFloat(d.amount),
+      member_delta: balAfter !== null ? -parseFloat(d.amount) : 0, member_bal_after: balAfter,
+      account: d.safePay ? 'small' : null, account_delta: d.safePay ? -parseFloat(d.amount) : 0, account_bal_after: safeAfter,
+      serial: d.serial || '', staff: staffUser
+    }]);
     toast('已電子存檔：' + fname + '（序號 ' + d.serial + '）' + cloudMsg + '。' + balMsg);
   } catch (e) {
     alert('PDF 已生成，但儲存記錄失敗：' + e.message);

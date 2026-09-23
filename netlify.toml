@@ -1,0 +1,11 @@
+[build]
+  publish = "public"
+
+# 載有個人資料及金錢記錄：不讓搜尋引擎收錄，也不允許被其他網站嵌入
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"

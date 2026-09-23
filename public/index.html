@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>香港扶幼會則仁中心 零用金支錢系統</title>
+<meta name="description" content="則仁中心忠孝宿舍零用金支錢系統入口：申請、夾萬現存及後台管理。登入後 15 分鐘自動登出。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Huninn&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#fffdf6; --dot:#dde3ea; --ink:#111; --yellow:#fde047;
+    --muted:#6b7280; --sub:#374151;
+    --gold:#f6d566; --gold-dark:#8a5a00; --cream:#fff3c4;
+    --indigo:#4f46e5; --indigo-soft:#eef2ff; --amber-soft:#fef3c7; --amber:#b45309;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
+    background-color:var(--paper);
+    background-image:radial-gradient(var(--dot) 1.2px,transparent 1.6px);
+    background-size:10px 10px;
+    color:var(--ink);
+    font-family:"Huninn","PingFang TC","Heiti TC","Microsoft JhengHei","Noto Sans TC",sans-serif;
+  }
+  .box{text-align:center;max-width:760px;width:100%}
+  .org{margin:0 0 18px;font-size:20px;letter-spacing:.14em}
+  .title{
+    display:inline-block;margin:0;padding:8px 36px;background:var(--yellow);color:var(--ink);
+    border:3px solid var(--ink);border-radius:10px;box-shadow:6px 6px 0 var(--ink);
+    transform:rotate(-1.2deg);font-size:32px;font-weight:400;letter-spacing:.12em;
+  }
+  .sub{color:var(--sub);font-size:17px;margin:22px 0 26px}
+
+  /* ── 登入閘 ───────────────────────────── */
+  .lock{
+    max-width:420px;margin:34px auto 0;padding:28px 26px;background:#fff;
+    border:3px solid var(--ink);border-radius:16px;box-shadow:7px 7px 0 var(--ink);
+    background-image:radial-gradient(rgba(0,0,0,.05) 1.1px,transparent 1.5px);background-size:8px 8px;
+  }
+  .lock-icon{
+    width:64px;height:64px;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;
+    font-size:30px;font-weight:900;color:var(--gold-dark);background:var(--gold);
+    border:3px solid var(--ink);border-radius:50%;
+    box-shadow:3px 3px 0 var(--ink), inset 0 0 0 4px rgba(255,255,255,.55);transform:rotate(6deg);
+  }
+  .lock p{margin:0 0 16px;font-size:15px;color:var(--sub);line-height:1.6}
+  .lock-row{display:flex;gap:10px}
+  .lock input{
+    flex:1;min-width:0;font:inherit;font-size:17px;padding:10px 14px;
+    border:3px solid var(--ink);border-radius:10px;background:#fff;color:var(--ink);
+  }
+  .lock input:focus-visible{outline:3px solid #b07500;outline-offset:2px}
+  .btn{
+    font:inherit;cursor:pointer;border:3px solid var(--ink);border-radius:10px;
+    padding:10px 20px;background:var(--yellow);color:var(--ink);
+    box-shadow:4px 4px 0 var(--ink);transition:transform .08s,box-shadow .08s;
+  }
+  .btn:hover{transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--ink)}
+  .btn:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink)}
+  .btn:disabled{opacity:.5;cursor:default;transform:none;box-shadow:4px 4px 0 var(--ink)}
+  .btn.gold{background:var(--gold)}
+  .lock-msg{min-height:22px;margin:12px 0 0;font-size:14px;color:#b91c1c}
+  .lock-skip{margin:10px 0 0;font-size:13px}
+  .lock-skip button{border:0;background:none;padding:0;color:#2563eb;text-decoration:underline;font:inherit;cursor:pointer}
+
+  /* ── 功能卡 ───────────────────────────── */
+  .session-bar{
+    display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;
+    margin:16px 0 20px;font-size:14px;color:var(--sub);
+  }
+  .session-bar .pill{
+    padding:5px 14px;background:var(--cream);color:var(--gold-dark);
+    border:2px solid var(--ink);border-radius:999px;box-shadow:2px 2px 0 var(--ink);
+  }
+  .session-bar .logout{
+    font:inherit;font-size:13px;padding:5px 14px;background:#fff;color:var(--sub);
+    border:2px solid var(--ink);border-radius:999px;box-shadow:2px 2px 0 var(--ink);cursor:pointer;
+  }
+  .session-bar .logout:hover{background:#f3f4f6}
+
+  .cards{display:flex;flex-wrap:wrap;gap:26px;justify-content:center}
+  .card{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+    width:260px;min-height:200px;padding:20px 16px;cursor:pointer;
+    border:3px solid var(--ink);border-radius:16px;box-shadow:7px 7px 0 var(--ink);
+    text-decoration:none;color:var(--ink);
+    background-image:radial-gradient(rgba(0,0,0,.07) 1.1px,transparent 1.5px);
+    background-size:8px 8px;
+    transition:transform .08s,box-shadow .08s;
+  }
+  .card:hover{transform:translate(-2px,-2px);box-shadow:9px 9px 0 var(--ink)}
+  .card:active{transform:translate(4px,4px);box-shadow:3px 3px 0 var(--ink)}
+  .card:focus-visible{outline:3px solid #b07500;outline-offset:4px}
+  .card-name{font-size:26px;letter-spacing:.1em}
+  .card-desc{font-size:14px;color:var(--sub);line-height:1.5}
+  .card-url{font-size:12px;color:var(--muted);letter-spacing:.03em}
+  .card-icon{
+    width:64px;height:64px;display:flex;align-items:center;justify-content:center;
+    font-size:30px;border:3px solid var(--ink);border-radius:14px;
+    box-shadow:3px 3px 0 var(--ink);
+  }
+
+  .card-apply{background-color:var(--cream)}
+  .card-apply .card-icon{
+    font-weight:900;color:var(--gold-dark);border-radius:50%;background:var(--gold);
+    box-shadow:3px 3px 0 var(--ink), inset 0 0 0 4px rgba(255,255,255,.55);transform:rotate(6deg);
+  }
+  .card-vault{background-color:var(--amber-soft)}
+  .card-vault .card-icon{background:#fff;transform:rotate(-3deg)}
+  .card-admin{background-color:var(--indigo-soft)}
+  .card-admin .card-icon{background:#fff;transform:rotate(3deg)}
+
+  .portal-link{
+    display:inline-block;margin-top:26px;font:inherit;font-size:15px;color:var(--sub);
+    padding:8px 22px;background:#fff;border:3px solid var(--ink);border-radius:999px;
+    box-shadow:3px 3px 0 var(--ink);text-decoration:none;transition:transform .08s,box-shadow .08s;
+  }
+  .portal-link:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--ink)}
+
+  .note{margin-top:26px;font-size:13px;color:var(--muted)}
+  .foot{margin-top:10px;font-size:13px;color:var(--muted)}
+
+  @media (max-width:520px){
+    .title{font-size:26px;padding:8px 22px}
+    .org{font-size:17px}
+    .card{width:100%;max-width:320px}
+    .lock-row{flex-direction:column}
+  }
+</style>
+</head>
+<body>
+  <main class="box">
+    <p class="org">香港扶幼會則仁中心</p>
+    <h1 class="title">零用金支錢系統</h1>
+
+    <!-- 登入閘：密碼統一在此輸入 -->
+    <section class="lock" id="lockView" hidden>
+      <div class="lock-icon" aria-hidden="true">$</div>
+      <p>支錢系統載有舍友個人資料及金錢記錄，只供獲授權的職員使用。<br>請輸入系統密碼；登入後 <strong>15 分鐘</strong>會自動登出。</p>
+      <form class="lock-row" id="lockForm">
+        <input type="password" id="lockInput" autocomplete="current-password" placeholder="系統密碼" maxlength="200" aria-label="系統密碼">
+        <button type="submit" class="btn gold" id="lockGo">進入</button>
+      </form>
+      <p class="lock-msg" id="lockMsg" role="status"></p>
+      <p class="lock-skip" id="lockSkip" hidden>未能連線驗證。<button type="button" id="lockSkipBtn">略過驗證直接進入</button>（密碼錯誤時各頁面會要求重新登入）</p>
+    </section>
+
+    <!-- 功能選擇（登入後顯示） -->
+    <section id="mainView" hidden>
+      <div class="session-bar">
+        <span class="pill" id="sessionPill">已登入</span>
+        <button type="button" class="logout" id="logoutBtn">登出</button>
+      </div>
+      <p class="sub">請選擇要開啟的功能</p>
+
+      <div class="cards">
+        <div class="card card-apply" data-url="/apply/" role="link" tabindex="0" aria-label="零用金申請">
+          <span class="card-icon" aria-hidden="true">$</span>
+          <span class="card-name">零用金申請</span>
+          <span class="card-desc">職員填單、舍友即場簽名，<br>列印單據或電子存檔上雲端檔案庫。</span>
+          <span class="card-url">/apply/</span>
+        </div>
+
+        <div class="card card-vault" data-url="/vault/" role="link" tabindex="0" aria-label="夾萬・現存">
+          <span class="card-icon" aria-hidden="true">🏦</span>
+          <span class="card-name">夾萬・現存</span>
+          <span class="card-desc">忠孝大細夾萬現存、過錢，<br>舍友結存管理及對數。</span>
+          <span class="card-url">/vault/</span>
+        </div>
+
+        <div class="card card-admin" data-url="/admin/" role="link" tabindex="0" aria-label="後台管理">
+          <span class="card-icon" aria-hidden="true">📊</span>
+          <span class="card-name">後台管理</span>
+          <span class="card-desc">支錢數據統計、匯出 CSV／ZIP，<br>結算及刪除記錄。</span>
+          <span class="card-url">/admin/</span>
+        </div>
+      </div>
+
+      <a class="portal-link" href="https://cycportal.netlify.app/">⌂ 返回宿舍服務主頁</a>
+      <p class="note">支錢系統獨立運作，資料均儲存於雲端。</p>
+    </section>
+
+    <p class="foot">創作者：何文諾社工（香港扶幼會則仁中心）</p>
+  </main>
+
+<script>
+'use strict';
+// ── 統一登入：密碼只在此頁輸入，經網址 hash 帶到各頁面（不會送上伺服器），15 分鐘後自動登出 ──
+// 密碼同「後台管理」共用一組（存於 Supabase settings 的 admin_pw，可於後台更改）
+const AUTH_SESSION_KEY = 'cyc-portal-auth', AUTH_TTL = 15 * 60 * 1000;
+const SUPABASE_URL = 'https://abtsyfbbtpvozywqaofs.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_beq8adbuLrISIgnpbAaLEw_Da1Fva-r';
+const DEFAULT_PW = '8888';
+
+const $ = id => document.getElementById(id);
+
+function portalAuth() {
+  try {
+    const a = JSON.parse(sessionStorage.getItem(AUTH_SESSION_KEY));
+    if (a && typeof a.p === 'string' && a.p && Number.isFinite(a.exp)) {
+      if (Date.now() < a.exp) return a;
+      sessionStorage.removeItem(AUTH_SESSION_KEY);
+    }
+  } catch (e) {}
+  return null;
+}
+function portalLogin(p) {
+  const exp = Date.now() + AUTH_TTL;
+  try {
+    sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify({ p, exp }));
+    // 順便開埋後台 session：同一組密碼，入 /admin/ 同 /vault/ 唔使再入一次
+    sessionStorage.setItem('cyc-admin-auth', JSON.stringify({ exp }));
+  } catch (e) {}
+}
+function portalLogout() {
+  try {
+    sessionStorage.removeItem(AUTH_SESSION_KEY);
+    sessionStorage.removeItem('cyc-admin-auth');
+  } catch (e) {}
+}
+
+function showLock(msg) {
+  $('mainView').hidden = true;
+  $('lockView').hidden = false;
+  $('lockMsg').textContent = msg || '';
+  $('lockSkip').hidden = true;
+  $('lockInput').focus();
+}
+function showMain() {
+  $('lockView').hidden = true;
+  $('mainView').hidden = false;
+  tickSession();
+}
+function tickSession() {
+  const a = portalAuth();
+  if (!a) { showLock('登入已過期（15 分鐘），請重新輸入密碼。'); return; }
+  const mins = Math.max(1, Math.ceil((a.exp - Date.now()) / 60000));
+  const until = new Date(a.exp).toLocaleTimeString('zh-HK', { hour: '2-digit', minute: '2-digit' });
+  $('sessionPill').textContent = `已登入 · ${until} 自動登出（約 ${mins} 分鐘）`;
+}
+setInterval(tickSession, 15000);
+
+// 驗證密碼：讀 Supabase settings 嘅 admin_pw（同後台同一組密碼）
+async function verifyPassword(p) {
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/settings?key=eq.admin_pw&select=value', {
+      cache: 'no-store',
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY },
+    });
+    if (!res.ok) return 'unknown';
+    const rows = await res.json();
+    const real = (rows && rows[0] && typeof rows[0].value === 'string' && rows[0].value) || DEFAULT_PW;
+    return p === real ? 'ok' : 'wrong';
+  } catch (e) {
+    return 'unknown';
+  }
+}
+
+let lastTry = '';
+$('lockForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const p = $('lockInput').value.trim();
+  if (!p) { $('lockMsg').textContent = '請先輸入密碼。'; return; }
+  lastTry = p;
+  $('lockGo').disabled = true;
+  $('lockMsg').textContent = '正在驗證…';
+  $('lockSkip').hidden = true;
+  const outcome = await verifyPassword(p);
+  $('lockGo').disabled = false;
+  if (outcome === 'ok') {
+    portalLogin(p);
+    $('lockInput').value = '';
+    showMain();
+  } else if (outcome === 'wrong') {
+    $('lockMsg').textContent = '密碼不正確，請再試一次。';
+  } else {
+    $('lockMsg').textContent = '未能連線驗證密碼，請檢查網絡。';
+    $('lockSkip').hidden = false;
+  }
+});
+$('lockSkipBtn').addEventListener('click', () => {
+  if (!lastTry) return;
+  portalLogin(lastTry);
+  $('lockInput').value = '';
+  showMain();
+});
+$('logoutBtn').addEventListener('click', () => {
+  portalLogout();
+  showLock('已登出。');
+});
+
+// 進入各頁面時，把密碼及進入時間附加在網址 hash（只留在瀏覽器，不會送上伺服器）
+function openSystem(url) {
+  const a = portalAuth();
+  if (!a) { showLock('登入已過期（15 分鐘），請重新輸入密碼。'); return; }
+  location.href = url + '#key=' + encodeURIComponent(a.p) + '&t=' + Date.now();
+}
+document.querySelectorAll('.card[data-url]').forEach(card => {
+  card.addEventListener('click', () => openSystem(card.dataset.url));
+  card.addEventListener('keydown', e => {
+    if (e.target === card && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openSystem(card.dataset.url); }
+  });
+});
+
+// 開啟時：已有有效登入就直接顯示功能頁
+if (portalAuth()) showMain(); else showLock('');
+</script>
+</body>
+</html>

@@ -148,12 +148,12 @@
 
 <script>
 // ====================== 入口頁統一登入 ======================
-// 密碼統一喺前置頁面輸入；未登入或超過 15 分鐘即返回入口頁
+// 密碼統一喺前置頁面輸入；未登入即返回入口頁（唔設時限，用到登出或關閉分頁）
 (function(){
   try {
     var h = new URLSearchParams(location.hash.slice(1)), k = h.get('key'), t = Number(h.get('t'));
-    if (k && isFinite(t) && Math.abs(Date.now() - t) < 900000) {
-      sessionStorage.setItem('cyc-portal-auth', JSON.stringify({ p: k, exp: t + 900000 }));
+    if (k && isFinite(t) && Math.abs(Date.now() - t) < 86400000) {
+      sessionStorage.setItem('cyc-portal-auth', JSON.stringify({ p: k, exp: Date.now() + 365 * 24 * 60 * 60 * 1000 }));
     }
     if (k || h.get('t')) history.replaceState(null, '', location.pathname + location.search);
   } catch (e) {}
@@ -424,7 +424,7 @@ create policy "anon access" on settings
     <!-- 入場密碼（已取消） -->
     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-3">
       <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wide">入場密碼</h3>
-      <p class="text-xs text-slate-500">入場密碼已取消：而家統一由「忠孝宿舍服務」入口頁登入，15 分鐘後自動登出。職員個人密碼仍然保留，用嚟控制電子簽名圖嘅使用。</p>
+      <p class="text-xs text-slate-500">入場密碼已取消：而家統一由「忠孝宿舍服務」入口頁登入，唔設時限（用到登出或關閉分頁）。職員個人密碼仍然保留，用嚟控制電子簽名圖嘅使用。</p>
     </div>
 
     <!-- 版本記錄 -->
@@ -432,7 +432,17 @@ create policy "anon access" on settings
       <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wide">版本記錄</h3>
       <div class="text-sm space-y-3">
         <div class="flex gap-3">
-          <span class="shrink-0 text-xs font-bold text-white bg-emerald-600 rounded-full px-2.5 py-1 h-fit">v1.5.0</span>
+          <span class="shrink-0 text-xs font-bold text-white bg-emerald-600 rounded-full px-2.5 py-1 h-fit">v1.5.1</span>
+          <div>
+            <div class="font-bold text-slate-900">取消 15 分鐘自動登出 <span class="text-xs font-normal text-slate-400">2026-09-23</span></div>
+            <ul class="text-xs text-slate-500 mt-1 list-disc pl-4 space-y-0.5">
+              <li>前置頁登入、後台／夾萬登入、簽名檔解鎖全部唔再限時，用到撳「登出」或關閉分頁為止</li>
+              <li>登入狀態列改為顯示登入者身份，唔再倒數登出時間</li>
+            </ul>
+          </div>
+        </div>
+        <div class="flex gap-3">
+          <span class="shrink-0 text-xs font-bold text-white bg-blue-600 rounded-full px-2.5 py-1 h-fit">v1.5.0</span>
           <div>
             <div class="font-bold text-slate-900">Google 網域登入 <span class="text-xs font-normal text-slate-400">2026-09-23</span></div>
             <ul class="text-xs text-slate-500 mt-1 list-disc pl-4 space-y-0.5">
@@ -901,8 +911,8 @@ let staffUser = '';
 let currentRec = null;   // 重印用
 let f_house = '';
 
-// ---- 支款人選擇：有簽名檔案嘅職員（何文諾、何樂軒）要先輸入個人密碼；驗證 15 分鐘有效 ----
-const STAFF_OK_MS = 900000;
+// ---- 支款人選擇：有簽名檔案嘅職員（何文諾、何樂軒）要先輸入個人密碼；驗證後唔設時限（關分頁即止） ----
+const STAFF_OK_MS = 365 * 24 * 60 * 60 * 1000;
 function staffOk(name){
   try {
     const v = JSON.parse(sessionStorage.getItem('staff-ok-' + name) || 'null');
@@ -931,7 +941,7 @@ $('f_staff_pw').addEventListener('input', () => {
     staffUser = name;
     $('f_staff_pw').value = '';
     $('f_staff_pw').classList.add('hidden');
-    toast('已驗證支款人「' + name + '」，簽名檔案已解鎖（15 分鐘有效）。');
+    toast('已驗證支款人「' + name + '」，簽名檔案已解鎖。');
     renderForm();
   }
 });

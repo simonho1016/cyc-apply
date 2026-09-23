@@ -51,8 +51,8 @@
 (function(){
   try {
     var h = new URLSearchParams(location.hash.slice(1)), k = h.get('key'), t = Number(h.get('t'));
-    if (k && isFinite(t) && Math.abs(Date.now() - t) < 900000) {
-      sessionStorage.setItem('cyc-portal-auth', JSON.stringify({ p: k, exp: t + 900000 }));
+    if (k && isFinite(t) && Math.abs(Date.now() - t) < 86400000) {
+      sessionStorage.setItem('cyc-portal-auth', JSON.stringify({ p: k, exp: Date.now() + 365 * 24 * 60 * 60 * 1000 }));
     }
     if (k || h.get('t')) history.replaceState(null, '', location.pathname + location.search);
   } catch (e) {}
@@ -87,7 +87,7 @@
   <section id="gateScreen" class="hidden max-w-sm mx-auto mt-10">
     <div class="card bg-white p-6 space-y-4">
       <h2 class="text-sm font-bold text-indigo-600 uppercase tracking-wide">後台登入</h2>
-      <p class="text-xs text-slate-500">後台載有所有支錢數據，請輸入後台密碼（登入 15 分鐘有效）。</p>
+      <p class="text-xs text-slate-500">後台載有所有支錢數據，請輸入後台密碼。</p>
       <input id="gate_pw" type="password" autocomplete="off" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="後台密碼">
       <p id="gate_err" class="text-xs text-red-500 h-4"></p>
       <button id="gate_btn" class="w-full py-2.5 rounded-lg bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition">進入後台</button>
@@ -270,8 +270,8 @@ async function getAdminPw(){
   } catch {}
   return DEFAULT_ADMIN_PW;
 }
-// 後台登入 15 分鐘有效（同入口頁一樣），過期要重新輸入密碼
-const ADMIN_AUTH_MS = 900000;
+// 後台登入唔設時限：用到撳登出或關閉分頁（sessionStorage）為止
+const ADMIN_AUTH_MS = 365 * 24 * 60 * 60 * 1000;
 function setAdminAuth(){ sessionStorage.setItem('cyc-admin-auth', JSON.stringify({ exp: Date.now() + ADMIN_AUTH_MS })); }
 function hasAdminAuth(){
   try {
@@ -297,7 +297,7 @@ $('adminLogout').addEventListener('click', () => {
 });
 setInterval(() => {
   if (!$('mainScreen').classList.contains('hidden') && !hasAdminAuth() && !isGoogleAdmin()) {
-    alert('後台登入已過期（15 分鐘），請重新登入。');
+    alert('後台登入狀態已清除，請重新登入。');
     location.reload();
   }
 }, 15000);

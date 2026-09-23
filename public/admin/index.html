@@ -296,7 +296,7 @@ $('adminLogout').addEventListener('click', () => {
   location.reload();
 });
 setInterval(() => {
-  if (!$('mainScreen').classList.contains('hidden') && !hasAdminAuth()) {
+  if (!$('mainScreen').classList.contains('hidden') && !hasAdminAuth() && !isGoogleAdmin()) {
     alert('後台登入已過期（15 分鐘），請重新登入。');
     location.reload();
   }
@@ -932,7 +932,14 @@ $('pw_save').addEventListener('click', async () => {
 });
 
 // ---- 初始化 ----
-if (hasAdminAuth()) showMain();
+// Google 網域登入嘅 admin（ho.ml@sbccyc.org.hk）免密直入後台
+function isGoogleAdmin(){
+  try {
+    const a = JSON.parse(sessionStorage.getItem('cyc-portal-auth') || 'null');
+    return !!(a && a.admin === true && a.email === 'ho.ml@sbccyc.org.hk' && Number.isFinite(a.exp) && Date.now() < a.exp);
+  } catch { return false; }
+}
+if (hasAdminAuth() || isGoogleAdmin()) showMain();
 else $('gateScreen').classList.remove('hidden');
 </script>
 </body>

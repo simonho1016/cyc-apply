@@ -4,7 +4,7 @@
 window.VERSIONS = [
   { v: 'v1.9.1', color: 'emerald', title: '簽名板適配修正・同事對照表', date: '2026-09-24', items: [
     '修正簽名板喺 iPhone 上未能適配螢幕：改用動態 viewport 尺寸（扣走瀏覽器工具列）、轉機偵測更可靠、簽名時鎖住背景捲動、橫向矮螢幕自動收細標題列',
-    '新增同事電郵對照：滕家麟 tab.kl、潘耀鋒 pun.yf、容俊杰 yung.ck、王子維 wong.tw、文然澤 man.yc（連同何文諾 ho.ml、何樂軒 ho.lh），登入後支款人自動鎖定本人'
+    '新增同事電郵對照：滕家麟 tan.kl、潘耀鋒 pun.yf、容俊杰 yung.ck、王子維 wong.tw、文然澤 man.yc（連同何文諾 ho.ml、何樂軒 ho.lh），登入後支款人自動鎖定本人'
   ]},
   { v: 'v1.9.0', color: 'blue', title: '支錢紀錄頁・職員即場簽署', date: '2026-09-24', items: [
     '新增「🧾 支錢紀錄」頁（/records/）：同事隨時查返自己嘅支錢紀錄，分「全部／未結算／已結算」，可以直接列印 PDF；admin 可以按職員篩選',

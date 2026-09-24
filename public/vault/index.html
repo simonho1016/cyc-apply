@@ -77,38 +77,38 @@
         <h3 class="text-sm font-bold text-amber-600 uppercase tracking-wide">🏦 夾萬現存</h3>
         <span id="vault_check" class="text-xs text-slate-500"></span>
       </div>
-      <p class="text-xs text-slate-500">每社有兩個夾萬：大夾萬（宿舍夾萬）過錢俾細夾萬（家社夾萬）；舍友支出必由<b>該社細夾萬</b>找數，細夾萬唔夠錢就唔可以結算或用「夾萬支付」。兩社大＋細總和 = 全體舍友總結存＋未結算墊支。</p>
+      <p class="text-xs text-slate-500">每社有兩個夾萬：現存現金（中心夾萬）過錢俾代管現金（家社夾萬）；舍友支出必由<b>該社代管現金</b>找數，代管現金唔夠錢就唔可以結算或用「夾萬支付」。兩社現存現金＋代管現金總和 = 全體舍友總結存＋未結算墊支。</p>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div class="rounded-xl border-2 border-rose-200 bg-rose-50/50 p-3 space-y-2">
           <div class="text-xs font-bold text-rose-600">■ 忠社</div>
           <label class="block">
-            <span class="text-xs font-medium text-slate-500">忠社大夾萬（宿舍夾萬）</span>
+            <span class="text-xs font-medium text-slate-500">忠社現存現金（中心夾萬）</span>
             <input id="vault_zhong_big" type="number" step="0.01" min="0" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="0.00">
           </label>
           <label class="block">
-            <span class="text-xs font-medium text-slate-500">忠社細夾萬（家社夾萬）</span>
+            <span class="text-xs font-medium text-slate-500">忠社代管現金（家社夾萬）</span>
             <input id="vault_zhong_small" type="number" step="0.01" min="0" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="0.00">
           </label>
         </div>
         <div class="rounded-xl border-2 border-blue-200 bg-blue-50/50 p-3 space-y-2">
           <div class="text-xs font-bold text-blue-600">■ 孝社</div>
           <label class="block">
-            <span class="text-xs font-medium text-slate-500">孝社大夾萬（宿舍夾萬）</span>
+            <span class="text-xs font-medium text-slate-500">孝社現存現金（中心夾萬）</span>
             <input id="vault_xiao_big" type="number" step="0.01" min="0" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="0.00">
           </label>
           <label class="block">
-            <span class="text-xs font-medium text-slate-500">孝社細夾萬（家社夾萬）</span>
+            <span class="text-xs font-medium text-slate-500">孝社代管現金（家社夾萬）</span>
             <input id="vault_xiao_small" type="number" step="0.01" min="0" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="0.00">
           </label>
         </div>
       </div>
       <div class="flex items-center gap-2 flex-wrap">
         <button id="vault_save" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-amber-600 hover:bg-amber-700 transition">儲存夾萬現存</button>
-        <span class="text-xs text-slate-400">直接改數會覆蓋現存；日常過錢請用下面「大 → 細」。</span>
+        <span class="text-xs text-slate-400">直接改數會覆蓋現存；日常過錢請用下面「現存現金 → 代管現金」。</span>
       </div>
       <div class="border-t border-slate-100 pt-3 space-y-2">
         <div class="flex items-center gap-2 flex-wrap">
-          <span class="text-xs font-medium text-slate-500">大夾萬過錢俾細夾萬：</span>
+          <span class="text-xs font-medium text-slate-500">現存現金過錢俾代管現金：</span>
           <select id="vault_xfer_house" class="rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white outline-none">
             <option value="zhong">忠社</option>
             <option value="xiao">孝社</option>
@@ -117,7 +117,7 @@
           <input id="vault_xfer_by" type="text" maxlength="20" class="w-24 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="轉賬人">
           <input id="vault_xfer_to" type="text" maxlength="20" class="w-24 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="收款人">
           <input id="vault_xfer_note" type="text" maxlength="50" class="flex-1 min-w-28 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="備註（可留空）">
-          <button id="vault_xfer" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-slate-700 hover:bg-slate-800 transition">大 → 細 過錢</button>
+          <button id="vault_xfer" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-slate-700 hover:bg-slate-800 transition">現存現金 → 代管現金 過錢</button>
         </div>
         <p class="text-xs text-slate-400">過錢會記入流水賬，月結紀錄嘅「戶口轉賬紀錄」會列出轉賬人同收款人。</p>
       </div>
@@ -143,7 +143,7 @@
         <h3 class="text-sm font-bold text-emerald-600 uppercase tracking-wide">💵 舍友存入</h3>
         <span class="text-xs text-slate-500">下一個收款編號：<input id="receipt_next" type="number" min="1" step="1" class="w-24 rounded-lg border border-slate-300 px-2 py-1 text-sm outline-none"> <button id="receipt_next_save" class="px-2 py-1 rounded-lg text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">儲存</button></span>
       </div>
-      <p class="text-xs text-slate-500">舍友存入款項時喺度登記：結存即時增加、款項落入你揀嘅<b>結算戶口</b>（預設代管現金・細夾萬），並自動開出收款編號（CYC xxxxxx，接續舊系統編號）。收款編號只會喺存入時出現。「列印票據」功能待開放。</p>
+      <p class="text-xs text-slate-500">舍友存入款項時喺度登記：結存即時增加、款項落入你揀嘅<b>結算戶口</b>（預設代管現金），並自動開出收款編號（CYC xxxxxx，接續舊系統編號）。收款編號只會喺存入時出現。「列印票據」功能待開放。</p>
       <div class="flex items-end gap-2 flex-wrap">
         <label class="block">
           <span class="text-xs font-medium text-slate-500">社別</span>
@@ -172,8 +172,8 @@
         <label class="block">
           <span class="text-xs font-medium text-slate-500">結算戶口</span>
           <select id="dep_acct" class="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white outline-none">
-            <option value="small">代管現金（細夾萬）</option>
-            <option value="big">現存現金（大夾萬）</option>
+            <option value="small">代管現金（家社夾萬）</option>
+            <option value="big">現存現金（中心夾萬）</option>
           </select>
         </label>
         <label class="block">
@@ -216,10 +216,10 @@
       <div>
         <p class="text-xs font-bold text-slate-500 mb-1">四個夾萬起始現存</p>
         <div class="grid grid-cols-2 gap-2 text-sm">
-          <label class="block"><span class="text-xs text-slate-500">忠社大夾萬</span><input id="seed_zb" type="number" step="0.01" min="0" class="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1.5 outline-none"></label>
-          <label class="block"><span class="text-xs text-slate-500">忠社細夾萬</span><input id="seed_zs" type="number" step="0.01" min="0" class="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1.5 outline-none"></label>
-          <label class="block"><span class="text-xs text-slate-500">孝社大夾萬</span><input id="seed_xb" type="number" step="0.01" min="0" class="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1.5 outline-none"></label>
-          <label class="block"><span class="text-xs text-slate-500">孝社細夾萬</span><input id="seed_xs" type="number" step="0.01" min="0" class="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1.5 outline-none"></label>
+          <label class="block"><span class="text-xs text-slate-500">忠社現存現金</span><input id="seed_zb" type="number" step="0.01" min="0" class="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1.5 outline-none"></label>
+          <label class="block"><span class="text-xs text-slate-500">忠社代管現金</span><input id="seed_zs" type="number" step="0.01" min="0" class="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1.5 outline-none"></label>
+          <label class="block"><span class="text-xs text-slate-500">孝社現存現金</span><input id="seed_xb" type="number" step="0.01" min="0" class="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1.5 outline-none"></label>
+          <label class="block"><span class="text-xs text-slate-500">孝社代管現金</span><input id="seed_xs" type="number" step="0.01" min="0" class="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1.5 outline-none"></label>
         </div>
       </div>
       <div>
@@ -377,15 +377,15 @@ async function renderVault(){
     if (error) { if (/settled_at|42703|schema cache/i.test(error.message)) advOk = false; }
     else adv = r2((data || []).reduce((a, r) => a + Number(r.amount || 0), 0));
   } catch { advOk = false; }
-  // 對照行：兩社大＋細總和 vs 舍友總結存＋未結算墊支
+  // 對照行：兩社現存＋代管總和 vs 舍友總結存＋未結算墊支
   const vaultTotal = r2(v.zhong_big + v.zhong_small + v.xiao_big + v.xiao_small);
   if (!v.init) {
     $('vault_check').textContent = '⚠️ 夾萬未設定，請先輸入四個現存數再儲存。';
   } else if (!advOk) {
-    $('vault_check').textContent = `大＋細總和 ${money(vaultTotal)} ｜ 舍友總結存 ${money(balTotal)}`;
+    $('vault_check').textContent = `現存＋代管總和 ${money(vaultTotal)} ｜ 舍友總結存 ${money(balTotal)}`;
   } else {
     const expected = r2(balTotal + adv);
-    $('vault_check').textContent = `大＋細總和 ${money(vaultTotal)} ｜ 舍友總結存 ${money(balTotal)} ＋ 未結算墊支 ${money(adv)} ＝ ${money(expected)}${Math.abs(vaultTotal - expected) >= 0.005 ? ' ⚠️ 唔對數' : ' ✅ 對數'}`;
+    $('vault_check').textContent = `現存＋代管總和 ${money(vaultTotal)} ｜ 舍友總結存 ${money(balTotal)} ＋ 未結算墊支 ${money(adv)} ＝ ${money(expected)}${Math.abs(vaultTotal - expected) >= 0.005 ? ' ⚠️ 唔對數' : ' ✅ 對數'}`;
   }
 }
 
@@ -402,7 +402,7 @@ $('vault_save').addEventListener('click', async () => {
     await saveSafeVault(v);
     const rows = [];
     const now = new Date().toISOString();
-    [['zhong','big','大夾萬'],['zhong','small','細夾萬'],['xiao','big','大夾萬'],['xiao','small','細夾萬']].forEach(([h, a, label]) => {
+    [['zhong','big','現存現金'],['zhong','small','代管現金'],['xiao','big','現存現金'],['xiao','small','代管現金']].forEach(([h, a, label]) => {
       const key = h + '_' + a, nv = v[key], ov = prev.init ? prev[key] : 0;
       if (Math.abs(nv - ov) >= 0.005) rows.push({ created_at: now, house: h, kind: 'adjust', account: a, account_delta: r2(nv - ov), account_bal_after: nv, note: '人手修正' + label });
     });
@@ -412,7 +412,7 @@ $('vault_save').addEventListener('click', async () => {
   } catch (e) { alert('儲存失敗：' + e.message); }
 });
 
-// ---- 大 → 細 過錢（同社之內）；記流水賬：大夾萬一筆出、細夾萬一筆入 ----
+// ---- 現存現金 → 代管現金 過錢（同社之內）；記流水賬：現存現金一筆出、代管現金一筆入 ----
 $('vault_xfer').addEventListener('click', async () => {
   const amt = Number($('vault_xfer_amt').value) || 0;
   if (amt <= 0) { alert('請輸入過錢金額。'); $('vault_xfer_amt').focus(); return; }
@@ -422,7 +422,7 @@ $('vault_xfer').addEventListener('click', async () => {
   const hName = k === 'xiao' ? '孝社' : '忠社';
   const v = await getSafeVault();
   if (!v.init) { alert('請先設定四個夾萬現存數。'); return; }
-  if (v[k + '_big'] < amt) { alert(`${hName}大夾萬現存 ${money(v[k + '_big'])} 唔夠過 ${money(amt)}。`); return; }
+  if (v[k + '_big'] < amt) { alert(`${hName}現存現金現存 ${money(v[k + '_big'])} 唔夠過 ${money(amt)}。`); return; }
   const next = { zhong_big: v.zhong_big, zhong_small: v.zhong_small, xiao_big: v.xiao_big, xiao_small: v.xiao_small };
   next[k + '_big'] = r2(next[k + '_big'] - amt);
   next[k + '_small'] = r2(next[k + '_small'] + amt);
@@ -434,7 +434,7 @@ $('vault_xfer').addEventListener('click', async () => {
       { created_at: now, house: k, kind: 'transfer', amount: amt, account: 'small', account_delta: amt,  account_bal_after: next[k + '_small'], staff: by, staff2: to, note: $('vault_xfer_note').value.trim() }
     ]);
     $('vault_xfer_amt').value = ''; $('vault_xfer_note').value = '';
-    toast(`已由${hName}大夾萬過 ${money(amt)} 俾${hName}細夾萬。`);
+    toast(`已由${hName}現存現金過 ${money(amt)} 俾${hName}代管現金。`);
     renderVault();
   } catch (e) { alert('過錢失敗：' + e.message); }
 });
@@ -500,7 +500,7 @@ $('dep_go').addEventListener('click', async () => {
   if (!staff) { alert('請填經手職員姓名。'); $('dep_staff').focus(); return; }
   const depCat = $('dep_cat').value;                    // 家長存入／社工存入／承存結餘／調節
   const depAcct = $('dep_acct').value;                  // big（現存現金）/ small（代管現金）
-  const acctLabel = depAcct === 'big' ? '現存現金（大夾萬）' : '代管現金（細夾萬）';
+  const acctLabel = depAcct === 'big' ? '現存現金（中心夾萬）' : '代管現金（家社夾萬）';
   const v = await getSafeVault();
   if (!v.init) { alert('請先設定四個夾萬現存數（存入嘅款項要落入結算戶口）。'); return; }
   if (!confirm(`確定 ${hName} ${mName} 存入 ${money(amt)}？\n類別：${depCat}　結算戶口：${acctLabel}\n會開出收款編號，結存同戶口即時增加。`)) return;

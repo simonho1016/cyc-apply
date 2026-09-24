@@ -289,7 +289,7 @@
         <label class="flex items-center gap-2 rounded-lg border-2 border-amber-300 bg-amber-50 px-3 py-2.5 text-sm cursor-pointer">
           <input type="checkbox" id="f_safepay" class="accent-amber-600 w-4 h-4">
           <span class="font-bold text-amber-800 shrink-0">🏦 夾萬支付</span>
-          <span class="text-xs text-amber-700">由細夾萬直接俾錢，自動結算，唔使再入後台結算</span>
+          <span class="text-xs text-amber-700">由代管現金直接俾錢，自動結算，唔使再入後台結算</span>
         </label>
 
         <div class="flex gap-2">
@@ -970,12 +970,12 @@ async function ledgerInsert(rows){
     }
   }
 }
-// 夾萬支付：檢查該社細夾萬夠唔夠錢，夠先俾印／存；成功後即扣數
+// 夾萬支付：檢查該社代管現金夠唔夠錢，夠先俾印／存；成功後即扣數
 async function checkSafePay(house, amount){
   const v = await getSafeVault();
   const k = houseKey(house) + '_small';
   if (v.init && v[k] < amount) {
-    alert(`${house}細夾萬現存 $${v[k].toFixed(2)} 唔夠支付 $${amount.toFixed(2)}。\n請通知負責同事由${house}大夾萬過錢，或取消「夾萬支付」改用墊支。`);
+    alert(`${house}代管現金現存 $${v[k].toFixed(2)} 唔夠支付 $${amount.toFixed(2)}。\n請通知負責同事由${house}現存現金過錢，或取消「夾萬支付」改用墊支。`);
     return null;
   }
   return v;
@@ -986,7 +986,7 @@ async function deductSafe(house, amount){
   v[k] = Math.round((v[k] - amount) * 100) / 100;
   delete v.init;
   await DB.setSetting('safe_vault', { zhong_big: v.zhong_big, zhong_small: v.zhong_small, xiao_big: v.xiao_big, xiao_small: v.xiao_small });
-  return v[k];   // 回傳扣完嘅細夾萬現存（寫流水賬用）
+  return v[k];   // 回傳扣完嘅代管現金現存（寫流水賬用）
 }
 
 // ---- 舍友現存自動扣數（settings key: member_bal = { 舍友id: 結存 }；後台／夾萬頁未儲存過就唔扣，保持兼容）----
@@ -1077,7 +1077,7 @@ $('f_archive').addEventListener('click', async () => {
   if (printing) return;
   const d = validateForm();
   if (!d) return;
-  if (d.safePay && !await checkSafePay(d.house, parseFloat(d.amount))) return;   // 細夾萬唔夠錢 → 停
+  if (d.safePay && !await checkSafePay(d.house, parseFloat(d.amount))) return;   // 代管現金唔夠錢 → 停
   if (!await checkMemberBal(d.payeeId, d.payee, parseFloat(d.amount))) return;   // 舍友結存唔夠，取消就停
   fillSheet(d);
   const sig = await openSignPad(d.payee);      // 要舍友即場簽名

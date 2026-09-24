@@ -140,7 +140,7 @@
 
     <!-- 夾萬・舍友現存入口（已搬去獨立頁面，避免同結算混雜） -->
     <a href="/vault/" class="card bg-amber-50 p-4 flex items-center justify-between gap-3 hover:bg-amber-100 transition">
-      <span class="text-sm"><span class="font-bold text-amber-700">🏦 夾萬・舍友現存</span><span class="block text-xs text-slate-500 mt-0.5">大／細夾萬現存、過錢、舍友結存、自動對數——已搬去獨立頁面管理</span></span>
+      <span class="text-sm"><span class="font-bold text-amber-700">🏦 夾萬・舍友現存</span><span class="block text-xs text-slate-500 mt-0.5">現存現金／代管現金結餘、過錢、舍友結存、自動對數——已搬去獨立頁面管理</span></span>
       <span class="shrink-0 px-4 py-2 rounded-lg text-sm font-bold text-white bg-amber-600">進入 →</span>
     </a>
 
@@ -478,7 +478,7 @@ function refreshSettleBtn(){
   $('print_btn').textContent = pdfN ? `🖨 列印所選（${pdfN} 份）` : '🖨 列印所選';
 }
 
-// ---- 刪除記錄（單筆／批量）；有雲端 PDF 會一併刪除；舍友結存同細夾萬自動回補；寫流水賬 ----
+// ---- 刪除記錄（單筆／批量）；有雲端 PDF 會一併刪除；舍友結存同代管現金自動回補；寫流水賬 ----
 async function deleteRecords(list){
   const paths = list.map(r => r.pdf_path).filter(Boolean);
   const { error } = await sb.from('applications').delete().in('id', list.map(r => r.id));
@@ -505,7 +505,7 @@ async function deleteRecords(list){
       if (touched) await sb.from('settings').upsert({ key: 'member_bal', value: bal });
     }
   } catch { /* 回補失敗唔阻刪除，可去「夾萬・現存」頁手動改返 */ }
-  // 回補細夾萬（夾萬支付即扣咗；已結算嘅單結算時扣咗——兩類都要加返）
+  // 回補代管現金（夾萬支付即扣咗；已結算嘅單結算時扣咗——兩類都要加返）
   try {
     const vault = await getSafeVault();
     if (vault.init) {
@@ -540,7 +540,7 @@ $('rec_list').addEventListener('click', async e => {
   if (!btn) return;
   const rec = rows.find(r => String(r.id) === btn.dataset.id);
   if (!rec) return;
-  if (!confirm(`確定刪除 ${rec.payee} 嘅記錄（${money(rec.amount)}${rec.serial ? '，序號 ' + rec.serial : ''}）？${rec.pdf_path ? '\n雲端 PDF 會一併刪除。' : ''}\n舍友結存會自動回補${rec.safe_pay || rec.settled_at ? '，細夾萬亦會回補' : ''}；序號唔會重用，刪除後唔可以還原。`)) return;
+  if (!confirm(`確定刪除 ${rec.payee} 嘅記錄（${money(rec.amount)}${rec.serial ? '，序號 ' + rec.serial : ''}）？${rec.pdf_path ? '\n雲端 PDF 會一併刪除。' : ''}\n舍友結存會自動回補${rec.safe_pay || rec.settled_at ? '，代管現金亦會回補' : ''}；序號唔會重用，刪除後唔可以還原。`)) return;
   try {
     await deleteRecords([rec]);
     toast('已刪除記錄。');
@@ -724,15 +724,15 @@ $('settle_btn').addEventListener('click', async () => {
   const ids = selectedIds();
   const sel = rows.filter(r => ids.includes(String(r.id)) && !r.settled_at);   // 已結算嘅自動跳過
   if (!sel.length) { alert('所選記錄全部已結算。'); return; }
-  // 檢查細夾萬夠唔夠錢結算（夾萬未設定就跳過檢查，照舊結算）
+  // 檢查代管現金夠唔夠錢結算（夾萬未設定就跳過檢查，照舊結算）
   const vault = await getSafeVault();
   if (vault.init) {
     const need = { zhong: 0, xiao: 0 };
     sel.forEach(r => { need[houseKey(r.house)] = r2(need[houseKey(r.house)] + Number(r.amount || 0)); });
     const lacks = [];
-    if (need.zhong > vault.zhong_small) lacks.push(`忠社細夾萬：需要 ${money(need.zhong)}，現存 ${money(vault.zhong_small)}（差 ${money(r2(need.zhong - vault.zhong_small))}）`);
-    if (need.xiao > vault.xiao_small) lacks.push(`孝社細夾萬：需要 ${money(need.xiao)}，現存 ${money(vault.xiao_small)}（差 ${money(r2(need.xiao - vault.xiao_small))}）`);
-    if (lacks.length) { alert('細夾萬唔夠錢，未能結算：\n' + lacks.join('\n') + '\n\n請先去「🏦 夾萬・現存」頁由大夾萬過錢俾細夾萬。'); return; }
+    if (need.zhong > vault.zhong_small) lacks.push(`忠社代管現金：需要 ${money(need.zhong)}，現存 ${money(vault.zhong_small)}（差 ${money(r2(need.zhong - vault.zhong_small))}）`);
+    if (need.xiao > vault.xiao_small) lacks.push(`孝社代管現金：需要 ${money(need.xiao)}，現存 ${money(vault.xiao_small)}（差 ${money(r2(need.xiao - vault.xiao_small))}）`);
+    if (lacks.length) { alert('代管現金唔夠錢，未能結算：\n' + lacks.join('\n') + '\n\n請先去「🏦 夾萬・現存」頁由現存現金過錢俾代管現金。'); return; }
   }
   // 按同事（墊支人）分項：結算即係由夾萬攞錢俾返墊支嘅同事
   const byS = {};
@@ -760,7 +760,7 @@ $('settle_ok').addEventListener('click', async () => {
   try {
     const { error } = await sb.from('applications').update({ settled_at: now, settled_by: by }).in('id', targets.map(r => r.id)).is('settled_at', null);
     if (error) throw new Error(error.message + (/column|schema cache/i.test(error.message) ? '（請去 Supabase → SQL Editor 跑：alter table applications add column if not exists settled_at timestamptz, add column if not exists settled_by text;）' : ''));
-    // 結算成功 → 由該社細夾萬扣數（夾萬未設定就唔扣）
+    // 結算成功 → 由該社代管現金扣數（夾萬未設定就唔扣）
     let deducted = false;
     try {
       const vault = await getSafeVault();
@@ -772,7 +772,7 @@ $('settle_ok').addEventListener('click', async () => {
           xiao_big: vault.xiao_big,   xiao_small: r2(vault.xiao_small - need.xiao)
         });
         deducted = true;
-        // 流水賬：每張單一筆 settle，細夾萬結餘逐張累扣
+        // 流水賬：每張單一筆 settle，代管現金結餘逐張累扣
         const run = { zhong: vault.zhong_small, xiao: vault.xiao_small };
         const now2 = new Date().toISOString();
         await ledgerInsert(targets.map(r => {
@@ -786,7 +786,7 @@ $('settle_ok').addEventListener('click', async () => {
     } catch { /* 扣數失敗唔阻結算，可去「夾萬・現存」頁手動改返 */ }
     $('settleModal').classList.add('hidden');
     $('settle_by').value = '';
-    toast(`已結算 ${n} 張單${deducted ? '，細夾萬已扣數' : ''}。`);
+    toast(`已結算 ${n} 張單${deducted ? '，代管現金已扣數' : ''}。`);
     loadData();
   } catch (e) { alert('結算失敗：' + e.message); }
 });

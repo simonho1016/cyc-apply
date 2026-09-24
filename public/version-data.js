@@ -2,7 +2,11 @@
 // /version/ 公開頁同 /apply/ 系統設定頁都係用呢份數據渲染
 // 最新版本放最前；color: emerald=最新 blue=一般 slate=取消或初版
 window.VERSIONS = [
-  { v: 'v1.9.1', color: 'emerald', title: '簽名板適配修正・同事對照表', date: '2026-09-24', items: [
+  { v: 'v1.9.2', color: 'emerald', title: '登入列顯示姓名職銜', date: '2026-09-24', items: [
+    '前置頁登入狀態列改為顯示對照姓名＋職銜（例：何文諾 社工），唔再顯示 Google 帳戶名；輸出文件（PDF 單據）維持只寫姓名不變',
+    '修正滕家麟登入電郵為 tan.kl@sbccyc.org.hk'
+  ]},
+  { v: 'v1.9.1', color: 'blue', title: '簽名板適配修正・同事對照表', date: '2026-09-24', items: [
     '修正簽名板喺 iPhone 上未能適配螢幕：改用動態 viewport 尺寸（扣走瀏覽器工具列）、轉機偵測更可靠、簽名時鎖住背景捲動、橫向矮螢幕自動收細標題列',
     '新增同事電郵對照：滕家麟 tan.kl、潘耀鋒 pun.yf、容俊杰 yung.ck、王子維 wong.tw、文然澤 man.yc（連同何文諾 ho.ml、何樂軒 ho.lh），登入後支款人自動鎖定本人'
   ]},

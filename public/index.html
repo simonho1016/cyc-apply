@@ -223,6 +223,27 @@ function roleFor(email, rolesMap) {
 }
 const ROLE_LABEL = { admin: 'admin', cashier: '支錢負責', normal: '普通' };
 
+// ── 電郵 → 姓名＋職銜對照（顯示用；支錢鎖定用人名部分）──
+const EMAIL_STAFF_MAP = {
+  'tan.kl@sbccyc.org.hk': '滕家麟',
+  'pun.yf@sbccyc.org.hk': '潘耀鋒',
+  'yung.ck@sbccyc.org.hk': '容俊杰',
+  'ho.ml@sbccyc.org.hk': '何文諾',
+  'ho.lh@sbccyc.org.hk': '何樂軒',
+  'wong.tw@sbccyc.org.hk': '王子維',
+  'man.yc@sbccyc.org.hk': '文然澤'
+};
+const STAFF_TITLE = {
+  '滕家麟': '社工', '潘耀鋒': '社工', '容俊杰': '社工',
+  '何文諾': '社工', '何樂軒': '社工',
+  '王子維': '導師', '文然澤': '導師'
+};
+// 有對照就顯示「何文諾 社工」；冇對照就用 Google 帳戶名
+function displayName(email, fallback){
+  const n = EMAIL_STAFF_MAP[(email || '').toLowerCase()];
+  return n ? n + ' ' + (STAFF_TITLE[n] || '') : (fallback || email || '');
+}
+
 // ── 模擬檢視：真 admin 可以用其他角色視角預覽（cyc-sim 只影響呢個分頁） ──
 function realRole() {
   const a = portalAuth();
@@ -313,7 +334,7 @@ function showMain() {
   // 模擬檢視提示橫額
   const s = simInfo();
   if (s) {
-    const who = s.name || s.email || '';
+    const who = displayName(s.email, s.name || '');
     $('simBanner').hidden = false;
     $('simBanner').innerHTML = '🔭 模擬檢視中：以「' + ROLE_LABEL[s.role] + '」' + (who ? '（' + who + '）' : '') + ' 視角瀏覽 · 操作會真實生效，請小心 · <button id="simStopBtn" style="text-decoration:underline;font-weight:700;background:none;border:none;cursor:pointer;color:inherit">取消模擬</button>';
     $('simStopBtn').addEventListener('click', () => { sessionStorage.removeItem('cyc-sim'); location.reload(); });
@@ -327,8 +348,8 @@ function tickSession() {
   if (!a) { showLock('登入狀態已清除，請重新登入。'); return; }
   const s = simInfo();
   const who = s
-    ? `${s.name || s.email || a.name || a.email}（${ROLE_LABEL[s.role]}·模擬中）`
-    : (a.email ? `${a.name || a.email}（${ROLE_LABEL[a.role] || '普通'}）` : '已登入');
+    ? `${displayName(s.email, s.name || a.name || a.email)}（${ROLE_LABEL[s.role]}·模擬中）`
+    : (a.email ? `${displayName(a.email, a.name)}（${ROLE_LABEL[a.role] || '普通'}）` : '已登入');
   $('sessionPill').textContent = `已登入 · ${who}`;
 }
 setInterval(tickSession, 15000);

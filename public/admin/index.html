@@ -18,30 +18,6 @@
   #toast { background: var(--ink) !important; border: 3px solid #fff !important; box-shadow: 4px 4px 0 rgba(20,20,20,.35) !important;
     font-family: "Huninn", sans-serif !important; font-size: 15px; }
   th { font-weight: 700; }
-  /* ── 月結單（照舊系統格式，A4 直向列印） ── */
-  .ms-sheet { max-width: 820px; margin: 0 auto; padding: 32px 28px; background: #fff; color: #000;
-    font-family: "DFKai-SB", "標楷體", "Noto Sans TC", "Huninn", serif; font-size: 14px; line-height: 1.5; }
-  .ms-sheet h1 { text-align: center; font-size: 20px; font-weight: 700; margin: 0 0 2px; }
-  .ms-sheet h2 { text-align: center; font-size: 17px; font-weight: 700; margin: 0 0 14px; }
-  .ms-meta { display: flex; justify-content: space-between; margin-bottom: 8px; }
-  .ms-sec { margin: 6px 0 4px; font-weight: 700; }
-  .ms-acct { display: flex; gap: 36px; flex-wrap: wrap; margin-bottom: 2px; }
-  .ms-acct b { border-bottom: 1px solid #000; padding: 0 4px; }
-  .ms-sheet table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-  .ms-sheet th, .ms-sheet td { border: 1.5px solid #000; padding: 3px 8px; font-size: 13.5px; }
-  .ms-sheet th { background: #fff; text-align: left; }
-  .ms-num { text-align: right; }
-  .ms-sig { display: flex; justify-content: space-between; gap: 24px; margin-top: 26px; }
-  .ms-sig .col div { margin-bottom: 14px; }
-  .ms-line { display: inline-block; min-width: 150px; border-bottom: 1.5px solid #000; }
-  .ms-warn { color: #b45309; font-size: 12px; margin: 4px 0; }
-  @media print {
-    body.print-statement > *:not(#sheetLayer) { display: none !important; }
-    body.print-statement #sheetLayer { position: static !important; overflow: visible !important; }
-    body.print-statement #sheetLayer .no-print { display: none !important; }
-    .ms-sheet { max-width: none; padding: 0; }
-    @page { size: A4 portrait; margin: 12mm; }
-  }
 </style>
 </head>
 <body class="text-slate-800">
@@ -144,24 +120,11 @@
       <span class="shrink-0 px-4 py-2 rounded-lg text-sm font-bold text-white bg-amber-600">進入 →</span>
     </a>
 
-    <!-- 月結紀錄（舊系統格式） -->
-    <div class="card bg-white p-5 space-y-3">
-      <h3 class="text-sm font-bold text-emerald-700 uppercase tracking-wide">🧾 零用月結紀錄（社別）</h3>
-      <p class="text-xs text-slate-500">揀社別同月份，輸出同舊系統一樣格式嘅月結單（戶口資料、戶口轉賬紀錄、舍友戶口紀錄、三級簽署欄）。數據來自流水賬：<b>承前結存</b>由「結存起點」同過往流水計出。</p>
-      <div class="flex flex-wrap items-end gap-3">
-        <label class="block">
-          <span class="text-xs font-medium text-slate-500">社別</span>
-          <select id="ms_house" class="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white outline-none">
-            <option>忠社</option><option>孝社</option>
-          </select>
-        </label>
-        <label class="block">
-          <span class="text-xs font-medium text-slate-500">月份</span>
-          <input id="ms_month" type="month" class="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none">
-        </label>
-        <button id="ms_go" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition">預覽月結</button>
-      </div>
-    </div>
+    <!-- 月結報告（已搬去獨立頁面，支錢負責都可以用） -->
+    <a href="/report/" class="card bg-emerald-50 p-4 flex items-center justify-between gap-3 hover:bg-emerald-100 transition">
+      <span class="text-sm"><span class="font-bold text-emerald-700">📑 月結報告</span><span class="block text-xs text-slate-500 mt-0.5">零用月結紀錄（社別）＋舍友零用金收支紀錄表（每人每月一版）——已搬去獨立頁面，支錢負責同事都可以列印</span></span>
+      <span class="shrink-0 px-4 py-2 rounded-lg text-sm font-bold text-white bg-emerald-600">進入 →</span>
+    </a>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
       <!-- 按舍友統計 -->
@@ -258,15 +221,6 @@
 </div>
 
 <div id="toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl text-white text-sm shadow-lg"></div>
-
-<!-- 月結單預覽／列印層 -->
-<div id="sheetLayer" class="hidden fixed inset-0 z-50 bg-white overflow-y-auto">
-  <div class="sheet-toolbar no-print sticky top-0 z-10 bg-white/95 border-b border-slate-200 px-4 py-2.5 flex items-center justify-center gap-3">
-    <button id="sheet_print" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition">🖨 列印／存 PDF</button>
-    <button id="sheet_close" class="px-5 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">✕ 關閉</button>
-  </div>
-  <div id="sheetBody"></div>
-</div>
 
 <script>
 const $ = id => document.getElementById(id);
@@ -790,131 +744,6 @@ $('settle_ok').addEventListener('click', async () => {
     loadData();
   } catch (e) { alert('結算失敗：' + e.message); }
 });
-
-// ---- 零用月結紀錄（社別）：照舊系統格式，數據來自 ledger 流水賬 ----
-const fmtMoney = n => Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fmtD = d => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
-const fmtDT = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
-
-async function buildStatement(houseName, ym){
-  const hk = houseKey(houseName);
-  const [y, m] = ym.split('-').map(Number);
-  const start = new Date(y, m - 1, 1), end = new Date(y, m, 1);
-  // 撈流水：該社月底前全部記錄（計承前要用到之前嘅）
-  const { data, error } = await sb.from('ledger').select('*').eq('house', hk)
-    .lt('created_at', end.toISOString()).order('created_at', { ascending: true }).limit(10000);
-  if (error) throw new Error(error.message + (/relation|schema cache|does not exist/i.test(error.message) ? '（ledger 表未開，請去 Supabase SQL Editor 開表）' : ''));
-  const all = data || [];
-  const before = [], during = [];
-  all.forEach(r => (new Date(r.created_at) < start ? before : during).push(r));
-
-  // 舍友名單：settings members 為主，加埋流水入面出現過嘅舊舍友
-  const membersDb = await getSettingValue('members');
-  const list = ((membersDb && membersDb[houseName]) || []).map(mm => ({ id: mm.id || mm.name, name: mm.name }));
-  const known = new Set(list.map(mm => mm.id));
-  all.forEach(r => {
-    if (r.member_id && !known.has(r.member_id)) { known.add(r.member_id); list.push({ id: r.member_id, name: r.member_name || r.member_id }); }
-  });
-
-  // 每位舍友：承前＝月起前最後一筆流水嘅 member_bal_after；存入／支出＝月內流水
-  const mRows = list.map(mm => {
-    const myB = before.filter(r => r.member_id === mm.id && r.member_bal_after !== null && r.member_bal_after !== undefined);
-    const opening = myB.length ? Number(myB[myB.length - 1].member_bal_after) : 0;
-    let dep = 0, exp = 0; const receipts = [];
-    during.filter(r => r.member_id === mm.id).forEach(r => {
-      if (r.kind === 'deposit') { dep = r2(dep + Number(r.member_delta || 0)); if (r.receipt_no) receipts.push(r.receipt_no); }
-      else if (r.kind === 'expense') exp = r2(exp - Number(r.member_delta || 0));
-      else if (r.kind === 'rollback') exp = r2(exp - Number(r.member_delta || 0));   // 刪單回補扣減支出
-    });
-    return { ...mm, opening, dep, exp, closing: r2(opening + dep - exp), receipts };
-  });
-
-  // 戶口結餘＝月底前最後一筆該夾萬流水嘅 account_bal_after；冇流水就用現時 settings 數（標注）
-  const acctFallback = !(all.some(r => r.account === 'big') && all.some(r => r.account === 'small'));
-  function accBal(a){
-    const ar = all.filter(r => r.account === a && r.account_bal_after !== null && r.account_bal_after !== undefined);
-    return ar.length ? Number(ar[ar.length - 1].account_bal_after) : null;
-  }
-  let bigBal = accBal('big'), smallBal = accBal('small');
-  if (bigBal === null || smallBal === null) {
-    const v = await getSafeVault();
-    if (v.init) { if (bigBal === null) bigBal = v[hk + '_big']; if (smallBal === null) smallBal = v[hk + '_small']; }
-  }
-  const xfers = during.filter(r => r.kind === 'transfer' && r.account === 'big');
-  return {
-    houseName, hk, y, m, start, end, mRows, xfers, bigBal, smallBal, acctFallback,
-    totOpen: r2(mRows.reduce((a, r) => a + r.opening, 0)),
-    totIn:   r2(mRows.reduce((a, r) => a + r.dep, 0)),
-    totOut:  r2(mRows.reduce((a, r) => a + r.exp, 0)),
-    totClose: r2(mRows.reduce((a, r) => a + r.closing, 0))
-  };
-}
-
-function statementHtml(st){
-  const accPre = st.hk === 'xiao' ? '孝' : '忠';
-  const totalAcct = (st.bigBal !== null && st.smallBal !== null) ? fmtMoney(r2(st.bigBal + st.smallBal)) : '—';
-  // 轉賬紀錄
-  const xferRows = st.xfers.map(x => `
-    <tr><td>${fmtDT(new Date(x.created_at))}</td><td>${accPre}_現存現金</td><td>${accPre}_代管現金</td>
-      <td class="ms-num">${fmtMoney(x.amount)}</td><td>${escapeHtml(x.note || '')}</td><td>${escapeHtml(x.staff || '')}</td><td>${escapeHtml(x.staff2 || '')}</td></tr>`).join('');
-  // 舍友戶口紀錄（補空白行至 27 行，同舊格式一樣填滿一版）
-  const blankN = Math.max(0, 27 - st.mRows.length);
-  const memRows = st.mRows.map(r => `
-    <tr><td>${escapeHtml(r.id)}</td><td>${escapeHtml(r.name)}</td>
-      <td class="ms-num">${fmtMoney(r.opening)}</td><td class="ms-num">${fmtMoney(r.dep)}</td>
-      <td class="ms-num">${fmtMoney(r.exp)}</td><td class="ms-num">${fmtMoney(r.closing)}</td>
-      <td>${r.receipts.map(escapeHtml).join(', ')}</td></tr>`).join('')
-    + Array.from({ length: blankN }, () => '<tr>' + '<td>&nbsp;</td>'.repeat(7) + '</tr>').join('');
-  return `<div class="ms-sheet">
-    <h1>香港扶幼會 香港扶幼會則仁中心</h1>
-    <h2>零用月結紀錄(社別)</h2>
-    <div class="ms-meta"><span>社別︰${st.houseName}　${st.y} 年 ${st.m} 月份</span><span>時段︰${fmtD(st.start)}–${fmtD(new Date(st.end.getTime() - 86400000))}</span></div>
-    <div class="ms-sec">戶口資料</div>
-    <div class="ms-acct"><span>${accPre}_現存現金<small>結餘：</small><b>$${st.bigBal !== null ? fmtMoney(st.bigBal) : '—'}</b></span>
-      <span>${accPre}_代管現金<small>結餘：</small><b>$${st.smallBal !== null ? fmtMoney(st.smallBal) : '—'}</b></span>
-      <span>總金額︰<b>$${totalAcct}</b></span></div>
-    <div class="ms-acct"><span>時段內支出︰<b>$${fmtMoney(st.totOut)}</b></span><span>時段內存入︰<b>$${fmtMoney(st.totIn)}</b></span></div>
-    ${st.acctFallback ? '<div class="ms-warn">⚠️ 戶口結餘未見流水記錄，以上顯示現時夾萬數作參考；請先去「🏦 夾萬・現存」設定結存起點。</div>' : ''}
-    <div class="ms-sec">戶口轉賬紀錄</div>
-    <table><thead><tr><th>日期/時間</th><th>轉出戶口</th><th>轉入戶口</th><th class="ms-num">金額</th><th>備註</th><th>轉賬人</th><th>收款人</th></tr></thead>
-      <tbody>${xferRows}</tbody></table>
-    <div class="ms-sec">舍友戶口紀錄</div>
-    <table><thead><tr><th>舍友編號</th><th>姓名</th><th class="ms-num">承前結存</th><th class="ms-num">時段內存入</th><th class="ms-num">時段內支出</th><th class="ms-num">結存</th><th>備註/收款編號</th></tr></thead>
-      <tbody>${memRows}
-      <tr><td colspan="2"></td><td class="ms-num"><b>${fmtMoney(st.totOpen)}</b></td><td class="ms-num"><b>${fmtMoney(st.totIn)}</b></td><td class="ms-num"><b>${fmtMoney(st.totOut)}</b></td><td class="ms-num"><b>${fmtMoney(st.totClose)}</b></td><td></td></tr></tbody></table>
-    <div class="ms-sig">
-      <div class="col">
-        <div>負責人姓名及簽署 : （　　　　）<span class="ms-line"></span></div>
-        <div>審核人姓名及簽署 : （　　　　）<span class="ms-line"></span></div>
-        <div>院長姓名及簽署 : （　　　　）<span class="ms-line"></span></div>
-      </div>
-      <div class="col">
-        <div>簽署日期 : <span class="ms-line"></span></div>
-        <div>簽署日期 : <span class="ms-line"></span></div>
-        <div>簽署日期 : <span class="ms-line"></span></div>
-      </div>
-    </div>
-  </div>`;
-}
-
-$('ms_month').value = new Date().toLocaleDateString('sv').slice(0, 7);
-$('ms_go').addEventListener('click', async () => {
-  const ym = $('ms_month').value;
-  if (!ym) { alert('請揀月份。'); return; }
-  $('ms_go').disabled = true;
-  try {
-    const st = await buildStatement($('ms_house').value, ym);
-    $('sheetBody').innerHTML = statementHtml(st);
-    $('sheetLayer').classList.remove('hidden');
-    document.body.classList.add('print-statement');
-  } catch (e) { alert('未能生成月結：' + e.message); }
-  $('ms_go').disabled = false;
-});
-$('sheet_close').addEventListener('click', () => {
-  $('sheetLayer').classList.add('hidden');
-  document.body.classList.remove('print-statement');
-});
-$('sheet_print').addEventListener('click', () => window.print());
 
 // ---- 權限管理（settings 嘅 roles：電郵 → cashier/admin；冇設定嘅網域職員預設普通） ----
 const ROLE_LABELS = { admin: 'admin', cashier: '支錢負責', normal: '普通' };

@@ -115,6 +115,8 @@
   .card-admin .card-icon{background:#fff;transform:rotate(3deg)}
   .card-records{background-color:#ccfbf1}
   .card-records .card-icon{background:#fff;transform:rotate(-2deg)}
+  .card-report{background-color:#dcfce7}
+  .card-report .card-icon{background:#fff;transform:rotate(2deg)}
 
   .portal-link{
     display:inline-block;margin-top:26px;font:inherit;font-size:15px;color:var(--sub);
@@ -183,6 +185,13 @@
           <span class="card-name">支錢紀錄</span>
           <span class="card-desc">查返自己嘅支錢紀錄，<br>已結算／未結算一目了然，隨時列印。</span>
           <span class="card-url">/records/</span>
+        </div>
+
+        <div class="card card-report" id="cardReportLink" data-url="/report/" role="link" tabindex="0" aria-label="月結報告">
+          <span class="card-icon" aria-hidden="true">📑</span>
+          <span class="card-name">月結報告</span>
+          <span class="card-desc">每月結算舍友支出及收入：<br>社別月結＋舍友收支紀錄表列印。</span>
+          <span class="card-url">/report/</span>
         </div>
       </div>
 
@@ -327,9 +336,10 @@ function showLock(msg) {
 function showMain() {
   $('lockView').hidden = true;
   $('mainView').hidden = false;
-  // 按角色收放功能卡：普通只可以用零用金申請；支錢負責冇後台管理（模擬檢視時用模擬角色）
+  // 按角色收放功能卡：普通只可以用零用金申請同支錢紀錄；支錢負責冇後台管理（模擬檢視時用模擬角色）
   const role = effectiveRole();
   $('cardVaultLink').style.display = role === 'normal' ? 'none' : '';
+  $('cardReportLink').style.display = role === 'normal' ? 'none' : '';
   $('cardAdminLink').style.display = role === 'admin' ? '' : 'none';
   // 模擬檢視提示橫額
   const s = simInfo();

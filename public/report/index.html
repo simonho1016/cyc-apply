@@ -70,7 +70,7 @@
   .ms-line { display: inline-block; width: 190px; border-bottom: 1.5px solid #000; }
 
   /* ── 舍友收支紀錄表（每人每月一版，report2 格式） ── */
-  .mr-sheet { page-break-after: always; }
+  .mr-sheet { page-break-after: always; width: 186mm; max-width: 186mm; }   /* 固定 A4 列印寬度，螢幕預覽同列印一致 */
   .mr-head { display: flex; justify-content: space-between; font-size: 14.5px; font-weight: 700; margin-bottom: 4px; }
   .mr-sheet table.tx { table-layout: fixed; }
   .mr-sheet table.tx th, .mr-sheet table.tx td { padding: 2px 6px; font-size: 12.5px; height: 26px; vertical-align: middle; }
@@ -151,7 +151,7 @@
     <!-- 舍友收支紀錄表 -->
     <div class="bg-white rounded-2xl p-5 space-y-3">
       <h3 class="text-sm font-bold text-teal-700 uppercase tracking-wide">📄 舍友零用金收支紀錄表</h3>
-      <p class="text-xs text-slate-500">每人每月一版 A4：承前結餘、逐筆存入／支出、結餘、分類小計同簽署欄，同舊系統「舍友零用金收支紀錄表」格式一樣。撳預覽後可以一次過列印全社。</p>
+      <p class="text-xs text-slate-500">每人每月一版 A4：承前結餘、逐筆存入／支出、結餘、分類小計同簽署欄，同舊系統「舍友零用金收支紀錄表」格式一樣。可以勾選個別舍友列印；內容多過一版會自動收窄，保證每人啱啱一頁。</p>
       <div class="flex items-end gap-2 flex-wrap">
         <label class="block"><span class="text-xs font-medium text-slate-500">社別</span>
           <select id="mr_house" class="mt-1 rounded-lg px-3 py-2 text-sm outline-none">
@@ -159,7 +159,15 @@
           </select></label>
         <label class="block"><span class="text-xs font-medium text-slate-500">月份</span>
           <input id="mr_month" type="month" class="mt-1 rounded-lg px-3 py-2 text-sm outline-none"></label>
-        <button id="mr_go" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 transition">預覽收支紀錄表（全社）</button>
+        <button id="mr_go" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 transition">預覽收支紀錄表</button>
+      </div>
+      <div>
+        <div class="flex items-center gap-2 mb-1.5">
+          <span class="text-xs font-medium text-slate-500">揀舍友（預設全選）：</span>
+          <button id="mr_all" class="px-2 py-0.5 rounded text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">全選</button>
+          <button id="mr_none" class="px-2 py-0.5 rounded text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">全唔選</button>
+        </div>
+        <div id="mr_members" class="flex flex-wrap gap-1.5 text-sm"></div>
       </div>
     </div>
 
@@ -475,6 +483,47 @@ function memberSheetHtml(st){
 $('ms_month').value = new Date().toLocaleDateString('sv').slice(0, 7);
 $('mr_month').value = new Date().toLocaleDateString('sv').slice(0, 7);
 
+// ---- 舍友選擇器 ----
+async function loadMemberPicker(){
+  const house = $('mr_house').value;
+  const box = $('mr_members');
+  box.innerHTML = '<span class="text-xs text-slate-400">載入名單中…</span>';
+  let base = null;
+  try {
+    const m = await getSettingValue('members');
+    if (m && Array.isArray(m[house]) && m[house].length) base = m[house];
+  } catch { /* 用預設名單 */ }
+  if (!base) base = DEFAULT_MEMBERS[house] || [];
+  box.innerHTML = base.map(mm => `
+    <label class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 cursor-pointer select-none">
+      <input type="checkbox" class="mr_pick accent-teal-600 w-4 h-4" value="${escapeHtml(mm.id || mm.name)}" checked> ${escapeHtml(mm.name)}
+    </label>`).join('');
+}
+$('mr_house').addEventListener('change', loadMemberPicker);
+$('mr_all').addEventListener('click', () => document.querySelectorAll('.mr_pick').forEach(c => c.checked = true));
+$('mr_none').addEventListener('click', () => document.querySelectorAll('.mr_pick').forEach(c => c.checked = false));
+loadMemberPicker();
+
+// ---- A4 自動收窄：內容高過一版就按比例縮細，保證每人一頁 ----
+const A4_PRINT_H = Math.round(273 * 96 / 25.4);   // A4 297mm 減上下邊距 24mm ≈ 1032px
+function fitSheets(){
+  document.querySelectorAll('#sheetBody .mr-sheet').forEach(el => {
+    el.style.transform = ''; el.style.height = '';
+    el.style.width = '186mm'; el.style.maxWidth = '186mm';
+    const hFull = el.scrollHeight;
+    const contentH = hFull - 64;   // 扣返螢幕 padding（列印時 padding=0）
+    if (contentH > A4_PRINT_H) {
+      const sc = A4_PRINT_H / contentH;
+      el.style.width = (186 / sc) + 'mm';       // 補返寬度，縮放後仍然用滿 A4 寬
+      el.style.maxWidth = (186 / sc) + 'mm';
+      el.style.transform = `scale(${sc})`;
+      el.style.transformOrigin = 'top left';
+      el.style.height = Math.ceil(hFull * sc) + 'px';
+    }
+  });
+}
+window.addEventListener('beforeprint', fitSheets);
+
 $('ms_go').addEventListener('click', async () => {
   const ym = $('ms_month').value;
   if (!ym) { alert('請揀月份。'); return; }
@@ -491,11 +540,14 @@ $('ms_go').addEventListener('click', async () => {
 $('mr_go').addEventListener('click', async () => {
   const ym = $('mr_month').value;
   if (!ym) { alert('請揀月份。'); return; }
+  const picked = new Set([...document.querySelectorAll('.mr_pick:checked')].map(c => c.value));
+  if (!picked.size) { alert('請至少揀一位舍友。'); return; }
   $('mr_go').disabled = true;
   try {
-    const list = await buildMemberStatements($('mr_house').value, ym);
-    if (!list.length) { alert('呢個社別冇舍友資料。'); $('mr_go').disabled = false; return; }
+    const list = (await buildMemberStatements($('mr_house').value, ym)).filter(st => picked.has(st.id));
+    if (!list.length) { alert('揀咗嘅舍友冇資料。'); $('mr_go').disabled = false; return; }
     $('sheetBody').innerHTML = list.map(memberSheetHtml).join('');
+    fitSheets();
     $('sheetLayer').classList.remove('hidden');
     document.body.classList.add('print-statement');
     toast(`已生成 ${list.length} 位舍友嘅收支紀錄表，撳「列印」一次過印晒。`);

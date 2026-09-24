@@ -296,7 +296,7 @@
           <button id="f_clear" class="flex-1 py-2.5 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">清空</button>
           <button id="f_archive" class="flex-[3] py-2.5 rounded-lg text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow transition">🗂️ 確認支錢＋電子存檔</button>
         </div>
-        <p class="text-xs text-slate-400">確認前會彈出簽名板：先舍友即場簽名，職員冇簽名檔嘅話跟住要職員即場簽署。存檔後 PDF 會自動上傳雲端檔案庫（按社別及舍友分類），本機同時下載一份後備。需要列印請去「🧾 支錢紀錄」頁。</p>
+        <p class="text-xs text-slate-400">確認前會彈出簽名板：先舍友即場簽名，職員冇簽名檔嘅話跟住要職員即場簽署。存檔後 PDF 會自動上傳雲端檔案庫（按社別及舍友分類），完成後會彈出通知。需要列印請去「🧾 支錢紀錄」頁。</p>
       </div>
 
       <!-- 列印預覽 -->
@@ -482,6 +482,19 @@ create policy "anon access" on settings
     #signModal .sign-btns button { padding: 6px 10px; font-size: 13px; }
   }
 </style>
+
+<!-- ====================== 支錢完成通知 ====================== -->
+<div id="doneModal" class="no-print fixed inset-0 z-50 hidden flex items-center justify-center" style="background:rgba(20,20,20,.45);">
+  <div class="bg-white rounded-2xl border-4 border-slate-900 shadow-[8px_8px_0_#141414] max-w-sm w-[90%] p-6 space-y-4">
+    <div class="text-center text-4xl" id="done_icon">✅</div>
+    <h3 class="text-center text-lg font-bold text-slate-900" id="done_title">支錢完成</h3>
+    <div id="done_body"></div>
+    <div class="flex gap-2">
+      <button id="done_records" class="flex-1 py-2.5 rounded-lg text-sm font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 transition">🧾 支錢紀錄</button>
+      <button id="done_next" class="flex-[2] py-2.5 rounded-lg text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition">繼續下一單</button>
+    </div>
+  </div>
+</div>
 
 <!-- ====================== 迷你計算機 ====================== -->
 <div id="calcPanel" class="no-print fixed bottom-5 right-5 z-30 hidden w-64 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden select-none">
@@ -1095,14 +1108,14 @@ $('f_archive').addEventListener('click', async () => {
   const pdf = await renderPDF();
   if (!pdf) return;
   const fname = archiveFileName(d);
-  pdf.save(fname);                             // 本機下載一份做後備
-  // 自動上傳到 Supabase Storage（apply-archive bucket）
-  let cloudMsg, pdfPath = null;
+  // 唔再自動彈 PDF 下載；直接上傳雲端檔案庫，完成後彈通知
+  let cloudMsg, pdfPath = null, cloudOk = false;
   try {
     pdfPath = await storageUpload(pdf.output('blob'), archivePath(d, fname));
-    cloudMsg = '，並已上傳到雲端檔案庫';
+    cloudMsg = '已上傳雲端檔案庫';
+    cloudOk = true;
   } catch (e) {
-    cloudMsg = '；雲端上傳失敗：' + e.message;
+    cloudMsg = '雲端上傳失敗：' + e.message;
   }
   // 夾萬支付＝即時結算，唔使再入後台結算
   const settlePatch = d.safePay ? { safe_pay: true, settled_at: new Date().toISOString(), settled_by: '夾萬' } : {};
@@ -1137,12 +1150,34 @@ $('f_archive').addEventListener('click', async () => {
       account: d.safePay ? 'small' : null, account_delta: d.safePay ? -parseFloat(d.amount) : 0, account_bal_after: safeAfter,
       serial: d.serial || '', staff: staffUser
     }]);
-    toast('已電子存檔：' + fname + '（序號 ' + d.serial + '）' + cloudMsg + '。' + balMsg);
+    // 完成通知（彈出式，唔再自動下載 PDF）
+    showDoneModal({
+      payee: d.payee, amount: parseFloat(d.amount).toFixed(2), serial: d.serial,
+      house: d.house, safePay: d.safePay, cloudOk, cloudMsg,
+      balMsg: balAfter !== null ? `舍友結存已自動扣減，最新結存 $${Number(balAfter).toFixed(2)}` : ''
+    });
   } catch (e) {
     alert('PDF 已生成，但儲存記錄失敗：' + e.message);
   }
   resetForm();
 });
+
+// ---- 支錢完成通知 ----
+function showDoneModal(o){
+  $('done_icon').textContent = o.cloudOk ? '✅' : '⚠️';
+  $('done_title').textContent = o.cloudOk ? '支錢完成' : '支錢完成（雲端上傳失敗）';
+  $('done_body').innerHTML = `
+    <div class="text-center space-y-1">
+      <div class="text-lg font-bold text-slate-900">${escapeHtml(o.house)} ${escapeHtml(o.payee)}　港幣$${o.amount}</div>
+      <div class="text-sm text-slate-500">序號 ${escapeHtml(o.serial || '—')}${o.safePay ? ' · 🏦 夾萬支付（已自動結算）' : ' · 待後台結算'}</div>
+      <div class="text-sm ${o.cloudOk ? 'text-emerald-700' : 'text-red-600'} font-bold mt-2">${escapeHtml(o.cloudMsg)}</div>
+      ${o.balMsg ? `<div class="text-xs text-slate-500">${escapeHtml(o.balMsg)}</div>` : ''}
+      ${o.cloudOk ? '' : '<div class="text-xs text-red-500">請盡快通知 admin 檢查雲端檔案庫；呢單記錄已儲存，可以喺「支錢紀錄」頁重試下載。</div>'}
+    </div>`;
+  $('doneModal').classList.remove('hidden');
+}
+$('done_next').addEventListener('click', () => $('doneModal').classList.add('hidden'));
+$('done_records').addEventListener('click', () => location.href = '/records/');
 
 // ---- 已列印記錄 ----
 $('f_history').addEventListener('click', () => { show('sListScreen'); loadHistory(); });

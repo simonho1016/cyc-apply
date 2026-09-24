@@ -447,9 +447,9 @@ create policy "anon access" on settings
     <div class="flex items-center justify-between gap-2 flex-wrap px-3 py-2 border-b border-slate-200 shrink-0">
       <div class="min-w-0">
         <h3 class="font-bold text-slate-900 text-sm sm:text-base">✍️ <span id="signLabel">舍友簽名</span>：<strong id="signWho" class="text-slate-900"></strong></h3>
-        <p class="text-xs text-slate-500">📱 直機會自動轉橫（將手機向左轉就係正確方向），簽完確認自動轉返直；方向唔啱可以撳「🔄 旋轉」</p>
+        <p class="sign-hint text-xs text-slate-500">📱 直機會自動轉橫（將手機向左轉就係正確方向），簽完確認自動轉返直；方向唔啱可以撳「🔄 旋轉」</p>
       </div>
-      <div class="flex gap-2 shrink-0">
+      <div class="sign-btns flex gap-2 shrink-0">
         <button id="signRotate" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">🔄 旋轉</button>
         <button id="signClear" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">🧽 清除</button>
         <button id="signCancel" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">取消</button>
@@ -470,7 +470,16 @@ create policy "anon access" on settings
     left: 50%;
     width: 100vh;
     height: 100vw;
+    /* dvh/dvw 會扣走瀏覽器工具列，舊機 fallback 用返 vh/vw */
+    width: 100dvh;
+    height: 100dvw;
     transform: translate(-50%, -50%) rotate(90deg);
+  }
+  /* 橫向矮螢幕：收細標題列，頂部按鈕一定睇得晒 */
+  @media (max-height: 480px) {
+    #signModal .sign-hint { display: none; }
+    #signModal h3 { font-size: 13px; }
+    #signModal .sign-btns button { padding: 6px 10px; font-size: 13px; }
   }
 </style>
 
@@ -540,7 +549,8 @@ const DEFAULT_MEMBERS = {
 };
 const DEFAULT_STAFF = [
   {name:'何文諾',pw:'0001'},{name:'容俊杰',pw:'0002'},{name:'何樂軒',pw:'0003'},
-  {name:'潘耀鋒',pw:'0004'},{name:'滕家麟',pw:'0005'},{name:'王子維',pw:'0006'}
+  {name:'潘耀鋒',pw:'0004'},{name:'滕家麟',pw:'0005'},{name:'王子維',pw:'0006'},
+  {name:'文然澤',pw:'0007'}
 ];
 const DEFAULT_ENTRY_PW = '1010';
 
@@ -603,8 +613,13 @@ if (SIM_NOW) {
 
 // ---- 按登入電郵預設支款人（其他同事嘅對照表稍後加入） ----
 const EMAIL_STAFF_MAP = {
+  'tab.kl@sbccyc.org.hk': '滕家麟',
+  'pun.yf@sbccyc.org.hk': '潘耀鋒',
+  'yung.ck@sbccyc.org.hk': '容俊杰',
   'ho.ml@sbccyc.org.hk': '何文諾',
-  'ho.lh@sbccyc.org.hk': '何樂軒'
+  'ho.lh@sbccyc.org.hk': '何樂軒',
+  'wong.tw@sbccyc.org.hk': '王子維',
+  'man.yc@sbccyc.org.hk': '文然澤'
 };
 
 // 填充支款人下拉（填單用）
@@ -1358,12 +1373,17 @@ function unlockLandscape(){
   try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen(); } catch {}
 }
 // 直機時自動將成個簽名板轉橫（sign-rot class）；viewport 轉返橫時自動除返
+// matchMedia 嘅 orientation 比 innerWidth/innerHeight 可靠（iOS 轉機時 innerWidth 會延遲更新）
+const mqPortrait = window.matchMedia('(orientation: portrait)');
+if (mqPortrait.addEventListener) mqPortrait.addEventListener('change', () => setTimeout(updateSignRotation, 80));
+window.addEventListener('orientationchange', () => { setTimeout(updateSignRotation, 150); setTimeout(updateSignRotation, 400); });
 function updateSignRotation(){
   const modal = $('signModal');
   if (modal.classList.contains('hidden')) return;
-  const portrait = window.innerHeight > window.innerWidth;
+  const portrait = mqPortrait.matches || window.innerHeight > window.innerWidth;
   modal.classList.toggle('sign-rot', portrait);
   requestAnimationFrame(() => sizeSignCanvas(true));
+  setTimeout(() => { if (!modal.classList.contains('hidden')) sizeSignCanvas(true); }, 300);
 }
 function openSignPad(payee, kind){
   return new Promise(resolve => {
@@ -1371,16 +1391,19 @@ function openSignPad(payee, kind){
     $('signLabel').textContent = kind === 'staff' ? '職員簽署' : '舍友簽名';
     $('signWho').textContent = payee || '';
     $('signModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';   // 鎖住背景，避免捲動影響 canvas 尺寸
     lockLandscape();
     updateSignRotation();
     // 等 modal 顯示先度到 canvas 尺寸；全螢幕／轉機過渡後再度多次
     requestAnimationFrame(() => { sizeSignCanvas(); clearSignPad(); });
     setTimeout(() => { if (!$('signModal').classList.contains('hidden')) sizeSignCanvas(true); }, 350);
+    setTimeout(() => { if (!$('signModal').classList.contains('hidden')) sizeSignCanvas(true); }, 800);
   });
 }
 function closeSignPad(result){
   $('signModal').classList.add('hidden');
-  $('signModal').classList.remove('sign-rot');   // 除返轉向 class：畫面自動轉返直
+  $('signModal').classList.remove('sign-rot');
+  document.body.style.overflow = '';   // 除返轉向 class：畫面自動轉返直
   unlockLandscape();
   const r = signResolve; signResolve = null;
   if (r) r(result);
@@ -1735,6 +1758,11 @@ function setupStaffFromLogin(){
   // 非 admin：鎖死支款人下拉
   $('f_staff').disabled = true;
   $('f_staff').classList.add('bg-slate-100', 'text-slate-500');
+  // 對照名唔喺職員名單（雲端設定未更新）→ 動態加返個 option，等佢照樣用得
+  if (name && !CFG.staff.some(s => s.name === name)) {
+    CFG.staff.push({ name, pw: '' });
+    fillStaffSelects();
+  }
   if (name && CFG.staff.some(s => s.name === name)) {
     if (!simInfo()) sessionStorage.setItem('staff-ok-' + name, JSON.stringify({ exp: Date.now() + STAFF_OK_MS }));
     $('f_staff').value = name;

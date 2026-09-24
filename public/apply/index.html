@@ -299,9 +299,8 @@
         <p class="text-xs text-slate-400">確認前會彈出簽名板：先舍友即場簽名，職員冇簽名檔嘅話跟住要職員即場簽署。存檔後 PDF 會自動上傳雲端檔案庫（按社別及舍友分類），完成後會彈出通知。需要列印請去「🧾 支錢紀錄」頁。</p>
       </div>
 
-      <!-- 列印預覽 -->
-      <section id="previewWrap">
-        <div class="no-print text-xs text-slate-400 mb-2 text-center">列印預覽</div>
+      <!-- 單據 DOM（唔再顯示預覽；存檔時喺螢幕外用佢生成 PDF） -->
+      <section id="previewWrap" style="position:absolute; left:-10000px; top:0; width:794px;">
         <div id="sheetScaler" class="mx-auto">
         <div id="sheet" class="doc bg-white text-black shadow-lg" style="width:794px; aspect-ratio:210/297; padding:14mm 16mm; font-size:15px; line-height:1.9; transform-origin:top left;">
 
@@ -1292,7 +1291,8 @@ function fitSheet(){
   const sheet = $('sheet'), scaler = $('sheetScaler');
   if (!sheet || !scaler) return;
   if (sheet.style.transform === 'none' && sheet.dataset.capturing === '1') return;
-  const avail = scaler.clientWidth;
+  // 預覽區已收起（螢幕外）：clientWidth 係 0 就唔好縮放，保持原大俾存檔渲染用
+  const avail = scaler.clientWidth || SHEET_W;
   const scale = Math.min(1, avail / SHEET_W);
   sheet.style.transform = scale < 1 ? `scale(${scale})` : 'none';
   scaler.style.height = (sheet.offsetHeight * scale) + 'px';

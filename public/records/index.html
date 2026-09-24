@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>則仁中心 — 支錢紀錄</title>
+<meta name="apple-mobile-web-app-title" content="支錢紀錄">
+<meta name="theme-color" content="#0f766e">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/signatures.js"></script>
+<style>
+  body { font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif; }
+  .doc { font-family: "Noto Serif TC", "Songti TC", "Songti SC", "STSong", "PMingLiU", "新細明體", "MingLiU", serif !important; }
+  .fill   { position: relative; display: inline-block; text-align: center; min-height: 1.4em; line-height: 1.4em; padding-bottom: 7px; vertical-align: baseline; }
+  .fill::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 0; border-bottom: 1.5px solid #000; }
+  .box    { width: 22px; height: 22px; border: 2px solid #000; display: inline-block; position: relative; flex: 0 0 auto; vertical-align: middle; }
+  .box-checked::after { content: ""; position: absolute; top: 2px; right: 2px; bottom: 2px; left: 2px; background: #000; }
+  .u-head { border-bottom: 2px solid #000; display: inline-block; padding-bottom: 1px; }
+  #sigFill { overflow: visible; }
+  #p_staff_sign { display: none; position: absolute; left: 50%; transform: translateX(-50%); bottom: 4px; height: 46px; width: auto; max-width: 170px; pointer-events: none; }
+  #payeeSigFill { overflow: visible; }
+  #p_payee_sign { display: none; position: absolute; left: 50%; transform: translateX(-50%); bottom: 4px; height: 46px; width: auto; max-width: 170px; pointer-events: none; }
+</style>
+<style>
+  :root { --ink: #141414; --pow: #ffd23f; }
+  body {
+    background-color: var(--pow) !important;
+    background-image: radial-gradient(rgba(20,20,20,.14) 1.6px, transparent 1.7px);
+    background-size: 15px 15px;
+    font-family: "Huninn", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif !important;
+  }
+  button, input, select, textarea { font-family: inherit !important; }
+  .bg-white:not(#sheet):not(header) {
+    border: 3px solid var(--ink) !important;
+    border-radius: 16px !important;
+    box-shadow: 6px 6px 0 var(--ink) !important;
+  }
+  header {
+    background: #fff !important;
+    border-bottom: 4px solid var(--ink) !important;
+    box-shadow: 0 4px 0 rgba(20,20,20,.15) !important;
+  }
+  button[class*="bg-"] {
+    border: 2.5px solid var(--ink) !important;
+    box-shadow: 3px 3px 0 var(--ink) !important;
+    font-family: "Huninn", "Noto Sans TC", sans-serif !important;
+    transition: transform .08s, box-shadow .08s, background .12s;
+  }
+  button[class*="bg-"]:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 var(--ink) !important; }
+  button[class*="bg-"]:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 var(--ink) !important; }
+  button:disabled { opacity: .45; }
+  select {
+    border: 2.5px solid var(--ink) !important;
+    border-radius: 10px !important;
+    box-shadow: 2.5px 2.5px 0 rgba(20,20,20,.2) !important;
+    background: #fff !important;
+  }
+  span[class*="rounded-full"] { border: 2px solid var(--ink); font-family: "Huninn", "Noto Sans TC", sans-serif !important; }
+  #toast {
+    background: var(--ink) !important;
+    border: 3px solid #fff !important;
+    box-shadow: 4px 4px 0 rgba(20,20,20,.35) !important;
+    font-family: "Huninn", "Noto Sans TC", sans-serif !important;
+    font-size: 15px;
+  }
+  #r_list > div {
+    border: 2.5px solid var(--ink) !important;
+    box-shadow: 3px 3px 0 rgba(20,20,20,.25) !important;
+  }
+  header h1 { text-shadow: 2px 2px 0 rgba(20,20,20,.12); }
+</style>
+</head>
+<body class="bg-slate-100 text-slate-800">
+
+<script>
+// ====================== 入口頁統一登入 ======================
+(function(){
+  function ok(){
+    try {
+      var a = JSON.parse(sessionStorage.getItem('cyc-portal-auth') || 'null');
+      return a && typeof a.p === 'string' && a.p && Number.isFinite(a.exp) && Date.now() < a.exp;
+    } catch (e) { return false; }
+  }
+  if (!ok()) { location.replace('/'); return; }
+  setInterval(function(){ if (!ok()) location.replace('/'); }, 15000);
+})();
+</script>
+
+<header class="sticky top-0 z-20 bg-white border-b border-slate-200 shadow-sm">
+  <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+    <div class="min-w-0">
+      <h1 class="text-base sm:text-lg font-bold text-slate-900 leading-tight">香港扶幼會 則仁中心 · 支錢紀錄</h1>
+      <p id="roleHint" class="text-xs text-slate-500">查返自己嘅支錢紀錄，隨時列印</p>
+    </div>
+    <div class="flex items-center gap-2 flex-wrap justify-end">
+      <button onclick="location.href='/apply/'" class="px-3 py-2 rounded-lg text-sm font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 transition">💰 零用金申請</button>
+      <button onclick="location.href='/'" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">← 返回</button>
+    </div>
+  </div>
+</header>
+
+<!-- 模擬檢視提示（admin 用其他角色視角預覽時顯示） -->
+<div id="simBanner" class="hidden bg-amber-100 border-b border-amber-300 text-amber-800 text-xs px-4 py-2 text-center"></div>
+
+<main class="max-w-5xl mx-auto px-4 py-6 space-y-4">
+
+  <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex items-center gap-3 flex-wrap">
+    <div class="flex gap-2" id="tabs">
+      <button data-tab="all" class="tab-btn px-4 py-2 rounded-lg text-sm font-bold bg-teal-600 text-white transition">全部</button>
+      <button data-tab="unsettled" class="tab-btn px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">未結算</button>
+      <button data-tab="settled" class="tab-btn px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">已結算</button>
+    </div>
+    <select id="staffFilter" class="hidden px-3 py-2 rounded-lg text-sm text-slate-700"></select>
+    <button id="refreshBtn" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">🔄 重新整理</button>
+  </div>
+
+  <div id="noMapWarn" class="hidden bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl px-4 py-3">
+    ⚠️ 你嘅帳戶未連結職員姓名，暫時睇唔到紀錄。請聯絡 admin 設定電郵對照。
+  </div>
+
+  <div id="r_list" class="space-y-3"></div>
+</main>
+
+<!-- 列印用單據（長期喺螢幕外渲染） -->
+<div id="printStage" style="position:absolute; left:-10000px; top:0;">
+  <div id="sheet" class="doc bg-white text-black" style="width:794px; aspect-ratio:210/297; padding:14mm 16mm; font-size:15px; line-height:1.9;">
+
+    <div class="flex items-start justify-between">
+      <div class="text-lg font-bold tracking-wide pl-6">單據紀錄表</div>
+      <div class="text-xs pt-1">＊可用廢紙印刷</div>
+    </div>
+
+    <div class="text-right mt-3 pr-1">
+      序號：<span id="p_serial" class="fill" style="min-width:120px; top:7px;"></span>
+    </div>
+
+    <div class="text-right mt-1 pr-1">
+      單據編號：<span id="p_no" class="fill" style="min-width:180px; top:7px;"></span>
+    </div>
+
+    <div class="flex justify-end items-center gap-2 mt-2">
+      <span class="text-sm font-semibold">Notion ID</span>
+      <span id="p_notion" class="border-2 border-black inline-flex items-center justify-center px-2" style="min-width:60px; min-height:30px;"></span>
+    </div>
+
+    <div class="text-center mt-4">
+      <div class="text-2xl font-bold tracking-widest">香港扶幼會　　則仁中心</div>
+      <div class="text-base tracking-widest mt-1">零用金支付記錄</div>
+    </div>
+
+    <div class="mt-10 text-center" style="white-space:nowrap;">
+      茲由<span id="p_house" class="fill" style="min-width:70px;">忠社／孝社</span>舍友
+      <span id="p_payee" class="fill" style="min-width:130px;"></span>
+      之零用金戶口支付港幣$<span id="p_amount" class="fill" style="min-width:110px;"></span>。
+    </div>
+
+    <div class="mt-14 flex items-end justify-center" style="white-space:nowrap;">
+      <div style="width:360px;">收款人（舍友）：<span class="fill" id="payeeSigFill" style="min-width:120px;">&nbsp;<img id="p_payee_sign" alt=""></span>（<span id="p_payee2"></span>）</div>
+      <div>日期：<span id="p_date1" class="fill" style="min-width:140px;"></span></div>
+    </div>
+    <div class="mt-14 flex items-end justify-center" style="white-space:nowrap;">
+      <div style="width:360px;">支款人（同事）：<span class="fill" id="sigFill" style="min-width:120px;">&nbsp;<img id="p_staff_sign" alt=""></span>（<span id="p_staff"></span>）</div>
+      <div>日期：<span id="p_date2" class="fill" style="min-width:140px;"></span></div>
+    </div>
+
+    <div class="mt-14">
+      <span class="u-head text-lg font-bold">支錢類別</span>
+      <div class="flex items-center flex-wrap gap-x-7 gap-y-3 mt-4 text-lg">
+        <span class="inline-flex items-center gap-2"><span id="c_車費" class="box"></span>車費</span>
+        <span class="inline-flex items-center gap-2"><span id="c_零用金" class="box"></span>零用金</span>
+        <span class="inline-flex items-center gap-2"><span id="c_活動費用" class="box"></span>活動費用</span>
+        <span class="inline-flex items-center gap-2"><span id="c_其他" class="box"></span>其他<span class="text-xs align-bottom">（請註明原因）</span></span>
+      </div>
+      <div id="p_catother_wrap" class="mt-2 text-sm hidden">原因：<span id="p_catother" class="fill" style="min-width:300px;"></span></div>
+    </div>
+
+    <div class="mt-10">
+      <span class="u-head text-lg font-bold">單　據</span><span class="text-xs ml-1">（如有）</span>
+      <div id="p_remark" class="border-2 border-black mt-3 p-3 whitespace-pre-wrap break-words" style="min-height:240px; line-height:1.6;"></div>
+    </div>
+
+    <div class="mt-14">
+      <div class="flex justify-between items-baseline">
+        <div>職員簽署：<span class="fill" style="min-width:170px;"></span><span id="p_safepay" class="text-sm font-bold" style="margin-left:10px;"></span></div>
+        <div>日期：<span class="fill" style="min-width:150px;"></span></div>
+      </div>
+      <div class="text-xs text-center mt-1" style="width:240px;">（入數同事簽署）</div>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-800 text-white text-sm px-4 py-2 rounded-full shadow-lg"></div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+
+const SUPABASE_URL = 'https://abtsyfbbtpvozywqaofs.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_beq8adbuLrISIgnpbAaLEw_Da1Fva-r';
+const ARCHIVE_BUCKET = 'apply-archive';
+
+// ---- 角色（同其他頁一致：模擬檢視只對真 admin 生效） ----
+function realRole(){
+  try {
+    const a = JSON.parse(sessionStorage.getItem('cyc-portal-auth') || 'null');
+    return (a && (a.role === 'admin' || a.role === 'cashier')) ? a.role : 'normal';
+  } catch { return 'normal'; }
+}
+function simInfo(){
+  if (realRole() !== 'admin') return null;
+  try {
+    const s = JSON.parse(sessionStorage.getItem('cyc-sim') || 'null');
+    return (s && (s.role === 'admin' || s.role === 'cashier' || s.role === 'normal')) ? s : null;
+  } catch { return null; }
+}
+function sessionRole(){ const s = simInfo(); return s ? s.role : realRole(); }
+function sessionEmail(){
+  const s = simInfo();
+  if (s && s.email) return s.email;
+  try {
+    const a = JSON.parse(sessionStorage.getItem('cyc-portal-auth') || 'null');
+    return (a && a.email) || '';
+  } catch { return ''; }
+}
+const ROLE_NOW = sessionRole();
+const CAN_MANAGE_FILES = ROLE_NOW !== 'normal';
+
+const EMAIL_STAFF_MAP = {
+  'ho.ml@sbccyc.org.hk': '何文諾',
+  'ho.lh@sbccyc.org.hk': '何樂軒'
+};
+
+// 模擬檢視提示橫額
+const SIM_NOW = simInfo();
+if (SIM_NOW) {
+  const RL = { admin: 'admin', cashier: '支錢負責', normal: '普通' };
+  const simWho = SIM_NOW.name || SIM_NOW.email || '';
+  $('simBanner').classList.remove('hidden');
+  $('simBanner').innerHTML = '🔭 模擬檢視中：以「' + RL[SIM_NOW.role] + '」' + (simWho ? '（' + simWho + '）' : '') + ' 視角瀏覽 · <button id="simStopBtn" class="underline font-bold">取消模擬</button>';
+  $('simStopBtn').addEventListener('click', () => { sessionStorage.removeItem('cyc-sim'); location.reload(); });
+}
+
+// ---- Supabase ----
+const dbConfigured = SUPABASE_URL.startsWith('https://') && !SUPABASE_URL.includes('YOUR-PROJECT') && SUPABASE_ANON_KEY.length > 40;
+let sb = null;
+if (dbConfigured && window.supabase) sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function listDone(limit){
+  if (!sb) throw new Error('未連接資料庫');
+  const { data, error } = await sb.from('applications').select('*').neq('status', 'pending').order('created_at', { ascending: false }).limit(limit || 200);
+  if (error) throw new Error('讀取失敗：' + error.message);
+  return data || [];
+}
+async function storageSignedUrl(path){
+  const { data, error } = await sb.storage.from(ARCHIVE_BUCKET).createSignedUrl(path, 120);
+  if (error) throw new Error(error.message);
+  return data.signedUrl;
+}
+
+// ---- 通用工具 ----
+let toastTimer;
+function toast(msg){
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.remove('hidden');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.add('hidden'), 2600);
+}
+function escapeHtml(s){ return (s || '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function todayStr(){
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+}
+function fmtDate(v){
+  if (!v) return "　　　／　　／　　";
+  const [y,m,d] = v.split('-');
+  return `${y} / ${m} / ${d}`;
+}
+function fmtTime(iso){
+  if (!iso) return '';
+  const d = new Date(iso);
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+// ---- 紀錄列表 ----
+let allRows = [];
+let tabNow = 'all';
+
+function myStaffName(){ return EMAIL_STAFF_MAP[sessionEmail()] || ''; }
+
+function visibleRows(){
+  let rows = allRows;
+  if (ROLE_NOW === 'admin') {
+    const f = $('staffFilter').value;
+    if (f) rows = rows.filter(r => (r.staff || '') === f);
+  } else {
+    const me = myStaffName();
+    rows = rows.filter(r => (r.staff || '') === me);
+  }
+  if (tabNow === 'settled') rows = rows.filter(r => !!r.settled_at);
+  else if (tabNow === 'unsettled') rows = rows.filter(r => !r.settled_at);
+  return rows;
+}
+
+function settleBadge(r){
+  if (r.settled_at) {
+    const by = r.safe_pay ? '🏦 夾萬支付' : '✅ 已結算';
+    return `<span class="rounded-full px-2.5 py-0.5 text-xs font-bold bg-emerald-100 text-emerald-700">${by} · ${escapeHtml(fmtTime(r.settled_at).slice(0,10))}</span>`;
+  }
+  return `<span class="rounded-full px-2.5 py-0.5 text-xs font-bold bg-amber-100 text-amber-700">⏳ 未結算</span>`;
+}
+
+function renderList(){
+  const box = $('r_list');
+  const rows = visibleRows();
+  if (!rows.length) { box.innerHTML = '<p class="text-sm text-slate-500 text-center mt-8">冇符合嘅紀錄。</p>'; return; }
+  box.innerHTML = rows.map(r => `
+    <div class="bg-white border border-slate-200 rounded-2xl p-4 text-sm shadow-sm">
+      <div class="flex justify-between items-start gap-2 flex-wrap">
+        <div class="min-w-0">
+          <div class="font-bold text-slate-900 text-base">${escapeHtml(r.payee)} <span class="text-xs font-normal text-slate-400">${escapeHtml(r.payee_id || '')} · ${escapeHtml(r.house || '')}</span> ${settleBadge(r)}</div>
+          <div class="text-lg font-bold text-blue-700 mt-0.5">港幣$${escapeHtml(r.amount)}</div>
+          <div class="text-xs text-slate-500 mt-1">類別：${escapeHtml((r.cats || []).join('、'))}${r.cat_other ? '（' + escapeHtml(r.cat_other) + '）' : ''}</div>
+          ${r.remark ? `<div class="text-xs text-slate-500 mt-0.5">備註：${escapeHtml(r.remark)}</div>` : ''}
+          <div class="text-xs text-slate-400 mt-1">支款人：${escapeHtml(r.staff || '')} · ${fmtTime(r.decided_at || r.created_at)}${r.serial ? ' · 序號 ' + escapeHtml(r.serial) : ''}${r.doc_no ? ' · 編號 ' + escapeHtml(r.doc_no) : ''}</div>
+        </div>
+        <div class="flex flex-col gap-2 items-stretch shrink-0">
+          <button data-act="print" data-id="${r.id}" class="px-4 py-2 rounded-lg bg-teal-50 text-teal-700 text-sm font-bold hover:bg-teal-100 transition">🖨️ 列印</button>
+          ${r.pdf_path && CAN_MANAGE_FILES ? `<button data-act="download" data-id="${r.id}" class="px-4 py-2 rounded-lg bg-emerald-50 text-emerald-600 text-sm font-medium hover:bg-emerald-100 transition">下載 PDF</button>` : ''}
+        </div>
+      </div>
+    </div>`).join('');
+  box._rows = rows;
+}
+
+async function loadRecords(){
+  const box = $('r_list');
+  box.innerHTML = '<p class="text-sm text-slate-500">載入中…</p>';
+  // 非 admin 冇對照 → 提示＋唔顯示任何紀錄
+  if (ROLE_NOW !== 'admin' && !myStaffName()) {
+    $('noMapWarn').classList.remove('hidden');
+    box.innerHTML = '';
+    return;
+  }
+  $('noMapWarn').classList.add('hidden');
+  try {
+    allRows = await listDone(200);
+    // admin：職員篩選下拉
+    if (ROLE_NOW === 'admin') {
+      const names = [...new Set(allRows.map(r => r.staff).filter(Boolean))];
+      $('staffFilter').innerHTML = '<option value="">全部職員</option>' + names.map(n => `<option>${escapeHtml(n)}</option>`).join('');
+      $('staffFilter').classList.remove('hidden');
+    }
+    renderList();
+  } catch (e) {
+    box.innerHTML = `<p class="text-sm text-red-500">${escapeHtml(e.message)}</p>`;
+  }
+}
+
+$('tabs').addEventListener('click', e => {
+  const btn = e.target.closest('.tab-btn');
+  if (!btn) return;
+  tabNow = btn.dataset.tab;
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    const on = b === btn;
+    b.className = 'tab-btn px-4 py-2 rounded-lg text-sm font-bold transition ' + (on ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200');
+  });
+  renderList();
+});
+$('staffFilter').addEventListener('change', renderList);
+$('refreshBtn').addEventListener('click', loadRecords);
+
+// ---- 由記錄重繪單據 → 列印 PDF ----
+let printing = false;
+
+function fillSheet(d){
+  $('p_no').textContent     = d.no || '';
+  $('p_serial').textContent = d.serial || '';
+  $('p_notion').textContent = d.notion || '';
+  $('p_house').textContent  = d.house || '忠社／孝社';
+  $('p_house').style.color  = d.house ? '#000' : '#9ca3af';
+  $('p_payee').textContent  = d.payee || '';
+  $('p_payee2').textContent = d.payee || '';
+  $('p_amount').textContent = d.amount || '';
+  $('p_staff').textContent  = d.staff || '';
+  $('p_date1').textContent  = fmtDate(d.date);
+  $('p_date2').textContent  = fmtDate(d.date);
+  const checked = new Set(d.cats || []);
+  ['車費','零用金','活動費用','其他'].forEach(c => {
+    $('c_'+c).classList.toggle('box-checked', checked.has(c));
+  });
+  const otherOn = checked.has('其他') && (d.catOther || '').trim();
+  $('p_catother_wrap').classList.toggle('hidden', !otherOn);
+  $('p_catother').textContent = d.catOther || '';
+  $('p_remark').textContent = d.remark || '';
+  $('p_safepay').textContent = d.safePay ? '■ 夾萬支付' : '□ 夾萬支付';
+}
+
+function setSigImg(id, data){
+  const img = $(id);
+  if (data) { img.src = data; img.style.display = 'block'; }
+  else { img.style.display = 'none'; }
+}
+
+async function printRecord(rec){
+  if (printing) return;
+  printing = true;
+  fillSheet({
+    no: rec.doc_no, notion: rec.notion_id, serial: rec.serial, house: rec.house, payee: rec.payee,
+    amount: rec.amount, date: (rec.decided_at || rec.created_at || '').slice(0, 10) || todayStr(),
+    staff: rec.staff, cats: rec.cats || [], catOther: rec.cat_other || '', remark: rec.remark || '',
+    safePay: !!rec.safe_pay
+  });
+  // 簽名：優先用記錄入面存咗嘅；冇就用內置簽名檔；都冇就留空
+  setSigImg('p_payee_sign', rec.payee_sign || null);
+  setSigImg('p_staff_sign', rec.staff_sign || SIGNATURES[rec.staff] || null);
+  const el = $('sheet');
+  try {
+    if (document.fonts && document.fonts.ready) { await document.fonts.ready; }
+    const canvas = await html2canvas(el, { scale: 2, useCORS: true, windowWidth: 794, backgroundColor: '#ffffff' });
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const ratio = Math.min(pageW / canvas.width, pageH / canvas.height);
+    const imgW = canvas.width * ratio;
+    const imgH = canvas.height * ratio;
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', (pageW - imgW) / 2, 0, imgW, imgH);
+    pdf.autoPrint();
+    window.open(pdf.output('bloburl'), '_blank');
+    if (!rec.payee_sign) toast('此記錄冇舍友簽名，列印本留空。');
+  } catch (e) {
+    alert('生成 PDF 失敗，請重試。');
+  } finally {
+    setSigImg('p_payee_sign', null);
+    setSigImg('p_staff_sign', null);
+    printing = false;
+  }
+}
+
+$('r_list').addEventListener('click', async e => {
+  const btn = e.target.closest('button[data-act]');
+  if (!btn || printing) return;
+  const rec = ($('r_list')._rows || []).find(r => String(r.id) === btn.dataset.id);
+  if (!rec) return;
+  if (btn.dataset.act === 'print') {
+    await printRecord(rec);
+  } else if (btn.dataset.act === 'download') {
+    try {
+      const url = await storageSignedUrl(rec.pdf_path);
+      window.open(url, '_blank');
+    } catch (err) { alert('下載失敗：' + err.message); }
+  }
+});
+
+loadRecords();
+</script>
+</body>
+</html>

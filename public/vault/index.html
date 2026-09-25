@@ -77,8 +77,8 @@
     <div class="card bg-white p-5 space-y-3" id="cardVault">
       <div class="flex items-center justify-between flex-wrap gap-2">
         <h3 class="text-sm font-bold text-amber-600 uppercase tracking-wide">🏦 夾萬現存</h3>
-        <span id="vault_check" class="text-xs text-slate-500"></span>
       </div>
+      <div id="vault_check"></div>
       <p class="text-xs text-slate-500">每社有兩個夾萬：現存現金（中心夾萬）過錢俾代管現金（家社夾萬）；舍友支出必由<b>該社代管現金</b>找數，代管現金唔夠錢就唔可以結算或用「夾萬支付」。兩社現存現金＋代管現金總和 = 全體舍友總結存＋未結算墊支。</p>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div class="rounded-xl border-2 border-rose-200 bg-rose-50/50 p-3 space-y-2">
@@ -129,13 +129,12 @@
     <div class="card bg-white p-5 space-y-3" id="cardBal">
       <div class="flex items-center justify-between flex-wrap gap-2">
         <h3 class="text-sm font-bold text-indigo-600 uppercase tracking-wide">👥 舍友現存</h3>
-        <span id="member_bal_total" class="text-xs text-slate-500"></span>
+        <span id="member_bal_total"></span>
       </div>
       <p class="text-xs text-slate-500">支錢成功後會自動扣減該舍友結存；後台刪除記錄會自動回補。呢度可以人手修正。<b>現存未歸 0 嘅舍友唔可以退出服務或刪除。</b>舍友嘅新增／改名／排序／轉社／退出服務請去後台管理「👥 舍友戶口管理」。已退出嘅舍友會灰顯唔可以改。</p>
       <div id="member_bal_list" class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm"></div>
       <div class="flex items-center gap-3 flex-wrap">
         <button id="member_bal_save" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition">儲存舍友現存</button>
-        <span id="member_house_totals" class="text-xs text-slate-500"></span>
       </div>
     </div>
 
@@ -385,25 +384,60 @@ async function renderVault(){
         </label>`;
       }).join('')}
     </div>`).join('');
-  $('member_bal_total').textContent = `舍友總結存：${money(balTotal)}`;
-  $('member_house_totals').textContent = `忠社 ${money(houseTotals['忠社'])} ｜ 孝社 ${money(houseTotals['孝社'])}`;
+  // 舍友總結存：分社顯示＋合計（放大粗體，清晰易睇）
+  $('member_bal_total').innerHTML =
+    `<span class="text-base font-extrabold text-slate-700">舍友總結存：</span>` +
+    `<span class="text-base font-extrabold text-rose-600">忠社 ${money(houseTotals['忠社'])}</span>` +
+    `<span class="text-sm font-bold text-slate-400"> ｜ </span>` +
+    `<span class="text-base font-extrabold text-blue-600">孝社 ${money(houseTotals['孝社'])}</span>` +
+    `<span class="text-sm font-bold text-slate-400"> ｜ </span>` +
+    `<span class="text-base font-extrabold text-slate-800">合計 ${money(balTotal)}</span>`;
   if (READONLY) document.querySelectorAll('.mbal_in').forEach(i => { i.disabled = true; });
-  // 未結算墊支（結算欄位未開通就當 0 並唔顯示）
+  // 未結算墊支（分社計；結算欄位未開通就當 0 並唔顯示對數）
   let adv = 0, advOk = true;
+  const advHouse = { '忠社': 0, '孝社': 0 };
   try {
-    const { data, error } = await sb.from('applications').select('amount').is('settled_at', null).limit(1000);
+    const { data, error } = await sb.from('applications').select('amount,house').is('settled_at', null).limit(1000);
     if (error) { if (/settled_at|42703|schema cache/i.test(error.message)) advOk = false; }
-    else adv = r2((data || []).reduce((a, r) => a + Number(r.amount || 0), 0));
+    else (data || []).forEach(r => {
+      const a = Number(r.amount || 0);
+      adv = r2(adv + a);
+      if (r.house === '忠社' || r.house === '孝社') advHouse[r.house] = r2(advHouse[r.house] + a);
+    });
   } catch { advOk = false; }
-  // 對照行：兩社現存＋代管總和 vs 舍友總結存＋未結算墊支
-  const vaultTotal = r2(v.zhong_big + v.zhong_small + v.xiao_big + v.xiao_small);
+  // 對照：分社夾萬（現存＋代管）vs 分社舍友結存＋墊支，再加兩社總對數
+  const vaultHouse = { '忠社': r2(v.zhong_big + v.zhong_small), '孝社': r2(v.xiao_big + v.xiao_small) };
+  const vaultTotal = r2(vaultHouse['忠社'] + vaultHouse['孝社']);
   if (!v.init) {
-    $('vault_check').textContent = '⚠️ 夾萬未設定，請先輸入四個現存數再儲存。';
-  } else if (!advOk) {
-    $('vault_check').textContent = `現存＋代管總和 ${money(vaultTotal)} ｜ 舍友總結存 ${money(balTotal)}`;
+    $('vault_check').innerHTML = '<p class="text-sm font-bold text-red-600">⚠️ 夾萬未設定，請先輸入四個現存數再儲存。</p>';
   } else {
-    const expected = r2(balTotal + adv);
-    $('vault_check').textContent = `現存＋代管總和 ${money(vaultTotal)} ｜ 舍友總結存 ${money(balTotal)} ＋ 未結算墊支 ${money(adv)} ＝ ${money(expected)}${Math.abs(vaultTotal - expected) >= 0.005 ? ' ⚠️ 唔對數' : ' ✅ 對數'}`;
+    const chk = (a, b) => Math.abs(a - b) < 0.005;
+    const badge = ok => ok
+      ? '<span class="text-base font-extrabold text-emerald-600">✅ 對數</span>'
+      : '<span class="text-base font-extrabold text-red-600">⚠️ 唔對數</span>';
+    const houseRow = (h, cls) => {
+      const big = h === '忠社' ? v.zhong_big : v.xiao_big;
+      const small = h === '忠社' ? v.zhong_small : v.xiao_small;
+      let row = `<div class="flex items-baseline gap-x-2 gap-y-0.5 flex-wrap">
+        <span class="text-base font-extrabold ${cls}">${h}夾萬 ${money(vaultHouse[h])}</span>
+        <span class="text-xs text-slate-400">（現存 ${money(big)}＋代管 ${money(small)}）</span>`;
+      if (advOk) {
+        const expH = r2(houseTotals[h] + advHouse[h]);
+        row += `<span class="text-xs text-slate-500">結存 ${money(houseTotals[h])}＋墊支 ${money(advHouse[h])} ＝ ${money(expH)}</span>${badge(chk(vaultHouse[h], expH))}`;
+      }
+      return row + '</div>';
+    };
+    let html = houseRow('忠社', 'text-rose-600') + houseRow('孝社', 'text-blue-600');
+    if (advOk) {
+      const expected = r2(balTotal + adv);
+      html += `<div class="flex items-baseline gap-x-2 gap-y-0.5 flex-wrap border-t border-slate-200 pt-1.5 mt-1.5">
+        <span class="text-sm font-bold text-slate-600">兩社總和 ${money(vaultTotal)} ＝ 總結存 ${money(balTotal)} ＋ 未結算墊支 ${money(adv)}</span>
+        ${badge(chk(vaultTotal, expected))}
+      </div>`;
+    } else {
+      html += `<div class="text-sm font-bold text-slate-600 border-t border-slate-200 pt-1.5 mt-1.5">兩社現存＋代管總和 ${money(vaultTotal)} ｜ 舍友總結存 ${money(balTotal)}</div>`;
+    }
+    $('vault_check').innerHTML = html;
   }
 }
 

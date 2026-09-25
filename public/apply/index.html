@@ -97,8 +97,10 @@
   }
   input:focus, select:focus, textarea:focus { box-shadow: 2.5px 2.5px 0 var(--ink) !important; }
 
-  /* 金額前綴格仔 */
-  .bg-slate-100:has(+ input) { border-right: 2.5px solid var(--ink) !important; }
+  /* 金額欄：成個欄位（前綴＋輸入）係一個漫畫格，入面冇分隔線 */
+  .amount-wrap { border: 2.5px solid var(--ink) !important; border-radius: 10px !important; box-shadow: 2.5px 2.5px 0 rgba(20,20,20,.2) !important; background: #fff !important; }
+  .amount-wrap:focus-within { box-shadow: 2.5px 2.5px 0 var(--ink) !important; }
+  .amount-wrap input { border: none !important; box-shadow: none !important; border-radius: 0 !important; }
 
   /* 狀態徽章 → 漫畫貼紙 */
   span[class*="rounded-full"] { border: 2px solid var(--ink); font-family: "Huninn", "Noto Sans TC", sans-serif !important; }
@@ -259,8 +261,8 @@
 
         <label class="block">
           <span class="text-xs font-medium text-slate-500">支付金額</span>
-          <div class="mt-1 flex items-center rounded-lg border border-slate-300 overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500">
-            <span class="px-3 py-2 bg-slate-100 text-slate-600 text-sm border-r border-slate-300 select-none">港幣$</span>
+          <div class="amount-wrap mt-1 flex items-center rounded-lg border border-slate-300 overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500">
+            <span class="px-3 py-2 bg-slate-100 text-slate-600 text-sm select-none">港幣$</span>
             <input id="f_amount" type="text" inputmode="decimal" class="flex-1 px-3 py-2 text-sm outline-none" placeholder="0.00">
           </div>
         </label>

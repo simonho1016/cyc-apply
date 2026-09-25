@@ -213,14 +213,14 @@ const ARCHIVE_BUCKET = 'apply-archive';
 function realRole(){
   try {
     const a = JSON.parse(sessionStorage.getItem('cyc-portal-auth') || 'null');
-    return (a && (a.role === 'admin' || a.role === 'cashier')) ? a.role : 'normal';
+    return (a && (a.role === 'admin' || a.role === 'manager' || a.role === 'cashier')) ? a.role : 'normal';
   } catch { return 'normal'; }
 }
 function simInfo(){
   if (realRole() !== 'admin') return null;
   try {
     const s = JSON.parse(sessionStorage.getItem('cyc-sim') || 'null');
-    return (s && (s.role === 'admin' || s.role === 'cashier' || s.role === 'normal')) ? s : null;
+    return (s && (s.role === 'admin' || s.role === 'manager' || s.role === 'cashier' || s.role === 'normal')) ? s : null;
   } catch { return null; }
 }
 function sessionRole(){ const s = simInfo(); return s ? s.role : realRole(); }
@@ -250,7 +250,7 @@ const EMAIL_STAFF_MAP = {
 // 模擬檢視提示橫額
 const SIM_NOW = simInfo();
 if (SIM_NOW) {
-  const RL = { admin: 'admin', cashier: '支錢負責', normal: '普通' };
+  const RL = { admin: 'admin', manager: '管理級', cashier: '管理夾萬同工', normal: '普通同工' };
   const simWho = SIM_NOW.name || SIM_NOW.email || '';
   $('simBanner').classList.remove('hidden');
   $('simBanner').innerHTML = '🔭 模擬檢視中：以「' + RL[SIM_NOW.role] + '」' + (simWho ? '（' + simWho + '）' : '') + ' 視角瀏覽 · <button id="simStopBtn" class="underline font-bold">取消模擬</button>';

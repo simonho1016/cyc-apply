@@ -227,9 +227,10 @@ async function getRolesMap() {
 function roleFor(email, rolesMap) {
   if (ADMIN_EMAILS.includes(email)) return 'admin';
   const r = rolesMap && rolesMap[email];
-  return (r === 'admin' || r === 'cashier') ? r : 'normal';
+  return (r === 'admin' || r === 'manager' || r === 'cashier') ? r : 'normal';
 }
-const ROLE_LABEL = { admin: 'admin', cashier: '支錢負責', normal: '普通' };
+// 四層權限：admin（最高）＞ manager 管理級（夾萬過錢＋支錢負責所有功能）＞ cashier 管理夾萬同工（支錢、存入、製作及下載文件）＞ normal 普通同工（支錢、檢視文件）
+const ROLE_LABEL = { admin: 'admin', manager: '管理級', cashier: '管理夾萬同工', normal: '普通同工' };
 
 // ── 電郵 → 姓名＋職銜對照（顯示用；支錢鎖定用人名部分）──
 const EMAIL_STAFF_MAP = {
@@ -284,13 +285,13 @@ loadStaffDir();
 // ── 模擬檢視：真 admin 可以用其他角色視角預覽（cyc-sim 只影響呢個分頁） ──
 function realRole() {
   const a = portalAuth();
-  return (a && (a.role === 'admin' || a.role === 'cashier')) ? a.role : 'normal';
+  return (a && (a.role === 'admin' || a.role === 'manager' || a.role === 'cashier')) ? a.role : 'normal';
 }
 function simInfo() {
   if (realRole() !== 'admin') return null;
   try {
     const s = JSON.parse(sessionStorage.getItem('cyc-sim') || 'null');
-    return (s && (s.role === 'admin' || s.role === 'cashier' || s.role === 'normal')) ? s : null;
+    return (s && (s.role === 'admin' || s.role === 'manager' || s.role === 'cashier' || s.role === 'normal')) ? s : null;
   } catch (e) { return null; }
 }
 function effectiveRole() { const s = simInfo(); return s ? s.role : realRole(); }

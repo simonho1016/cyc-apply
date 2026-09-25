@@ -428,7 +428,7 @@
     <div id="done_body"></div>
     <div class="flex gap-2">
       <button id="done_records" class="flex-1 py-2.5 rounded-lg text-sm font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 transition">🧾 支錢紀錄</button>
-      <button id="done_next" class="flex-[2] py-2.5 rounded-lg text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition">繼續下一單</button>
+      <button id="done_next" class="flex-[2] py-2.5 rounded-lg text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition">✅ 已向舍友支付金額</button>
     </div>
   </div>
 </div>
@@ -513,19 +513,19 @@ const CFG = {
 };
 function staffPwOf(name){ const s = CFG.staff.find(s => s.name === name); return s ? s.pw : null; }
 
-// ---- 角色權限（前置頁登入時寫入 session）：admin 全用；cashier 可存檔/下載/重印/存入；normal 只用零用金申請 ----
+// ---- 角色權限（前置頁登入時寫入 session）：admin 全用；manager 管理級＝cashier 功能＋夾萬過錢；cashier 管理夾萬同工可存檔/下載/重印/存入；normal 普通同工只用零用金申請 ----
 // 模擬檢視：真 admin 可以用其他角色視角預覽（cyc-sim 只影響呢個分頁；簽名檔唔會自動解鎖）
 function realRole(){
   try {
     const a = JSON.parse(sessionStorage.getItem('cyc-portal-auth') || 'null');
-    return (a && (a.role === 'admin' || a.role === 'cashier')) ? a.role : 'normal';
+    return (a && (a.role === 'admin' || a.role === 'manager' || a.role === 'cashier')) ? a.role : 'normal';
   } catch { return 'normal'; }
 }
 function simInfo(){
   if (realRole() !== 'admin') return null;
   try {
     const s = JSON.parse(sessionStorage.getItem('cyc-sim') || 'null');
-    return (s && (s.role === 'admin' || s.role === 'cashier' || s.role === 'normal')) ? s : null;
+    return (s && (s.role === 'admin' || s.role === 'manager' || s.role === 'cashier' || s.role === 'normal')) ? s : null;
   } catch { return null; }
 }
 function sessionRole(){ const s = simInfo(); return s ? s.role : realRole(); }
@@ -546,14 +546,14 @@ if (ROLE_NOW === 'normal') {
   $('t_admin').classList.add('hidden');
   $('t_report').classList.add('hidden');
   // t_vault 普通級都入得（唯讀睇數），唔收埋
-} else if (ROLE_NOW === 'cashier') {
+} else if (ROLE_NOW === 'cashier' || ROLE_NOW === 'manager') {
   $('t_admin').classList.add('hidden');
 }
 
 // 模擬檢視提示橫額
 const SIM_NOW = simInfo();
 if (SIM_NOW) {
-  const RL = { admin: 'admin', cashier: '支錢負責', normal: '普通' };
+  const RL = { admin: 'admin', manager: '管理級', cashier: '管理夾萬同工', normal: '普通同工' };
   const simWho = SIM_NOW.name || SIM_NOW.email || '';
   $('simBanner').classList.remove('hidden');
   $('simBanner').innerHTML = '🔭 模擬檢視中：以「' + RL[SIM_NOW.role] + '」' + (simWho ? '（' + simWho + '）' : '') + ' 視角瀏覽 · 操作會真實生效，請小心 · <button id="simStopBtn" class="underline font-bold">取消模擬</button>';
@@ -1100,8 +1100,8 @@ $('f_archive').addEventListener('click', async () => {
     }
     let safeAfter = null;
     if (d.safePay) { try { safeAfter = await deductSafe(d.house, parseFloat(d.amount)); } catch {} }
-    let balMsg = '', balAfter = null;
-    try { balAfter = await deductMemberBal(d.payeeId, d.payee, parseFloat(d.amount)); if (balAfter !== null) balMsg = '舍友結存已自動扣減。'; } catch {}
+    let balAfter = null;
+    try { balAfter = await deductMemberBal(d.payeeId, d.payee, parseFloat(d.amount)); } catch {}
     // 流水賬：支出（月結紀錄用）
     ledgerInsert([{
       house: houseKey(d.house), kind: 'expense', member_id: d.payeeId || '', member_name: d.payee,
@@ -1114,7 +1114,7 @@ $('f_archive').addEventListener('click', async () => {
     showDoneModal({
       payee: d.payee, amount: parseFloat(d.amount).toFixed(2), serial: d.serial,
       house: d.house, safePay: d.safePay, cloudOk, cloudMsg,
-      balMsg: balAfter !== null ? `舍友結存已自動扣減，最新結存 $${Number(balAfter).toFixed(2)}` : ''
+      balAfter: balAfter
     });
   } catch (e) {
     alert('PDF 已生成，但儲存記錄失敗：' + e.message);
@@ -1131,7 +1131,11 @@ function showDoneModal(o){
       <div class="text-lg font-bold text-slate-900">${escapeHtml(o.house)} ${escapeHtml(o.payee)}　港幣$${o.amount}</div>
       <div class="text-sm text-slate-500">序號 ${escapeHtml(o.serial || '—')}${o.safePay ? ' · 🏦 夾萬支付（已自動結算）' : ' · 待後台結算'}</div>
       <div class="text-sm ${o.cloudOk ? 'text-emerald-700' : 'text-red-600'} font-bold mt-2">${escapeHtml(o.cloudMsg)}</div>
-      ${o.balMsg ? `<div class="text-xs text-slate-500">${escapeHtml(o.balMsg)}</div>` : ''}
+      ${o.balAfter !== null && o.balAfter !== undefined ? `
+      <div class="mt-3 rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3">
+        <div class="text-xs text-slate-500">舍友結存已自動扣減</div>
+        <div class="mt-0.5 text-base font-bold text-slate-700">最新結存 <span class="text-3xl font-extrabold text-emerald-700 align-baseline">$${Number(o.balAfter).toFixed(2)}</span></div>
+      </div>` : ''}
       ${o.cloudOk ? '' : '<div class="text-xs text-red-500">請盡快通知 admin 檢查雲端檔案庫；呢單記錄已儲存，可以喺「支錢紀錄」頁重試下載。</div>'}
     </div>`;
   $('doneModal').classList.remove('hidden');

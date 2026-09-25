@@ -112,18 +112,20 @@
       </div>
       <div class="border-t border-slate-100 pt-3 space-y-2" id="vaultXferRow">
         <div class="flex items-center gap-2 flex-wrap">
-          <span class="text-xs font-medium text-slate-500">現存現金過錢俾代管現金：</span>
+          <span class="text-xs font-medium text-slate-500">現存現金過錢俾代管現金（只限管理級或以上）：</span>
           <select id="vault_xfer_house" class="rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white outline-none">
             <option value="zhong">忠社</option>
             <option value="xiao">孝社</option>
           </select>
           <input id="vault_xfer_amt" type="number" step="0.01" min="0" class="w-28 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="金額">
-          <input id="vault_xfer_by" type="text" maxlength="20" class="w-24 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="轉賬人">
-          <input id="vault_xfer_to" type="text" maxlength="20" class="w-24 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="收款人">
+          <input id="vault_xfer_by" type="text" maxlength="20" readonly class="w-24 rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-600 outline-none" placeholder="轉賬人" title="轉賬人＝登入嘅管理級同事，自動填寫">
+          <select id="vault_xfer_to" class="rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white outline-none" title="收款人＝管理夾萬同工，按社別自動揀">
+            <option value="">— 收款人 —</option>
+          </select>
           <input id="vault_xfer_note" type="text" maxlength="50" class="flex-1 min-w-28 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="備註（可留空）">
           <button id="vault_xfer" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-slate-700 hover:bg-slate-800 transition">現存現金 → 代管現金 過錢</button>
         </div>
-        <p class="text-xs text-slate-400">過錢會記入流水賬，月結紀錄嘅「戶口轉賬紀錄」會列出轉賬人同收款人。</p>
+        <p class="text-xs text-slate-400">過錢會記入流水賬，月結紀錄嘅「戶口轉賬紀錄」會列出轉賬人同收款人。轉賬人係登入嘅管理級同事（自動）；收款人係該社嘅管理夾萬同工（揀社別後自動揀，多於一位可以下拉改）。</p>
       </div>
     </div>
 
@@ -257,8 +259,35 @@ const money = n => '$' + Number(n || 0).toFixed(2);
 const r2 = n => Math.round(n * 100) / 100;
 function houseOf(h){ return h === '孝社' ? 'xiao' : 'zhong'; }
 
-// ---- 出入閘：任何已登入職員都入得；normal（普通）只可以睇數（唯讀），cashier 只可以用「舍友存入」，admin 全用 ----
-let READONLY = false;   // 普通權限唯讀模式
+// ---- 職員姓名對照（雲端名冊 settings.staff_dir 優先，hardcode 後備；同支錢頁一致） ----
+const EMAIL_STAFF_MAP = {
+  'tan.kl@sbccyc.org.hk': '滕家麟',
+  'pun.yf@sbccyc.org.hk': '潘耀鋒',
+  'yung.ck@sbccyc.org.hk': '容俊杰',
+  'ho.ml@sbccyc.org.hk': '何文諾',
+  'ho.lh@sbccyc.org.hk': '何樂軒',
+  'wong.tw@sbccyc.org.hk': '王子維',
+  'man.yc@sbccyc.org.hk': '文然澤'
+};
+let CLOUD_STAFF_DIR = {};
+let KEEPERS = [];   // 管理夾萬同工清單 [{email, name, house}]，setupXfer 由雲端 roles 載入
+function sessionEmail(){
+  const s = simInfo();
+  if (s && s.email) return s.email;
+  try {
+    const a = JSON.parse(sessionStorage.getItem('cyc-portal-auth') || 'null');
+    return (a && a.email) ? String(a.email).toLowerCase() : '';
+  } catch { return ''; }
+}
+function staffNameOf(email){
+  const e = (email || '').toLowerCase();
+  const c = CLOUD_STAFF_DIR[e];
+  if (c && !c.deleted && c.name) return c.name;
+  return EMAIL_STAFF_MAP[e] || '';
+}
+
+// ---- 出入閘：任何已登入職員都入得；normal（普通同工）唯讀睇數；cashier（管理夾萬同工）只可以用「舍友存入」；manager（管理級）＝存入＋過錢＋睇數；admin 全用 ----
+let READONLY = false;   // 普通權限／管理級唯讀模式（舍友現存唔可以改）
 $('adminLogout').addEventListener('click', () => { location.href = '/'; });
 setInterval(() => {
   if (!$('mainScreen').classList.contains('hidden') && !isLoggedIn()) {
@@ -273,7 +302,7 @@ function showMain(){
   $('adminLogout').classList.remove('hidden');
   const role = sessionRole();
   if (role === 'normal') {
-    // 普通權限：睇夾萬現存同各舍友現存（決定支唔支到錢），但唔可以改任何嘢
+    // 普通同工：睇夾萬現存同各舍友現存（決定支唔支到錢），但唔可以改任何嘢
     READONLY = true;
     ['vault_zhong_big', 'vault_zhong_small', 'vault_xiao_big', 'vault_xiao_small'].forEach(id => { const el = $(id); if (el) el.disabled = true; });
     $('vault_save').classList.add('hidden');
@@ -286,14 +315,26 @@ function showMain(){
     $('t_admin').classList.add('hidden');
     $('t_report').classList.add('hidden');   // 普通級唔入得月結報告
     $('roBanner').classList.remove('hidden');
-  } else if (!isFullAdmin()) {
-    // 支錢負責（cashier）：只可以用「舍友存入」；夾萬改數、過錢、舍友現存修正、結存起點、收款編號設定全部收起
+  } else if (role === 'cashier') {
+    // 管理夾萬同工：只可以用「舍友存入」；夾萬改數、過錢、舍友現存修正、結存起點、收款編號設定全部收起
     ['cardVault', 'cardBal', 'cardSeed'].forEach(id => { const el = $(id); if (el) el.classList.add('hidden'); });
     $('receipt_next').disabled = true;
     $('receipt_next_save').classList.add('hidden');
-    $('t_admin').classList.add('hidden');   // 支錢負責冇後台管理
+    $('t_admin').classList.add('hidden');   // 管理夾萬同工冇後台管理
+  } else if (role === 'manager') {
+    // 管理級：夾萬「現存→代管」過錢＋舍友存入＋睇數；夾萬直接改數、舍友現存修正、結存起點、收款編號設定仍然係 admin 專用
+    READONLY = true;   // 舍友現存唯讀（mbal 輸入停用）
+    ['vault_zhong_big', 'vault_zhong_small', 'vault_xiao_big', 'vault_xiao_small'].forEach(id => { const el = $(id); if (el) el.disabled = true; });
+    $('vault_save').classList.add('hidden');
+    $('member_bal_save').classList.add('hidden');
+    const seed = $('cardSeed'); if (seed) seed.classList.add('hidden');
+    $('receipt_next').disabled = true;
+    $('receipt_next_save').classList.add('hidden');
+    $('t_admin').classList.add('hidden');
+    // vaultXferRow（過錢）同 cardDep（存入）保持可用
   }
   renderVault();
+  setupXfer();         // 管理級／admin：轉賬人自動＋收款人按社別
 }
 
 // ---- 預設名單（settings 未設定 members 時使用，同支錢系統一致） ----
@@ -467,12 +508,52 @@ $('vault_save').addEventListener('click', async () => {
   } catch (e) { alert('儲存失敗：' + e.message); }
 });
 
+// ---- 過錢欄位設定（管理級／admin）：轉賬人＝登入同事（自動）；收款人＝管理夾萬同工（按社別自動揀） ----
+async function setupXfer(){
+  const role = sessionRole();
+  if (role !== 'admin' && role !== 'manager') return;
+  try {
+    const [dir, roles] = await Promise.all([getSettingValue('staff_dir'), getSettingValue('roles')]);
+    if (dir && typeof dir === 'object') CLOUD_STAFF_DIR = dir;
+    KEEPERS = [];
+    if (roles && typeof roles === 'object') {
+      Object.keys(roles).forEach(em => {
+        const e = String(em).toLowerCase();
+        if (roles[em] !== 'cashier') return;
+        const c = CLOUD_STAFF_DIR[e];
+        if (c && c.deleted) return;
+        KEEPERS.push({ email: e, name: staffNameOf(e) || e, house: (c && c.house) || '' });
+      });
+    }
+  } catch {}
+  $('vault_xfer_by').value = staffNameOf(sessionEmail()) || '';
+  const sel = $('vault_xfer_to');
+  if (KEEPERS.length) {
+    sel.innerHTML = '<option value="">— 收款人（管理夾萬同工）—</option>' +
+      KEEPERS.map(k => `<option value="${escapeHtml(k.name)}">${escapeHtml(k.name)}${k.house ? '（' + (k.house === 'zhong' ? '忠社' : '孝社') + '夾萬）' : ''}</option>`).join('');
+  } else {
+    sel.innerHTML = '<option value="">（未有管理夾萬同工，請 admin 喺後台指派）</option>';
+  }
+  // 預設社別（忠社）觸發一次自動揀收款人
+  const hit0 = KEEPERS.find(k => k.house === $('vault_xfer_house').value);
+  if (hit0) sel.value = hit0.name;
+}
+$('vault_xfer_house').addEventListener('change', () => {
+  const h = $('vault_xfer_house').value;   // zhong / xiao
+  const sel = $('vault_xfer_to');
+  const hit = KEEPERS.find(k => k.house === h);
+  sel.value = hit ? hit.name : '';
+  if (!hit && KEEPERS.length) toast('該社未指派管理夾萬同工，請手動揀收款人。');
+});
+
 // ---- 現存現金 → 代管現金 過錢（同社之內）；記流水賬：現存現金一筆出、代管現金一筆入 ----
 $('vault_xfer').addEventListener('click', async () => {
+  if (!['admin', 'manager'].includes(sessionRole())) { alert('過錢只限管理級或以上職員操作。'); return; }
   const amt = Number($('vault_xfer_amt').value) || 0;
   if (amt <= 0) { alert('請輸入過錢金額。'); $('vault_xfer_amt').focus(); return; }
   const by = $('vault_xfer_by').value.trim(), to = $('vault_xfer_to').value.trim();
-  if (!by || !to) { alert('請填轉賬人同收款人（月結紀錄需要）。'); return; }
+  if (!by) { alert('未能識別登入同事姓名，請聯絡 admin 喺後台帳號管理補登姓名。'); return; }
+  if (!to) { alert('請揀收款人（管理夾萬同工）（月結紀錄需要）。'); return; }
   const k = $('vault_xfer_house').value;             // zhong / xiao
   const hName = k === 'xiao' ? '孝社' : '忠社';
   const v = await getSafeVault();
@@ -657,8 +738,8 @@ $('seed_save').addEventListener('click', async () => {
 });
 
 // ---- 初始化 ----
-// 角色：admin（永久 admin 電郵／後台指派）全用；cashier（支錢負責）只可以用「舍友存入」；
-// normal（普通）已登入就可以入，但只可以唯讀睇夾萬現存同舍友現存；未登入唔入得
+// 角色：admin（永久 admin 電郵／後台指派）全用；manager（管理級）＝舍友存入＋現存→代管過錢＋睇數；
+// cashier（管理夾萬同工）只可以用「舍友存入」；normal（普通同工）已登入就可以入，唯讀睇夾萬同舍友現存；未登入唔入得
 // 模擬檢視：真 admin 可以用其他角色視角預覽（cyc-sim 只影響呢個分頁）
 const ADMIN_EMAILS = ['ho.ml@sbccyc.org.hk', 'ho.lh@sbccyc.org.hk'];
 function isLoggedIn(){
@@ -672,14 +753,14 @@ function realRole(){
     const a = JSON.parse(sessionStorage.getItem('cyc-portal-auth') || 'null');
     if (!a || !Number.isFinite(a.exp) || Date.now() >= a.exp) return 'normal';
     if (a.email && ADMIN_EMAILS.includes(a.email)) return 'admin';
-    return (a.role === 'admin' || a.role === 'cashier') ? a.role : 'normal';
+    return (a.role === 'admin' || a.role === 'manager' || a.role === 'cashier') ? a.role : 'normal';
   } catch { return 'normal'; }
 }
 function simInfo(){
   if (realRole() !== 'admin') return null;
   try {
     const s = JSON.parse(sessionStorage.getItem('cyc-sim') || 'null');
-    return (s && (s.role === 'admin' || s.role === 'cashier' || s.role === 'normal')) ? s : null;
+    return (s && ['admin', 'manager', 'cashier', 'normal'].includes(s.role)) ? s : null;
   } catch { return null; }
 }
 function sessionRole(){ const s = simInfo(); return s ? s.role : realRole(); }
@@ -689,7 +770,7 @@ function isFullAdmin(){ return sessionRole() === 'admin'; }
 (function(){
   const s = simInfo();
   if (!s) return;
-  const RL = { admin: 'admin', cashier: '支錢負責', normal: '普通' };
+  const RL = { admin: 'admin', manager: '管理級', cashier: '管理夾萬同工', normal: '普通同工' };
   const who = s.name || s.email || '';
   const b = $('simBanner');
   b.classList.remove('hidden');

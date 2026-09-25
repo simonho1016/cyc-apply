@@ -391,20 +391,11 @@ create policy "anon access" on settings
   for all to anon using (true) with check (true);</pre>
     </div>
 
-    <!-- 舍友名單 -->
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
-      <div class="flex items-center justify-between flex-wrap gap-2">
-        <h3 class="text-sm font-bold text-blue-600 uppercase tracking-wide">舍友名單</h3>
-        <div class="flex gap-2">
-          <button data-sethouse="忠社" class="set-house-tab px-3 py-1.5 rounded-lg text-sm font-bold bg-blue-600 text-white transition">忠社</button>
-          <button data-sethouse="孝社" class="set-house-tab px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-100 text-slate-600 transition">孝社</button>
-        </div>
-      </div>
-      <div id="setMembers" class="space-y-2"></div>
-      <div class="flex gap-2">
-        <button id="addMemberBtn" class="flex-1 py-2 rounded-lg text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition">＋ 新增舍友</button>
-        <button id="saveMembersBtn" class="flex-1 py-2 rounded-lg text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition">儲存舍友名單</button>
-      </div>
+    <!-- 舍友名單（已搬去後台管理） -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-3">
+      <h3 class="text-sm font-bold text-blue-600 uppercase tracking-wide">舍友名單</h3>
+      <p class="text-sm text-slate-500">舍友嘅新增、修訂編號／姓名、排序、刪除同埋<b>轉社</b>，已經搬去後台管理嘅「👥 舍友戶口管理」，由 admin 負責處理。呢度嘅名單會自動同步，唔使喺度改。</p>
+      <a href="/admin/" class="inline-block px-4 py-2 rounded-lg text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 transition">前往後台管理 →</a>
     </div>
 
     <!-- 職員名單同密碼 -->
@@ -1603,120 +1594,12 @@ document.addEventListener('keydown', e => {
 });
 
 // ====================== 系統設定 ======================
-let setHouse = '忠社';
-
 function openSettings(){
   $('set_who').textContent = staffUser || '（未揀支款人）';
   $('setDbWarn').classList.toggle('hidden', CFG.settingsDbOk);
-  setMemberBal = null;
-  DB.getSettings().then(s => {
-    setMemberBal = (s.member_bal && typeof s.member_bal === 'object') ? s.member_bal : null;
-  }).catch(() => { setMemberBal = null; });
-  renderSetMembers();
   renderSetStaff();
   show('settingsScreen');
 }
-
-// ---- 舍友名單編輯 ----
-let setMemberBal = null;   // 開設定頁時載入嘅舍友現存（未設定過 = null，冇刪除限制）
-function memberBalOf(id){
-  if (!setMemberBal || !id) return 0;
-  return Number(setMemberBal[id]) || 0;
-}
-document.querySelectorAll('.set-house-tab').forEach(btn => {
-  btn.addEventListener('click', () => {
-    setHouse = btn.dataset.sethouse;
-    document.querySelectorAll('.set-house-tab').forEach(b => {
-      const on = b === btn;
-      b.className = 'set-house-tab px-3 py-1.5 rounded-lg text-sm transition ' + (on ? 'font-bold bg-blue-600 text-white' : 'font-medium bg-slate-100 text-slate-600');
-    });
-    renderSetMembers();
-  });
-});
-function memberRow(m){
-  return `<div class="set-member-row flex items-center gap-1.5">
-    <span class="flex flex-col shrink-0">
-      <button class="set-up text-slate-400 hover:text-blue-600 text-xs leading-none px-0.5" title="上移">▲</button>
-      <button class="set-down text-slate-400 hover:text-blue-600 text-xs leading-none px-0.5" title="下移">▼</button>
-    </span>
-    <input data-f="id" value="${escapeHtml(m.id)}" placeholder="舍號" class="w-20 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500">
-    <input data-f="name" value="${escapeHtml(m.name)}" placeholder="姓名" class="flex-1 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500">
-    <button class="set-del text-red-400 hover:text-red-600 text-lg px-1" title="刪除">&times;</button>
-  </div>`;
-}
-function renderSetMembers(){
-  $('setMembers').innerHTML = (CFG.members[setHouse] || []).map(memberRow).join('');
-}
-$('setMembers').addEventListener('click', e => {
-  const row = e.target.closest('.set-member-row');
-  if (!row) return;
-  if (e.target.closest('.set-up')) {
-    const prev = row.previousElementSibling;
-    if (prev) row.parentNode.insertBefore(row, prev);
-    return;
-  }
-  if (e.target.closest('.set-down')) {
-    const next = row.nextElementSibling;
-    if (next) row.parentNode.insertBefore(next, row);
-    return;
-  }
-  if (e.target.closest('.set-del')) {
-    const id = row.querySelector('[data-f="id"]').value.trim();
-    const name = row.querySelector('[data-f="name"]').value.trim();
-    const bal = memberBalOf(id);
-    if (bal !== 0) {
-      alert(`「${name || id}」現存 $${bal.toFixed(2)} 未歸 0，唔可以刪除。\n請先去「🏦 夾萬・現存」頁將佢嘅結存調整為 0。`);
-      return;
-    }
-    row.remove();
-  }
-});
-$('addMemberBtn').addEventListener('click', () => {
-  $('setMembers').insertAdjacentHTML('beforeend', memberRow({id:'',name:''}));
-  const rows = $('setMembers').querySelectorAll('.set-member-row');
-  rows[rows.length-1].querySelector('input').focus();
-});
-function collectMembers(){
-  // 收集兩個社別：而家編輯緊嘅由畫面讀，另一邊用 CFG 原有
-  const rows = [...$('setMembers').querySelectorAll('.set-member-row')];
-  const list = rows.map(r => ({
-    id: r.querySelector('[data-f="id"]').value.trim(),
-    name: r.querySelector('[data-f="name"]').value.trim()
-  }));
-  if (list.some(m => !m.id || !m.name)) { alert('有舍友未填舍號或姓名。'); return null; }
-  const ids = list.map(m => m.id);
-  if (new Set(ids).size !== ids.length) { alert('舍號有重複，請檢查。'); return null; }
-  const names = list.map(m => m.name);
-  if (new Set(names).size !== names.length) { alert('姓名有重複，請檢查。'); return null; }
-  return { ...CFG.members, [setHouse]: list };
-}
-$('saveMembersBtn').addEventListener('click', async () => {
-  const members = collectMembers();
-  if (!members) return;
-  // 雙重保障：直接改舍號都當刪除舊舍號，現存未歸 0 一樣擋
-  const oldIds = (CFG.members[setHouse] || []).map(m => m.id);
-  const newIds = members[setHouse].map(m => m.id);
-  const removed = oldIds.filter(id => !newIds.includes(id));
-  if (setMemberBal) {
-    const blocked = removed.filter(id => (Number(setMemberBal[id]) || 0) !== 0);
-    if (blocked.length) {
-      const old = (CFG.members[setHouse] || []).find(m => m.id === blocked[0]);
-      alert(`「${old ? old.name : blocked[0]}」（${blocked[0]}）現存 $${(Number(setMemberBal[blocked[0]]) || 0).toFixed(2)} 未歸 0，唔可以刪除或改舍號。\n請先去「🏦 夾萬・現存」頁將結存調整為 0。`);
-      return;
-    }
-  }
-  try {
-    await DB.setSetting('members', members);
-    CFG.members = members;
-    // 已刪除而且結存為 0 嘅舍友，順便清走佢嘅結存紀錄
-    if (setMemberBal && removed.length) {
-      let touched = false;
-      removed.forEach(id => { if (id in setMemberBal) { delete setMemberBal[id]; touched = true; } });
-      if (touched) await DB.setSetting('member_bal', setMemberBal);
-    }
-    toast('已儲存舍友名單。');
-  } catch (e) { alert(e.message); }
-});
 
 // ---- 職員名單編輯 ----
 function staffRow(s){

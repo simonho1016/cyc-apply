@@ -126,6 +126,26 @@
       <span class="shrink-0 px-4 py-2 rounded-lg text-sm font-bold text-white bg-emerald-600">進入 →</span>
     </a>
 
+    <!-- 舍友戶口管理（admin 專用） -->
+    <div class="card bg-white p-5 space-y-3">
+      <div class="flex items-center justify-between flex-wrap gap-2">
+        <h3 class="text-sm font-bold text-sky-700 uppercase tracking-wide">👥 舍友戶口管理</h3>
+        <div class="flex gap-2">
+          <button data-mghouse="忠社" class="mg-house-tab px-3 py-1.5 rounded-lg text-sm font-bold bg-sky-600 text-white transition">忠社</button>
+          <button data-mghouse="孝社" class="mg-house-tab px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-100 text-slate-600 transition">孝社</button>
+        </div>
+      </div>
+      <p class="text-xs text-slate-500">新增／修訂舍友編號同姓名、調整排序、轉社。<b>現存未歸 0 嘅舍友唔可以刪除或改編號</b>；轉社會將舍友結存連同款項由舊社代管現金自動搬去新社代管現金，並記入流水賬（月結會顯示轉出／轉入）。</p>
+      <div id="mg_list" class="space-y-1.5 text-sm"></div>
+      <div class="flex items-end gap-2 flex-wrap border-t border-slate-100 pt-3">
+        <label class="block"><span class="text-xs font-medium text-slate-500">新舍友編號</span>
+          <input id="mg_new_id" maxlength="6" class="mt-0.5 w-24 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none" placeholder="A01"></label>
+        <label class="block"><span class="text-xs font-medium text-slate-500">姓名</span>
+          <input id="mg_new_name" maxlength="10" class="mt-0.5 w-32 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none"></label>
+        <button id="mg_add" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 transition">＋ 新增舍友</button>
+      </div>
+    </div>
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
       <!-- 按舍友統計 -->
       <div class="card bg-white p-5">
@@ -220,6 +240,48 @@
   </div>
 </div>
 
+<!-- 舍友修訂 modal -->
+<div id="mgEditModal" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/50"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="card bg-white p-6 w-full max-w-md space-y-4">
+      <h3 class="font-bold text-slate-900">✏️ 修訂舍友</h3>
+      <p id="mg_e_info" class="text-xs text-slate-500"></p>
+      <div class="flex gap-2">
+        <label class="block"><span class="text-xs font-medium text-slate-500">編號</span>
+          <input id="mg_e_id" maxlength="6" class="mt-0.5 w-24 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none disabled:bg-slate-100 disabled:text-slate-400"></label>
+        <label class="block flex-1"><span class="text-xs font-medium text-slate-500">姓名</span>
+          <input id="mg_e_name" maxlength="10" class="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none"></label>
+      </div>
+      <p class="text-xs text-amber-600">現存未歸 0 嘅舍友唔可以改編號（只可以改姓名）；要改編號請先將結存歸 0，或者用「轉社」搬編號。</p>
+      <div class="flex gap-2">
+        <button id="mg_e_cancel" class="flex-1 py-2.5 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">取消</button>
+        <button id="mg_e_ok" class="flex-1 py-2.5 rounded-lg text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 transition">儲存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 舍友轉社 modal -->
+<div id="mgXferModal" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/50"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="card bg-white p-6 w-full max-w-md space-y-4">
+      <h3 class="font-bold text-slate-900">🔀 舍友轉社</h3>
+      <div id="mg_x_info" class="text-sm space-y-1 rounded-lg bg-slate-50 border border-slate-200 p-3"></div>
+      <label class="block">
+        <span class="text-xs font-medium text-slate-500">轉入 <b id="mg_x_to"></b> 嘅新編號</span>
+        <input id="mg_x_id" maxlength="6" class="mt-1 w-32 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="例如 B14">
+      </label>
+      <p class="text-xs text-slate-500">確認後：舍友會即刻轉社；結存（如有）會由舊社<b>代管現金</b>自動搬去新社代管現金，並記入流水賬（月結會顯示轉出／轉入）。舊編號嘅歷史支錢記錄會保留唔變。</p>
+      <div class="flex gap-2">
+        <button id="mg_x_cancel" class="flex-1 py-2.5 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">取消</button>
+        <button id="mg_x_ok" class="flex-1 py-2.5 rounded-lg text-sm font-bold text-white bg-violet-600 hover:bg-violet-700 transition">確認轉社</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl text-white text-sm shadow-lg"></div>
 
 <script>
@@ -258,6 +320,7 @@ function showMain(){
   $('adminLogout').classList.remove('hidden');
   loadData();
   loadRoles();
+  mgLoad();
 }
 
 // ---- 數據 ----
@@ -805,6 +868,236 @@ $('sim_stop').addEventListener('click', () => {
   refreshSimUI();
 });
 refreshSimUI();
+
+// ====================== 舍友戶口管理（新增／修訂／排序／刪除／轉社） ======================
+// 預設舍友名單（雲端未存設定時嘅後備，同支錢頁／月結頁一致）
+const DEFAULT_MEMBERS = {
+  '忠社': [
+    {id:'A01',name:'王嘉星'},{id:'A02',name:'莫志樂'},{id:'A03',name:'劉柏曦'},{id:'A10',name:'王駿騰'},
+    {id:'A11',name:'梁柏狄'},{id:'A12',name:'賴元朮'},{id:'A13',name:'魏浩男'},{id:'A15',name:'姚瑄政'},
+    {id:'A16',name:'林子誠'},{id:'A17',name:'蕭冠稀'},{id:'A18',name:'蕭栢稀'},{id:'A19',name:'趙君介'},
+    {id:'A22',name:'高政'},{id:'B08',name:'冼子朗'}
+  ],
+  '孝社': [
+    {id:'B01',name:'陳允浠'},{id:'B02',name:'潘韋霖'},{id:'B03',name:'莊咏賢'},{id:'B04',name:'黃仲明'},
+    {id:'B05',name:'李祐承'},{id:'B06',name:'劉俊希'},{id:'B07',name:'曹振袁'},{id:'B09',name:'程浩銘'},
+    {id:'B10',name:'蔡浩鈞'},{id:'B11',name:'陳冠喬'},{id:'B12',name:'鄭子倫'},{id:'B14',name:'吳培燊'},
+    {id:'B17',name:'翁梓峻'},{id:'B18',name:'鄧國賢'},{id:'B22',name:'徐櫻俊'},{id:'B24',name:'蘇鎮'},
+    {id:'B26',name:'林戩翹'}
+  ]
+};
+let mgMembers = null;   // {忠社:[{id,name}...], 孝社:[...]}
+let mgBal = {};         // member_bal：編號 → 現存
+let mgHouse = '忠社';
+let mgEditId = null, mgXferId = null;
+
+function mgStaffName(){
+  try { const a = JSON.parse(sessionStorage.getItem('cyc-portal-auth') || 'null'); return (a && (a.name || a.email)) || ''; } catch { return ''; }
+}
+async function mgLoad(){
+  try {
+    const m = await getSettingValue('members');
+    mgMembers = (m && typeof m === 'object' && !Array.isArray(m) && (Array.isArray(m['忠社']) || Array.isArray(m['孝社'])))
+      ? { '忠社': Array.isArray(m['忠社']) ? m['忠社'] : [], '孝社': Array.isArray(m['孝社']) ? m['孝社'] : [] }
+      : JSON.parse(JSON.stringify(DEFAULT_MEMBERS));
+  } catch { mgMembers = JSON.parse(JSON.stringify(DEFAULT_MEMBERS)); }
+  try {
+    const b = await getSettingValue('member_bal');
+    mgBal = (b && typeof b === 'object' && !Array.isArray(b)) ? b : {};
+  } catch { mgBal = {}; }
+  mgRender();
+}
+const mgBalOf = id => Number(mgBal[id]) || 0;
+// 全兩社編號／姓名（except = {house, id} 嘅話會略過嗰位舍友，修訂時用）
+function mgAllIds(except){
+  const out = [];
+  ['忠社', '孝社'].forEach(h => (mgMembers[h] || []).forEach(m => { if (!except || !(except.house === h && m.id === except.id)) out.push(m.id); }));
+  return out;
+}
+function mgAllNames(except){
+  const out = [];
+  ['忠社', '孝社'].forEach(h => (mgMembers[h] || []).forEach(m => { if (!except || !(except.house === h && m.id === except.id)) out.push(m.name); }));
+  return out;
+}
+async function mgSaveMembers(){
+  const { error } = await sb.from('settings').upsert({ key: 'members', value: mgMembers });
+  if (error) throw new Error(error.message);
+}
+async function mgSaveBal(){
+  const { error } = await sb.from('settings').upsert({ key: 'member_bal', value: mgBal });
+  if (error) throw new Error(error.message);
+}
+function mgRender(){
+  const list = mgMembers[mgHouse] || [];
+  $('mg_list').innerHTML = list.length ? list.map((m, i) => {
+    const bal = mgBalOf(m.id);
+    return `<div class="flex items-center gap-1.5 border border-slate-200 rounded-lg px-2.5 py-1.5">
+      <span class="flex flex-col shrink-0">
+        <button data-act="up" data-id="${escapeHtml(m.id)}" class="text-slate-400 hover:text-sky-600 text-xs leading-none px-0.5 ${i === 0 ? 'invisible' : ''}" title="上移">▲</button>
+        <button data-act="down" data-id="${escapeHtml(m.id)}" class="text-slate-400 hover:text-sky-600 text-xs leading-none px-0.5 ${i === list.length - 1 ? 'invisible' : ''}" title="下移">▼</button>
+      </span>
+      <span class="w-12 shrink-0 font-mono text-xs font-bold text-slate-500">${escapeHtml(m.id)}</span>
+      <span class="flex-1 min-w-0 truncate font-medium">${escapeHtml(m.name)}</span>
+      <span class="shrink-0 text-xs ${bal !== 0 ? 'font-bold text-amber-600' : 'text-slate-400'}">現存 ${money(bal)}</span>
+      <button data-act="edit" data-id="${escapeHtml(m.id)}" class="shrink-0 px-2.5 py-1 rounded-lg bg-sky-50 text-sky-700 text-xs font-bold hover:bg-sky-100 transition">修訂</button>
+      <button data-act="xfer" data-id="${escapeHtml(m.id)}" class="shrink-0 px-2.5 py-1 rounded-lg bg-violet-50 text-violet-700 text-xs font-bold hover:bg-violet-100 transition">轉社</button>
+      <button data-act="del" data-id="${escapeHtml(m.id)}" class="shrink-0 px-2.5 py-1 rounded-lg bg-red-50 text-red-600 text-xs font-bold hover:bg-red-100 transition">刪除</button>
+    </div>`;
+  }).join('') : '<p class="text-xs text-slate-400 py-3 text-center">呢個社別仲未有舍友。</p>';
+}
+document.querySelectorAll('.mg-house-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    mgHouse = btn.dataset.mghouse;
+    document.querySelectorAll('.mg-house-tab').forEach(b => {
+      const on = b === btn;
+      b.className = 'mg-house-tab px-3 py-1.5 rounded-lg text-sm transition ' + (on ? 'font-bold bg-sky-600 text-white' : 'font-medium bg-slate-100 text-slate-600');
+    });
+    mgRender();
+  });
+});
+$('mg_add').addEventListener('click', async () => {
+  const id = $('mg_new_id').value.trim().toUpperCase();
+  const name = $('mg_new_name').value.trim();
+  if (!id || !name) { alert('請填舍友編號同姓名。'); return; }
+  if (mgAllIds().includes(id)) { alert(`編號 ${id} 已經用緊（忠孝兩社唔可以重複）。`); return; }
+  if (mgAllNames().includes(name)) { alert(`姓名「${name}」已經用緊。`); return; }
+  (mgMembers[mgHouse] = mgMembers[mgHouse] || []).push({ id, name });
+  try {
+    await mgSaveMembers();
+    $('mg_new_id').value = ''; $('mg_new_name').value = '';
+    toast(`已新增 ${id} ${name}（${mgHouse}）。`);
+    mgRender();
+  } catch (e) { alert('儲存失敗：' + e.message); mgLoad(); }
+});
+$('mg_list').addEventListener('click', async e => {
+  const btn = e.target.closest('button[data-act]');
+  if (!btn) return;
+  const id = btn.dataset.id, act = btn.dataset.act;
+  const list = mgMembers[mgHouse] || [];
+  const idx = list.findIndex(m => m.id === id);
+  if (idx < 0) return;
+  if (act === 'up' || act === 'down') {
+    const j = act === 'up' ? idx - 1 : idx + 1;
+    if (j < 0 || j >= list.length) return;
+    [list[idx], list[j]] = [list[j], list[idx]];
+    try { await mgSaveMembers(); mgRender(); }
+    catch (err) { [list[idx], list[j]] = [list[j], list[idx]]; alert('儲存失敗：' + err.message); }
+    return;
+  }
+  if (act === 'del') {
+    const m = list[idx], bal = mgBalOf(id);
+    if (bal !== 0) { alert(`「${m.name}」現存 ${money(bal)} 未歸 0，唔可以刪除。\n請先去「🏦 夾萬・現存」頁將佢嘅結存調整為 0。`); return; }
+    if (!confirm(`確定刪除 ${id} ${m.name}（${mgHouse}）？\n歷史支錢記錄會保留唔變。`)) return;
+    list.splice(idx, 1);
+    if (id in mgBal) delete mgBal[id];
+    try { await mgSaveMembers(); await mgSaveBal(); toast('已刪除舍友。'); mgRender(); }
+    catch (err) { alert('儲存失敗：' + err.message); mgLoad(); }
+    return;
+  }
+  if (act === 'edit') { mgOpenEdit(id); return; }
+  if (act === 'xfer') { mgOpenXfer(id); return; }
+});
+// ---- 修訂 ----
+function mgOpenEdit(id){
+  const m = (mgMembers[mgHouse] || []).find(x => x.id === id);
+  if (!m) return;
+  mgEditId = id;
+  const bal = mgBalOf(id);
+  $('mg_e_info').innerHTML = `而家：<b>${escapeHtml(m.id)} ${escapeHtml(m.name)}</b>（${mgHouse}） · 現存 <b class="${bal !== 0 ? 'text-amber-600' : ''}">${money(bal)}</b>`;
+  $('mg_e_id').value = m.id;
+  $('mg_e_name').value = m.name;
+  $('mg_e_id').disabled = bal !== 0;   // 現存未歸 0 唔准改編號
+  $('mgEditModal').classList.remove('hidden');
+}
+$('mg_e_cancel').addEventListener('click', () => { $('mgEditModal').classList.add('hidden'); $('mg_e_id').disabled = false; });
+$('mg_e_ok').addEventListener('click', async () => {
+  const list = mgMembers[mgHouse] || [];
+  const idx = list.findIndex(m => m.id === mgEditId);
+  if (idx < 0) { $('mgEditModal').classList.add('hidden'); return; }
+  const m = list[idx], oldId = m.id;
+  const newId = $('mg_e_id').value.trim().toUpperCase();
+  const newName = $('mg_e_name').value.trim();
+  if (!newId || !newName) { alert('請填編號同姓名。'); return; }
+  if (newId !== oldId && mgBalOf(oldId) !== 0) { alert('現存未歸 0，唔可以改編號。'); return; }
+  if (newId !== oldId && mgAllIds({ house: mgHouse, id: oldId }).includes(newId)) { alert(`編號 ${newId} 已經用緊（忠孝兩社唔可以重複）。`); return; }
+  if (mgAllNames({ house: mgHouse, id: oldId }).includes(newName)) { alert(`姓名「${newName}」已經用緊。`); return; }
+  m.id = newId; m.name = newName;
+  if (newId !== oldId && oldId in mgBal) { mgBal[newId] = mgBal[oldId]; delete mgBal[oldId]; }
+  try {
+    await mgSaveMembers();
+    if (newId !== oldId) await mgSaveBal();
+    $('mgEditModal').classList.add('hidden'); $('mg_e_id').disabled = false;
+    toast('已儲存修訂。');
+    mgRender();
+  } catch (err) { alert('儲存失敗：' + err.message); mgLoad(); }
+});
+// ---- 轉社 ----
+function mgOpenXfer(id){
+  const m = (mgMembers[mgHouse] || []).find(x => x.id === id);
+  if (!m) return;
+  mgXferId = id;
+  const other = mgHouse === '忠社' ? '孝社' : '忠社';
+  const bal = mgBalOf(id);
+  $('mg_x_info').innerHTML = `<div>舍友：<b>${escapeHtml(m.name)}</b>（${escapeHtml(m.id)}）</div>
+    <div>轉出：${mgHouse} → 轉入：<b class="text-violet-700">${other}</b></div>
+    <div>現存結存：<b class="${bal !== 0 ? 'text-amber-600' : ''}">${money(bal)}</b>${bal > 0 ? `<span class="text-xs text-slate-500">（會由${mgHouse}代管現金搬去${other}代管現金）</span>` : ''}</div>`;
+  $('mg_x_to').textContent = other;
+  // 新編號預填舊編號（如對方社未用緊）
+  $('mg_x_id').value = (mgMembers[other] || []).some(x => x.id === id) ? '' : id;
+  $('mgXferModal').classList.remove('hidden');
+}
+$('mg_x_cancel').addEventListener('click', () => $('mgXferModal').classList.add('hidden'));
+$('mg_x_ok').addEventListener('click', async () => {
+  const oldHouse = mgHouse, newHouse = oldHouse === '忠社' ? '孝社' : '忠社';
+  const oldList = mgMembers[oldHouse] || [];
+  const idx = oldList.findIndex(m => m.id === mgXferId);
+  if (idx < 0) { $('mgXferModal').classList.add('hidden'); return; }
+  const m = oldList[idx];
+  const newId = $('mg_x_id').value.trim().toUpperCase();
+  if (!newId) { alert('請填新編號。'); $('mg_x_id').focus(); return; }
+  if (mgAllIds().includes(newId)) { alert(`編號 ${newId} 已經用緊（忠孝兩社唔可以重複）。`); return; }
+  const B = r2(mgBalOf(m.id));
+  const ok = houseKey(oldHouse), nk = houseKey(newHouse);
+  // 有結存就要檢查舊社代管現金夠唔夠搬
+  let vault = null, nv = null;
+  if (B > 0) {
+    vault = await getSafeVault();
+    if (vault.init && vault[ok + '_small'] < B) {
+      alert(`${oldHouse}代管現金唔夠錢搬結存：需要 ${money(B)}，現存 ${money(vault[ok + '_small'])}。\n請先去「🏦 夾萬・現存」頁由現存現金過錢俾代管現金，再試轉社。`);
+      return;
+    }
+    if (vault.init) {
+      nv = { zhong_big: vault.zhong_big, zhong_small: vault.zhong_small, xiao_big: vault.xiao_big, xiao_small: vault.xiao_small };
+      nv[ok + '_small'] = r2(nv[ok + '_small'] - B);
+      nv[nk + '_small'] = r2(nv[nk + '_small'] + B);
+    }
+  }
+  if (!confirm(`確認轉社？\n\n${m.name}（${m.id}）由 ${oldHouse} 轉去 ${newHouse}（新編號 ${newId}）\n結存 ${money(B)} 會一併轉移${B > 0 ? '（代管現金自動過戶）' : ''}，並記入流水賬。\n舊編號嘅歷史記錄保留唔變。`)) return;
+  const now = new Date().toISOString(), staff = mgStaffName();
+  oldList.splice(idx, 1);
+  (mgMembers[newHouse] = mgMembers[newHouse] || []).push({ id: newId, name: m.name });
+  if (m.id in mgBal) delete mgBal[m.id];
+  if (B !== 0) mgBal[newId] = B;
+  try {
+    await mgSaveMembers();
+    await mgSaveBal();
+    if (nv) await saveSafeVault(nv);
+    if (B !== 0) {
+      const base = { created_at: now, member_name: m.name, amount: B, staff };
+      await ledgerInsert([
+        { ...base, house: ok, kind: 'transfer_out', member_id: m.id, member_delta: -B, member_bal_after: 0,
+          ...(nv ? { account: 'small', account_delta: -B, account_bal_after: nv[ok + '_small'] } : {}),
+          note: `轉社至${newHouse}（新編號 ${newId}）` },
+        { ...base, house: nk, kind: 'transfer_in', member_id: newId, member_delta: B, member_bal_after: B,
+          ...(nv ? { account: 'small', account_delta: B, account_bal_after: nv[nk + '_small'] } : {}),
+          note: `由${oldHouse}轉入（舊編號 ${m.id}）` }
+      ]);
+    }
+    $('mgXferModal').classList.add('hidden');
+    alert(`✅ 轉社完成\n\n${m.name} 已由 ${oldHouse}（${m.id}）轉去 ${newHouse}（新編號 ${newId}）\n結存 ${money(B)} 已一併轉移。`);
+    mgLoad();
+  } catch (err) { alert('轉社失敗：' + err.message); mgLoad(); }
+});
 
 // ---- 初始化 ----
 // 角色：永久 admin 電郵、後台指派嘅 admin 直入；其餘要入後台密碼

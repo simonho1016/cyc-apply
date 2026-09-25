@@ -316,6 +316,8 @@ async function buildStatement(houseName, ym){
       if (r.kind === 'deposit') { dep = r2(dep + Number(r.member_delta || 0)); if (r.receipt_no) receipts.push(r.receipt_no); }
       else if (r.kind === 'expense') exp = r2(exp - Number(r.member_delta || 0));
       else if (r.kind === 'rollback') exp = r2(exp - Number(r.member_delta || 0));
+      else if (r.kind === 'transfer_in') dep = r2(dep + Number(r.member_delta || 0));    // 轉社轉入當存入
+      else if (r.kind === 'transfer_out') exp = r2(exp - Number(r.member_delta || 0));   // 轉社轉出當支出
     });
     return { ...mm, opening, dep, exp, closing: r2(opening + dep - exp), receipts };
   });
@@ -432,8 +434,15 @@ async function buildMemberStatements(houseName, ym){
         const amt = delta || Number(r.amount || 0);
         bal = r2(bal + amt); totOut = r2(totOut - amt);
         txns.push({ d, desc: '刪單回補' + (r.serial ? '　#' + escapeHtml(r.serial) : ''), in: amt, out: null, bal, staff: r.staff || '', payer: '' });
+      } else if (r.kind === 'transfer_in') {
+        bal = r2(bal + delta); totIn = r2(totIn + delta);
+        txns.push({ d, desc: escapeHtml(r.note || '轉社轉入'), in: delta, out: null, bal, staff: r.staff || '', payer: '' });
+      } else if (r.kind === 'transfer_out') {
+        const amt = -delta || Number(r.amount || 0);
+        bal = r2(bal - amt); totOut = r2(totOut + amt);
+        txns.push({ d, desc: escapeHtml(r.note || '轉社轉出'), in: null, out: amt, bal, staff: r.staff || '', payer: '' });
       }
-      // settle 行唔影響舍友結存（支錢嗰陣已扣），唔列入舍友收支表
+      // settle 行唔影響舍友結存（支錢嗰陣已扣），唔列入舍友收支表；轉社行唔入分類小計
     });
     return { ...mm, houseName, y, m, start, end, opening, txns, totIn, totOut, closing: r2(opening + totIn - totOut), catSum };
   });

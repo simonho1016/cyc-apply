@@ -182,7 +182,7 @@
     <!-- 權限管理（Google 登入職員角色） -->
     <div class="card bg-white p-5 space-y-3">
       <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wide">權限管理</h3>
-      <p class="text-xs text-slate-500">用 Google 登入嘅職員預設係「<b>普通</b>」：只可以支錢同檢視文件。喺度可以將個別 @sbccyc.org.hk 電郵升做「<b>支錢負責</b>」（支錢、舍友存入、製作及下載文件）或「<b>admin</b>」（所有權限）。ho.ml／ho.lh@sbccyc.org.hk 係永久 admin，唔使亦唔可以喺度設定。設定喺職員下次登入時生效。</p>
+      <p class="text-xs text-slate-500">用 Google 登入嘅職員預設係「<b>普通</b>」：只可以支錢同檢視文件。喺度可以將任何 @sbccyc.org.hk 職員改做「<b>支錢負責</b>」（支錢、舍友存入、製作及下載文件）或「<b>admin</b>」（所有權限，包括新增其他 admin）。ho.ml／ho.lh@sbccyc.org.hk 係永久 admin，唔可以改。設定喺職員下次登入時生效。</p>
       <div id="role_list" class="space-y-2 text-sm"></div>
       <div class="flex gap-2 flex-wrap items-center">
         <input id="role_email" type="email" autocomplete="off" class="flex-1 min-w-48 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="職員電郵（xxx@sbccyc.org.hk）">
@@ -828,19 +828,63 @@ $('settle_ok').addEventListener('click', async () => {
 
 // ---- 權限管理（settings 嘅 roles：電郵 → cashier/admin；冇設定嘅網域職員預設普通） ----
 const ROLE_LABELS = { admin: 'admin', cashier: '支錢負責', normal: '普通' };
+// 已登記同事對照表（同前置頁一致）；perm = 永久 admin 唔可以改
+const KNOWN_STAFF = [
+  { email: 'ho.ml@sbccyc.org.hk',   name: '何文諾', title: '社工', perm: true },
+  { email: 'ho.lh@sbccyc.org.hk',   name: '何樂軒', title: '社工', perm: true },
+  { email: 'tan.kl@sbccyc.org.hk',  name: '滕家麟', title: '社工' },
+  { email: 'pun.yf@sbccyc.org.hk',  name: '潘耀鋒', title: '社工' },
+  { email: 'yung.ck@sbccyc.org.hk', name: '容俊杰', title: '社工' },
+  { email: 'wong.tw@sbccyc.org.hk', name: '王子維', title: '導師' },
+  { email: 'man.yc@sbccyc.org.hk',  name: '文然澤', title: '導師' }
+];
 async function loadRoles(){
   const box = $('role_list');
   box.innerHTML = '<p class="text-xs text-slate-400">載入中…</p>';
+  let map = {};
   try {
     const { data, error } = await sb.from('settings').select('value').eq('key', 'roles').maybeSingle();
     if (error) throw error;
-    const map = (data && data.value && typeof data.value === 'object' && !Array.isArray(data.value)) ? data.value : {};
-    const entries = Object.entries(map).sort((a, b) => a[0].localeCompare(b[0]));
-    box.innerHTML = entries.length
-      ? entries.map(([em, r]) => `<div class="flex items-center justify-between gap-2 border border-slate-200 rounded-lg px-3 py-2"><span class="truncate">${escapeHtml(em)}</span><span class="shrink-0 text-xs font-bold ${r === 'admin' ? 'text-indigo-600' : 'text-emerald-600'}">${ROLE_LABELS[r] || escapeHtml(String(r))}</span></div>`).join('')
-      : '<p class="text-xs text-slate-400">未有特別設定：除永久 admin 外，所有 @sbccyc.org.hk 職員都係「普通」。</p>';
-  } catch (e) { box.innerHTML = `<p class="text-xs text-red-500">讀取失敗：${escapeHtml(e.message)}</p>`; }
+    map = (data && data.value && typeof data.value === 'object' && !Array.isArray(data.value)) ? data.value : {};
+  } catch (e) { box.innerHTML = `<p class="text-xs text-red-500">讀取失敗：${escapeHtml(e.message)}</p>`; return; }
+  const sel = (email, cur) => `<select class="role_sel shrink-0 rounded-lg border border-slate-300 px-2 py-1 text-xs bg-white outline-none" data-email="${email}">
+    <option value="normal"${cur === 'normal' ? ' selected' : ''}>普通</option>
+    <option value="cashier"${cur === 'cashier' ? ' selected' : ''}>支錢負責</option>
+    <option value="admin"${cur === 'admin' ? ' selected' : ''}>admin</option>
+  </select>`;
+  const rows = KNOWN_STAFF.map(s => {
+    const cur = s.perm ? 'admin' : (map[s.email] || 'normal');
+    const right = s.perm
+      ? '<span class="shrink-0 text-xs font-bold text-indigo-600">永久 admin</span>'
+      : sel(s.email, cur);
+    return `<div class="flex items-center justify-between gap-2 border border-slate-200 rounded-lg px-3 py-2">
+      <span class="min-w-0 truncate"><b>${s.name}</b> <span class="text-xs text-slate-400">${s.title} · ${s.email}</span></span>${right}</div>`;
+  });
+  // 對照表以外嘅自訂電郵（例如新同事）
+  const knownEmails = KNOWN_STAFF.map(s => s.email);
+  Object.keys(map).filter(em => !knownEmails.includes(em)).sort().forEach(em => {
+    rows.push(`<div class="flex items-center justify-between gap-2 border border-dashed border-slate-300 rounded-lg px-3 py-2">
+      <span class="min-w-0 truncate text-slate-600">${escapeHtml(em)}</span>${sel(escapeHtml(em), map[em] || 'normal')}</div>`);
+  });
+  box.innerHTML = rows.join('');
 }
+// 下拉即改即存（升 admin 要先確認）
+$('role_list').addEventListener('change', async e => {
+  const s = e.target.closest('.role_sel');
+  if (!s) return;
+  const em = s.dataset.email, role = s.value;
+  if (role === 'admin' && !confirm(`確定將 ${em} 升做 admin？\n\nadmin 擁有所有權限：結算、刪除記錄、舍友戶口管理、權限管理（包括再新增其他 admin）、轉正式版本。`)) { loadRoles(); return; }
+  try {
+    const { data, error } = await sb.from('settings').select('value').eq('key', 'roles').maybeSingle();
+    if (error) throw error;
+    const map = (data && data.value && typeof data.value === 'object' && !Array.isArray(data.value)) ? { ...data.value } : {};
+    if (role === 'normal') delete map[em]; else map[em] = role;
+    const { error: e2 } = await sb.from('settings').upsert({ key: 'roles', value: map });
+    if (e2) throw e2;
+    toast(`已更新 ${em} 為「${ROLE_LABELS[role]}」，下次登入生效。`);
+    loadRoles();
+  } catch (err) { alert('儲存失敗：' + err.message); loadRoles(); }
+});
 $('role_save').addEventListener('click', async () => {
   const em = $('role_email').value.trim().toLowerCase();
   const role = $('role_role').value;

@@ -122,7 +122,7 @@
   }
 
   /* 試用模式 / 警告條 → 漫畫風 */
-  #demoBanner > div, #setDbWarn {
+  #demoBanner > div {
     border: 3px solid var(--ink) !important;
     box-shadow: 4px 4px 0 var(--ink) !important;
     border-radius: 14px !important;
@@ -181,7 +181,6 @@
     </div>
     <div class="flex items-center gap-2 flex-wrap justify-end">
       <button id="f_history" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">📁 已列印記錄</button>
-      <button id="f_settings" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">⚙️ 系統設定</button>
       <button id="t_records" onclick="location.href='/records/'" class="px-3 py-2 rounded-lg text-sm font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 transition">🧾 支錢紀錄</button>
       <button id="t_vault" onclick="location.href='/vault/'" class="px-3 py-2 rounded-lg text-sm font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 transition">🏦 夾萬・現存</button>
       <button id="t_report" onclick="location.href='/report/'" class="px-3 py-2 rounded-lg text-sm font-bold text-sky-700 bg-sky-50 hover:bg-sky-100 transition">📈 月結報告</button>
@@ -375,62 +374,7 @@
     </div>
   </section>
 
-  <!-- ====================== 系統設定 ====================== -->
-  <section id="settingsScreen" class="hidden space-y-6 max-w-2xl mx-auto">
-    <div class="flex items-center justify-between">
-      <h2 class="text-lg font-bold text-slate-900">⚙️ 系統設定</h2>
-      <span class="text-xs text-slate-400">登入：<strong id="set_who" class="text-slate-600"></strong></span>
-    </div>
-
-    <!-- 設定資料庫未開通提示 -->
-    <div id="setDbWarn" class="hidden rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-3 space-y-2">
-      <p>⚠️ 資料庫未開通「設定儲存」。而家顯示嘅係內置預設值，修改<strong>唔會</strong>儲存。請去 Supabase → SQL Editor 跑下面呢段 SQL 開通：</p>
-      <pre class="text-xs bg-white border border-amber-200 rounded-lg p-3 overflow-x-auto select-all">create table settings (
-  key text primary key,
-  value jsonb not null
-);
-alter table settings enable row level security;
-create policy "anon access" on settings
-  for all to anon using (true) with check (true);</pre>
-    </div>
-
-    <!-- 舍友名單（已搬去後台管理） -->
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-3">
-      <h3 class="text-sm font-bold text-blue-600 uppercase tracking-wide">舍友名單</h3>
-      <p class="text-sm text-slate-500">舍友嘅新增、修訂編號／姓名、排序、刪除同埋<b>轉社</b>，已經搬去後台管理嘅「👥 舍友戶口管理」，由 admin 負責處理。呢度嘅名單會自動同步，唔使喺度改。</p>
-      <a href="/admin/" class="inline-block px-4 py-2 rounded-lg text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 transition">前往後台管理 →</a>
-    </div>
-
-    <!-- 職員名單同密碼 -->
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
-      <h3 class="text-sm font-bold text-emerald-600 uppercase tracking-wide">職員名單同密碼</h3>
-      <div id="setStaff" class="space-y-2"></div>
-      <p class="text-xs text-slate-400">注意：得何文諾、何樂軒有電子簽名圖；新增職員列印時唔會有簽名，要實體簽名。</p>
-      <div class="flex gap-2">
-        <button id="addStaffBtn" class="flex-1 py-2 rounded-lg text-sm font-medium text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition">＋ 新增職員</button>
-        <button id="saveStaffBtn" class="flex-1 py-2 rounded-lg text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition">儲存職員名單</button>
-      </div>
-    </div>
-
-    <!-- Supabase Storage 電子存檔 -->
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
-      <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wide">Supabase Storage 電子存檔</h3>
-      <p class="text-xs text-slate-500">「電子存檔」會將 PDF 上傳到 Supabase Storage 嘅 <strong>apply-archive</strong> bucket，按 <strong>zhong／xiao（社別）→ 舍友編號 → 檔案</strong> 分類（Supabase 唔支援中文路徑，所以用英文編碼）；本機同時會下載一份做後備，本機檔名維持「舍友編號_日期」。免費計劃（1 GB）大約可儲存 2,500–5,000 張 PDF。</p>
-      <p class="text-xs text-slate-400">Bucket 未開通時，存檔仍會儲存雲端記錄同本機下載 PDF，只係冇雲端檔案；記錄頁嘅「下載 PDF」掣會喺該記錄有雲端檔案時先出現。</p>
-    </div>
-
-    <!-- 入場密碼（已取消） -->
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-3">
-      <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wide">入場密碼</h3>
-      <p class="text-xs text-slate-500">入場密碼已取消：而家統一由「忠孝宿舍服務」入口頁登入，唔設時限（用到登出或關閉分頁）。職員個人密碼仍然保留，用嚟控制電子簽名圖嘅使用。</p>
-    </div>
-
-    <!-- 版本記錄 -->
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-3">
-      <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wide">版本記錄 <a href="/version/" target="_blank" class="text-xs font-normal text-blue-500 hover:underline">（公開頁面 ↗）</a></h3>
-      <div id="ver_list" class="text-sm space-y-3"></div>
-    </div>
-  </section>
+  <!-- 系統設定已全數搬去後台管理（/admin/）：職員名冊＝帳號及權限管理；簽名密碼＝🔏 簽名密碼卡 -->
 
 </main>
 
@@ -595,16 +539,14 @@ function sessionEmail(){
 }
 const CAN_MANAGE_FILES = sessionRole() !== 'normal';   // 製作／存檔／下載文件權限
 
-// 按角色收放工具列：普通只見申請同記錄；支錢負責冇系統設定同後台
+// 按角色收放工具列：普通只見申請、紀錄同夾萬；後台管理只限 admin
 const ROLE_NOW = sessionRole();
 if (ROLE_NOW === 'normal') {
   $('roleHint').textContent = '填單 → 簽名 → 電子存檔';
-  $('f_settings').classList.add('hidden');
   $('t_admin').classList.add('hidden');
   $('t_report').classList.add('hidden');
   // t_vault 普通級都入得（唯讀睇數），唔收埋
 } else if (ROLE_NOW === 'cashier') {
-  $('f_settings').classList.add('hidden');
   $('t_admin').classList.add('hidden');
 }
 
@@ -637,12 +579,23 @@ function staffNameOf(email){
   return EMAIL_STAFF_MAP[e] || '';
 }
 
+// 支款人名單：雲端名冊（後台帳號及權限管理）為準；內置對照同舊名單做後備
+function allStaffNames(){
+  const names = [];
+  const push = n => { if (n && !names.includes(n)) names.push(n); };
+  Object.keys(EMAIL_STAFF_MAP).forEach(e => push(staffNameOf(e)));   // 已知同事按固定順序
+  Object.keys(CLOUD_STAFF_DIR).sort().forEach(e => { const c = CLOUD_STAFF_DIR[e]; if (c && !c.deleted) push(c.name); });
+  (CFG.staff || []).forEach(s => push(s.name));                      // 舊名單後備（離線時）
+  return names;
+}
+
 // 填充支款人下拉（填單用）
 function fillStaffSelects(){
-  const opts = CFG.staff.map(s => `<option>${escapeHtml(s.name)}</option>`).join('');
+  const names = allStaffNames();
+  const opts = names.map(n => `<option>${escapeHtml(n)}</option>`).join('');
   const cur = $('f_staff').value;
   $('f_staff').innerHTML = '<option value="">— 支款人 —</option>' + opts;
-  if (cur && CFG.staff.some(s => s.name === cur)) $('f_staff').value = cur;
+  if (cur && names.includes(cur)) $('f_staff').value = cur;
 }
 
 
@@ -739,7 +692,7 @@ async function loadSettings(){
     if (typeof s.entry_pw === 'string' && s.entry_pw) CFG.entryPw = s.entry_pw;
   } catch { /* 用預設值 */ }
   window.__entryPw = CFG.entryPw;
-  // 職員登入下拉（系統設定用）＋ 支款人下拉（填單用）
+  // 支款人下拉（填單用；名單以後台帳號管理嘅雲端名冊為準）
   fillStaffSelects();
   if (window.__lockReady) window.__lockReady();
 }
@@ -777,7 +730,7 @@ function statusBadge(s){
 }
 
 // ====================== 畫面切換 ======================
-const SCREENS = ['sFormScreen','sListScreen','settingsScreen'];
+const SCREENS = ['sFormScreen','sListScreen'];
 function show(id){
   SCREENS.forEach(s => $(s).classList.toggle('hidden', s !== id));
   $('homeBtn').classList.toggle('hidden', id === 'sFormScreen');
@@ -790,9 +743,6 @@ function backToLogin(){
   onStaffChange();          // 重新同步支款人下拉（已驗證嘅唔會再問密碼）
   show('sFormScreen');
 }
-
-// 頂部「⚙️ 系統設定」→ 直接進入，唔使登入
-$('f_settings').addEventListener('click', openSettings);
 
 // ====================== 職員流程 ======================
 let staffUser = '';
@@ -1084,7 +1034,7 @@ async function storageUpload(pdfBlob, path){
       p = path.replace(/\.pdf$/i, `_${String(Date.now()).slice(-6)}.pdf`);
       continue;
     }
-    throw new Error(error.message + (/not found|bucket/i.test(error.message) ? '（請去 Supabase → Storage 建立 apply-archive bucket，詳見系統設定說明）' : ''));
+    throw new Error(error.message + (/not found|bucket/i.test(error.message) ? '（請去 Supabase → Storage 建立 apply-archive bucket，詳見後台管理嘅電子存檔說明）' : ''));
   }
   throw new Error('同名檔案已存在，請稍後再試。');
 }
@@ -1613,81 +1563,17 @@ document.addEventListener('keydown', e => {
   if (btn){ btn.style.filter = 'brightness(0.85)'; setTimeout(() => btn.style.filter = '', 100); }
 });
 
-// ====================== 系統設定 ======================
-function openSettings(){
-  $('set_who').textContent = staffUser || '（未揀支款人）';
-  $('setDbWarn').classList.toggle('hidden', CFG.settingsDbOk);
-  renderSetStaff();
-  show('settingsScreen');
-}
-
-// ---- 職員名單編輯 ----
-function staffRow(s){
-  return `<div class="set-staff-row flex items-center gap-2">
-    <input data-f="name" value="${escapeHtml(s.name)}" placeholder="姓名" class="flex-1 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500">
-    <input data-f="pw" value="${escapeHtml(s.pw)}" placeholder="密碼" class="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500">
-    <button class="set-del text-red-400 hover:text-red-600 text-lg px-1" title="刪除">&times;</button>
-  </div>`;
-}
-function renderSetStaff(){
-  $('setStaff').innerHTML = CFG.staff.map(staffRow).join('');
-}
-$('setStaff').addEventListener('click', e => {
-  if (e.target.closest('.set-del')) e.target.closest('.set-staff-row').remove();
-});
-$('addStaffBtn').addEventListener('click', () => {
-  $('setStaff').insertAdjacentHTML('beforeend', staffRow({name:'',pw:''}));
-  const rows = $('setStaff').querySelectorAll('.set-staff-row');
-  rows[rows.length-1].querySelector('input').focus();
-});
-$('saveStaffBtn').addEventListener('click', async () => {
-  const rows = [...$('setStaff').querySelectorAll('.set-staff-row')];
-  const list = rows.map(r => ({
-    name: r.querySelector('[data-f="name"]').value.trim(),
-    pw: r.querySelector('[data-f="pw"]').value.trim()
-  }));
-  if (!list.length) { alert('至少要有一個職員。'); return; }
-  if (list.some(s => !s.name || !s.pw)) { alert('有職員未填姓名或密碼。'); return; }
-  const names = list.map(s => s.name);
-  if (new Set(names).size !== names.length) { alert('職員姓名有重複，請檢查。'); return; }
-  if (staffUser && !list.some(s => s.name === staffUser)) {
-    if (!confirm(`而家揀咗嘅支款人「${staffUser}」唔喺新名單入面。儲存後支款人會被清空，確定？`)) return;
-  }
-  try {
-    await DB.setSetting('staff', list);
-    CFG.staff = list;
-    // 更新支款人下拉
-    fillStaffSelects();
-    toast('已儲存職員名單。');
-    if (staffUser && !CFG.staff.some(s => s.name === staffUser)) { staffUser = ''; backToLogin(); }
-  } catch (e) { alert(e.message); }
-});
-
-// ---- 入場密碼（已取消，統一由入口頁登入） ----
-
 // ====================== 初始化 ======================
-// 版本記錄（共享數據 /version-data.js，同 /version/ 公開頁一致）
-(function renderVersions(){
-  const COLOR = { emerald: 'bg-emerald-600', blue: 'bg-blue-600', slate: 'bg-slate-400' };
-  $('ver_list').innerHTML = (window.VERSIONS || []).map(e => `
-    <div class="flex gap-3">
-      <span class="shrink-0 text-xs font-bold text-white ${COLOR[e.color] || COLOR.blue} rounded-full px-2.5 py-1 h-fit">${e.v}</span>
-      <div>
-        <div class="font-bold text-slate-900">${e.title} <span class="text-xs font-normal text-slate-400">${e.date}</span></div>
-        <ul class="text-xs text-slate-500 mt-1 list-disc pl-4 space-y-0.5">
-          ${e.items.map(i => `<li>${i}</li>`).join('')}
-        </ul>
-      </div>
-    </div>`).join('');
-})();
+// 版本記錄喺公開頁 /version/（前置頁 footer 有連結）
 
 // 本人用 Google 登入（電郵有對照）時：預設支款人係自己，簽名檔自動解鎖（Google 已核實身份）；揀其他人嘅簽名檔仍然要對方密碼
 // 模擬檢視中唔會自動解鎖簽名檔（保護簽名）
 // 非 admin：支款人鎖定係自己（唔可以用其他人名義支錢）；冇對照就提示聯絡 admin
 function setupStaffFromLogin(){
   const name = staffNameOf(sessionEmail());
+  const inList = n => allStaffNames().includes(n);
   if (ROLE_NOW === 'admin') {
-    if (!name || !CFG.staff.some(s => s.name === name)) return;
+    if (!name || !inList(name)) return;
     if (!simInfo()) sessionStorage.setItem('staff-ok-' + name, JSON.stringify({ exp: Date.now() + STAFF_OK_MS }));
     $('f_staff').value = name;
     onStaffChange();
@@ -1696,12 +1582,7 @@ function setupStaffFromLogin(){
   // 非 admin：鎖死支款人下拉
   $('f_staff').disabled = true;
   $('f_staff').classList.add('bg-slate-100', 'text-slate-500');
-  // 對照名唔喺職員名單（雲端設定未更新）→ 動態加返個 option，等佢照樣用得
-  if (name && !CFG.staff.some(s => s.name === name)) {
-    CFG.staff.push({ name, pw: '' });
-    fillStaffSelects();
-  }
-  if (name && CFG.staff.some(s => s.name === name)) {
+  if (name && inList(name)) {
     if (!simInfo()) sessionStorage.setItem('staff-ok-' + name, JSON.stringify({ exp: Date.now() + STAFF_OK_MS }));
     $('f_staff').value = name;
     onStaffChange();
@@ -1718,6 +1599,7 @@ loadSettings().then(async () => {
     const s = await DB.getSettings();
     if (s && s.staff_dir && typeof s.staff_dir === 'object') CLOUD_STAFF_DIR = s.staff_dir;
   } catch { /* 用 hardcode 後備 */ }
+  fillStaffSelects();   // 雲端名冊返咗先填充支款人下拉
   setupStaffFromLogin();
 });
 window.addEventListener('load', fitSheet);

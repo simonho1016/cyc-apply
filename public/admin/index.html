@@ -234,6 +234,24 @@
       </div>
     </div>
 
+    <!-- 簽名密碼（admin 專用；由支錢頁系統設定搬入） -->
+    <div class="card bg-white p-5 space-y-3">
+      <h3 class="text-sm font-bold text-emerald-600 uppercase tracking-wide">🔏 簽名密碼</h3>
+      <p class="text-xs text-slate-500">只有<b>何文諾、何樂軒</b>有電子簽名圖。同事喺支錢頁揀佢哋做「支款人」時，要輸入呢度嘅密碼先用到對應簽名檔（本人用 Google 登入揀自己就唔使）。其他同事冇簽名檔，支錢時即場簽署，唔使密碼。同事姓名同職級喺上面「👥 帳號及權限管理」度改。</p>
+      <div class="space-y-2 text-sm">
+        <label class="flex items-center gap-2 flex-wrap"><span class="w-16 font-bold text-slate-700">何文諾</span><input id="sigpw_ml" type="text" autocomplete="off" class="flex-1 min-w-32 rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none" placeholder="簽名密碼"></label>
+        <label class="flex items-center gap-2 flex-wrap"><span class="w-16 font-bold text-slate-700">何樂軒</span><input id="sigpw_lh" type="text" autocomplete="off" class="flex-1 min-w-32 rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none" placeholder="簽名密碼"></label>
+      </div>
+      <button id="sigpw_save" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition">儲存簽名密碼</button>
+    </div>
+
+    <!-- 電子存檔說明（由支錢頁系統設定搬入） -->
+    <div class="card bg-white p-5 space-y-2">
+      <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wide">🗂️ 電子存檔（Supabase Storage）</h3>
+      <p class="text-xs text-slate-500">「電子存檔」會將 PDF 上傳到 Supabase Storage 嘅 <strong>apply-archive</strong> bucket，按 <strong>zhong／xiao（社別）→ 舍友編號 → 檔案</strong> 分類（Supabase 唔支援中文路徑，所以用英文編碼）；本機同時會下載一份做後備，本機檔名維持「舍友編號_日期」。免費計劃（1 GB）大約可儲存 2,500–5,000 張 PDF。</p>
+      <p class="text-xs text-slate-400">Bucket 未開通時，存檔仍會儲存雲端記錄同本機下載 PDF，只係冇雲端檔案；記錄頁嘅「下載 PDF」掣會喺該記錄有雲端檔案時先出現。</p>
+    </div>
+
     <!-- 轉正式版本（清除測試數據，admin 專用） -->
     <div class="card bg-white p-5 space-y-3">
       <h3 class="text-sm font-bold text-red-600 uppercase tracking-wide">🚀 轉正式版本</h3>
@@ -353,6 +371,7 @@ function showMain(){
   $('adminLogout').classList.remove('hidden');
   loadData();
   loadRoles();
+  loadSigPw();
   mgLoad();
 }
 
@@ -995,6 +1014,35 @@ $('sf_save').addEventListener('click', async () => {
     $('sf_email').value = ''; $('sf_name').value = ''; $('sf_title').value = ''; $('sf_role').value = 'normal';
     toast(`已儲存帳號：${name}（${title} · ${ROLE_LABELS[role]}），下次登入生效。`);
     loadRoles();
+  } catch (e) { alert('儲存失敗：' + e.message); }
+});
+
+// ---- 簽名密碼（settings key "staff"：[{name,pw}]；得何文諾／何樂軒有電子簽名圖，密碼保護簽名檔）----
+const SIG_PW_NAMES = ['何文諾', '何樂軒'];
+const SIG_PW_INPUT = { '何文諾': 'sigpw_ml', '何樂軒': 'sigpw_lh' };
+async function loadSigPw(){
+  try {
+    const v = await getSettingValue('staff');
+    const arr = Array.isArray(v) ? v : [];
+    SIG_PW_NAMES.forEach(n => {
+      const f = arr.find(s => s && s.name === n);
+      $(SIG_PW_INPUT[n]).value = f ? (f.pw || '') : '';
+    });
+  } catch { /* 留空 */ }
+}
+$('sigpw_save').addEventListener('click', async () => {
+  let arr = [];
+  try { const v = await getSettingValue('staff'); arr = Array.isArray(v) ? v.filter(s => s && s.name) : []; } catch {}
+  for (const n of SIG_PW_NAMES) {
+    const pw = $(SIG_PW_INPUT[n]).value.trim();
+    if (!pw) { alert(`請填${n}嘅簽名密碼。`); $(SIG_PW_INPUT[n]).focus(); return; }
+    const f = arr.find(s => s.name === n);
+    if (f) f.pw = pw; else arr.push({ name: n, pw });
+  }
+  try {
+    const { error } = await sb.from('settings').upsert({ key: 'staff', value: arr });
+    if (error) throw new Error(error.message);
+    toast('已儲存簽名密碼，即時生效。');
   } catch (e) { alert('儲存失敗：' + e.message); }
 });
 

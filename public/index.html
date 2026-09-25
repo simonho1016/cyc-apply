@@ -169,7 +169,7 @@
         <div class="card card-vault" id="cardVaultLink" data-url="/vault/" role="link" tabindex="0" aria-label="夾萬・現存">
           <span class="card-icon" aria-hidden="true">🏦</span>
           <span class="card-name">夾萬・現存</span>
-          <span class="card-desc">忠孝現存現金・代管現金、過錢，<br>舍友結存管理及對數。</span>
+          <span class="card-desc">忠孝現存現金・代管現金、各舍友現存，<br>支錢前查結存；存入及改數限負責同事。</span>
           <span class="card-url">/vault/</span>
         </div>
 
@@ -338,7 +338,7 @@ function showMain() {
   $('mainView').hidden = false;
   // 按角色收放功能卡：普通只可以用零用金申請同支錢紀錄；支錢負責冇後台管理（模擬檢視時用模擬角色）
   const role = effectiveRole();
-  $('cardVaultLink').style.display = role === 'normal' ? 'none' : '';
+  $('cardVaultLink').style.display = '';                    // 普通級都入得（唯讀睇數）
   $('cardReportLink').style.display = role === 'normal' ? 'none' : '';
   $('cardAdminLink').style.display = role === 'admin' ? '' : 'none';
   // 模擬檢視提示橫額

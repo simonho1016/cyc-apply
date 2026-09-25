@@ -844,7 +844,7 @@ document.querySelectorAll('.f-house-btn').forEach(btn => {
 });
 function populatePayee(){
   const sel = $('f_payee');
-  const list = CFG.members[f_house] || [];
+  const list = (CFG.members[f_house] || []).filter(m => !m.exited);   // 已退出服務嘅舍友唔可以支錢
   const opts = ['<option value="">' + (f_house ? '— 請選擇舍友 —' : '— 請先選擇社別 —') + '</option>']
     .concat(list.map(m => `<option value="${m.name}">${m.id}　${m.name}</option>`));
   if (f_house) opts.push('<option value="__other__">其他…</option>');
@@ -998,7 +998,7 @@ async function getMemberBal(){
   const b = s.member_bal;
   return (b && typeof b === 'object') ? { map: b, init: true } : { map: {}, init: false };
 }
-// 支錢前檢查：舍友結存唔夠 → 彈出確認，取消就停
+// 支錢前檢查：舍友結存唔夠 → 硬性禁止支錢（v1.12.0 起唔准透支）
 async function checkMemberBal(payeeId, payee, amount){
   const { map, init } = await getMemberBal();
   if (!init) return true;
@@ -1006,7 +1006,8 @@ async function checkMemberBal(payeeId, payee, amount){
   if (!(k in map)) return true;                  // 名單外嘅收款人唔扣數
   const bal = Number(map[k]) || 0;
   if (bal < amount) {
-    return confirm(`${payee} 現存 $${bal.toFixed(2)} 唔夠支 $${amount.toFixed(2)}。\n確定仍要支錢？（結存會變負數，請之後去「夾萬・舍友現存」頁核實）`);
+    alert(`❌ 唔可以支錢\n\n${payee} 現存結存 $${bal.toFixed(2)}，唔夠支 $${parseFloat(amount).toFixed(2)}。\n請先去「🏦 夾萬・現存」頁幫舍友存入款項，先至再支錢。`);
+    return false;
   }
   return true;
 }

@@ -298,10 +298,10 @@ async function memberList(houseName, all){
     if (membersDb && Array.isArray(membersDb[houseName]) && membersDb[houseName].length) base = membersDb[houseName];
   } catch { /* 用預設名單 */ }
   if (!base) base = DEFAULT_MEMBERS[houseName] || [];
-  const list = base.map(mm => ({ id: mm.id || mm.name, name: mm.name }));
+  const list = base.map(mm => ({ id: mm.id || mm.name, name: mm.name, exited: !!mm.exited }));
   const known = new Set(list.map(mm => mm.id));
   all.forEach(r => {
-    if (r.member_id && !known.has(r.member_id)) { known.add(r.member_id); list.push({ id: r.member_id, name: r.member_name || r.member_id }); }
+    if (r.member_id && !known.has(r.member_id)) { known.add(r.member_id); list.push({ id: r.member_id, name: r.member_name || r.member_id, exited: false }); }
   });
   return list;
 }
@@ -327,7 +327,7 @@ async function buildStatement(houseName, ym){
       else if (r.kind === 'transfer_out') exp = r2(exp - Number(r.member_delta || 0));   // 轉社轉出當支出
     });
     return { ...mm, opening, dep, exp, closing: r2(opening + dep - exp), receipts };
-  });
+  }).filter(r => !(r.exited && r.opening === 0 && r.dep === 0 && r.exp === 0));   // 已退出＋冇結存冇活動唔列出
   const acctFallback = !(all.some(r => r.account === 'big') && all.some(r => r.account === 'small'));
   function accBal(a){
     const ar = all.filter(r => r.account === a && r.account_bal_after !== null && r.account_bal_after !== undefined);
@@ -452,7 +452,7 @@ async function buildMemberStatements(houseName, ym){
       // settle 行唔影響舍友結存（支錢嗰陣已扣），唔列入舍友收支表；轉社行唔入分類小計
     });
     return { ...mm, houseName, y, m, start, end, opening, txns, totIn, totOut, closing: r2(opening + totIn - totOut), catSum };
-  });
+  }).filter(r => !(r.exited && r.opening === 0 && !r.txns.length));   // 已退出＋冇結存冇活動唔列出
 }
 
 function memberSheetHtml(st){

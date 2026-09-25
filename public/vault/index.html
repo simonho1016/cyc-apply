@@ -62,14 +62,16 @@
   <!-- ====================== 權限不足（只限 Google admin／支錢負責） ====================== -->
   <section id="gateScreen" class="hidden max-w-sm mx-auto mt-10">
     <div class="card bg-white p-6 space-y-4 text-center">
-      <h2 class="text-sm font-bold text-amber-600 uppercase tracking-wide">需要 admin 或支錢負責權限</h2>
-      <p class="text-xs text-slate-500">夾萬・現存頁只限 admin 同支錢負責同事使用。請返回入口頁，用已獲授權嘅 @sbccyc.org.hk Google 帳戶登入。</p>
+      <h2 class="text-sm font-bold text-amber-600 uppercase tracking-wide">需要先登入</h2>
+      <p class="text-xs text-slate-500">已登入嘅 @sbccyc.org.hk 職員都可以睇夾萬現存同舍友現存；存入同改數只限 admin／支錢負責。請返回入口頁登入。</p>
       <button onclick="location.href='/'" class="w-full py-2.5 rounded-lg bg-amber-600 text-white font-bold hover:bg-amber-700 transition">返回入口頁</button>
     </div>
   </section>
 
   <!-- ====================== 主畫面 ====================== -->
   <section id="mainScreen" class="hidden space-y-6">
+
+    <div id="roBanner" class="hidden card bg-sky-50 border-sky-200 p-3 text-xs text-sky-800">👀 普通權限：呢頁只可以<b>睇</b>夾萬現存同各舍友現存（用嚟確認夠唔夠錢支錢），唔可以改數或存入。需要存入或修正請搵 admin／支錢負責同事。</div>
 
     <!-- 夾萬現存（admin 專用） -->
     <div class="card bg-white p-5 space-y-3" id="cardVault">
@@ -106,7 +108,7 @@
         <button id="vault_save" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-amber-600 hover:bg-amber-700 transition">儲存夾萬現存</button>
         <span class="text-xs text-slate-400">直接改數會覆蓋現存；日常過錢請用下面「現存現金 → 代管現金」。</span>
       </div>
-      <div class="border-t border-slate-100 pt-3 space-y-2">
+      <div class="border-t border-slate-100 pt-3 space-y-2" id="vaultXferRow">
         <div class="flex items-center gap-2 flex-wrap">
           <span class="text-xs font-medium text-slate-500">現存現金過錢俾代管現金：</span>
           <select id="vault_xfer_house" class="rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white outline-none">
@@ -129,7 +131,7 @@
         <h3 class="text-sm font-bold text-indigo-600 uppercase tracking-wide">👥 舍友現存</h3>
         <span id="member_bal_total" class="text-xs text-slate-500"></span>
       </div>
-      <p class="text-xs text-slate-500">支錢成功後會自動扣減該舍友結存；後台刪除記錄會自動回補。呢度可以人手修正。<b>現存未歸 0 嘅舍友唔可以喺系統設定刪除。</b>舍友嘅新增／改名／排序請去支錢系統「⚙️ 系統設定」。</p>
+      <p class="text-xs text-slate-500">支錢成功後會自動扣減該舍友結存；後台刪除記錄會自動回補。呢度可以人手修正。<b>現存未歸 0 嘅舍友唔可以退出服務或刪除。</b>舍友嘅新增／改名／排序／轉社／退出服務請去後台管理「👥 舍友戶口管理」。已退出嘅舍友會灰顯唔可以改。</p>
       <div id="member_bal_list" class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm"></div>
       <div class="flex items-center gap-3 flex-wrap">
         <button id="member_bal_save" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition">儲存舍友現存</button>
@@ -138,7 +140,7 @@
     </div>
 
     <!-- 舍友存入（開收據） -->
-    <div class="card bg-white p-5 space-y-3">
+    <div class="card bg-white p-5 space-y-3" id="cardDep">
       <div class="flex items-center justify-between flex-wrap gap-2">
         <h3 class="text-sm font-bold text-emerald-600 uppercase tracking-wide">💵 舍友存入</h3>
         <span class="text-xs text-slate-500">下一個收款編號：<input id="receipt_next" type="number" min="1" step="1" class="w-24 rounded-lg border border-slate-300 px-2 py-1 text-sm outline-none"> <button id="receipt_next_save" class="px-2 py-1 rounded-lg text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">儲存</button></span>
@@ -254,10 +256,11 @@ const money = n => '$' + Number(n || 0).toFixed(2);
 const r2 = n => Math.round(n * 100) / 100;
 function houseOf(h){ return h === '孝社' ? 'xiao' : 'zhong'; }
 
-// ---- 出入閘：只限 Google admin／支錢負責（密碼閘已取消） ----
+// ---- 出入閘：任何已登入職員都入得；normal（普通）只可以睇數（唯讀），cashier 只可以用「舍友存入」，admin 全用 ----
+let READONLY = false;   // 普通權限唯讀模式
 $('adminLogout').addEventListener('click', () => { location.href = '/'; });
 setInterval(() => {
-  if (!$('mainScreen').classList.contains('hidden') && !isFullAdmin() && sessionRole() !== 'cashier') {
+  if (!$('mainScreen').classList.contains('hidden') && !isLoggedIn()) {
     alert('登入狀態已清除，請重新登入。');
     location.reload();
   }
@@ -267,7 +270,21 @@ function showMain(){
   $('gateScreen').classList.add('hidden');
   $('mainScreen').classList.remove('hidden');
   $('adminLogout').classList.remove('hidden');
-  if (!isFullAdmin()) {
+  const role = sessionRole();
+  if (role === 'normal') {
+    // 普通權限：睇夾萬現存同各舍友現存（決定支唔支到錢），但唔可以改任何嘢
+    READONLY = true;
+    ['vault_zhong_big', 'vault_zhong_small', 'vault_xiao_big', 'vault_xiao_small'].forEach(id => { const el = $(id); if (el) el.disabled = true; });
+    $('vault_save').classList.add('hidden');
+    $('vaultXferRow').classList.add('hidden');
+    $('member_bal_save').classList.add('hidden');
+    $('cardDep').classList.add('hidden');
+    const seed = $('cardSeed'); if (seed) seed.classList.add('hidden');
+    $('receipt_next').disabled = true;
+    $('receipt_next_save').classList.add('hidden');
+    $('t_admin').classList.add('hidden');
+    $('roBanner').classList.remove('hidden');
+  } else if (!isFullAdmin()) {
     // 支錢負責（cashier）：只可以用「舍友存入」；夾萬改數、過錢、舍友現存修正、結存起點、收款編號設定全部收起
     ['cardVault', 'cardBal', 'cardSeed'].forEach(id => { const el = $(id); if (el) el.classList.add('hidden'); });
     $('receipt_next').disabled = true;
@@ -362,14 +379,15 @@ async function renderVault(){
         const amt = Number(balMap[k]) || 0;
         balTotal = r2(balTotal + amt);
         houseTotals[h] = r2(houseTotals[h] + amt);
-        return `<label class="flex items-center gap-2 py-0.5" data-house="${h}" data-name="${escapeHtml(m.name)}">
-          <span class="flex-1 min-w-0 truncate">${escapeHtml(m.name)} <span class="text-xs text-slate-400">${escapeHtml(m.id || '')}</span></span>
-          <input type="number" step="0.01" class="mbal_in w-24 rounded-lg border border-slate-300 px-2 py-1 text-sm outline-none" data-key="${escapeHtml(k)}" value="${amt ? amt.toFixed(2) : ''}" placeholder="0.00">
+        return `<label class="flex items-center gap-2 py-0.5 ${m.exited ? 'opacity-50' : ''}" data-house="${h}" data-name="${escapeHtml(m.name)}">
+          <span class="flex-1 min-w-0 truncate">${escapeHtml(m.name)} <span class="text-xs text-slate-400">${escapeHtml(m.id || '')}</span>${m.exited ? ' <span class="text-xs font-bold text-slate-400">（已退出）</span>' : ''}</span>
+          <input type="number" step="0.01" class="mbal_in w-24 rounded-lg border border-slate-300 px-2 py-1 text-sm outline-none" data-key="${escapeHtml(k)}" value="${amt ? amt.toFixed(2) : ''}" placeholder="0.00"${m.exited ? ' disabled' : ''}>
         </label>`;
       }).join('')}
     </div>`).join('');
   $('member_bal_total').textContent = `舍友總結存：${money(balTotal)}`;
   $('member_house_totals').textContent = `忠社 ${money(houseTotals['忠社'])} ｜ 孝社 ${money(houseTotals['孝社'])}`;
+  if (READONLY) document.querySelectorAll('.mbal_in').forEach(i => { i.disabled = true; });
   // 未結算墊支（結算欄位未開通就當 0 並唔顯示）
   let adv = 0, advOk = true;
   try {
@@ -483,7 +501,7 @@ $('receipt_next_save').addEventListener('click', async () => {
 let CUR_MEMBERS = null;   // renderVault 填入 {忠社:[...], 孝社:[...]}
 function fillDepMembers(){
   const h = $('dep_house').value === 'xiao' ? '孝社' : '忠社';
-  const list = (CUR_MEMBERS && CUR_MEMBERS[h]) || [];
+  const list = ((CUR_MEMBERS && CUR_MEMBERS[h]) || []).filter(m => !m.exited);   // 已退出服務唔可以存入
   $('dep_member').innerHTML = list.map(m => `<option value="${escapeHtml(m.id || m.name)}" data-name="${escapeHtml(m.name)}">${escapeHtml(m.name)} ${escapeHtml(m.id || '')}</option>`).join('');
 }
 $('dep_house').addEventListener('change', fillDepMembers);
@@ -602,9 +620,16 @@ $('seed_save').addEventListener('click', async () => {
 });
 
 // ---- 初始化 ----
-// 角色：admin（永久 admin 電郵／後台指派）全用；cashier（支錢負責）直入，但只可以用「舍友存入」；normal 唔入得
+// 角色：admin（永久 admin 電郵／後台指派）全用；cashier（支錢負責）只可以用「舍友存入」；
+// normal（普通）已登入就可以入，但只可以唯讀睇夾萬現存同舍友現存；未登入唔入得
 // 模擬檢視：真 admin 可以用其他角色視角預覽（cyc-sim 只影響呢個分頁）
 const ADMIN_EMAILS = ['ho.ml@sbccyc.org.hk', 'ho.lh@sbccyc.org.hk'];
+function isLoggedIn(){
+  try {
+    const a = JSON.parse(sessionStorage.getItem('cyc-portal-auth') || 'null');
+    return !!(a && Number.isFinite(a.exp) && Date.now() < a.exp);
+  } catch { return false; }
+}
 function realRole(){
   try {
     const a = JSON.parse(sessionStorage.getItem('cyc-portal-auth') || 'null');
@@ -634,7 +659,7 @@ function isFullAdmin(){ return sessionRole() === 'admin'; }
   b.innerHTML = '🔭 模擬檢視中：以「' + RL[s.role] + '」' + (who ? '（' + who + '）' : '') + ' 視角瀏覽 · 操作會真實生效，請小心 · <button id="simStopBtn" class="underline font-bold">取消模擬</button>';
   document.getElementById('simStopBtn').addEventListener('click', () => { sessionStorage.removeItem('cyc-sim'); location.reload(); });
 })();
-if (isFullAdmin() || sessionRole() === 'cashier') showMain();
+if (isLoggedIn()) showMain();
 else $('gateScreen').classList.remove('hidden');
 </script>
 </body>

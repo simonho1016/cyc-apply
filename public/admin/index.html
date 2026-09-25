@@ -135,7 +135,7 @@
           <button data-mghouse="孝社" class="mg-house-tab px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-100 text-slate-600 transition">孝社</button>
         </div>
       </div>
-      <p class="text-xs text-slate-500">新增／修訂舍友編號同姓名、調整排序、轉社。<b>現存未歸 0 嘅舍友唔可以刪除或改編號</b>；轉社會將舍友結存連同款項由舊社代管現金自動搬去新社代管現金，並記入流水賬（月結會顯示轉出／轉入）。</p>
+      <p class="text-xs text-slate-500">新增／修訂舍友編號同姓名、調整排序、轉社、退出服務。<b>現存未歸 0 嘅舍友唔可以刪除、改編號或退出服務</b>；轉社會將結存連同款項由舊社代管現金搬去新社，並記入流水賬。舍友離宿請用「<b>退出服務</b>」：名單除名但<b>歷史記錄同雲端 PDF 全部封存保留</b>，隨時查返；「刪除」只用於錯誤新增嘅戶口。</p>
       <div id="mg_list" class="space-y-1.5 text-sm"></div>
       <div class="flex items-end gap-2 flex-wrap border-t border-slate-100 pt-3">
         <label class="block"><span class="text-xs font-medium text-slate-500">新舍友編號</span>
@@ -167,7 +167,7 @@
     <!-- 記錄列表 + 結算 -->
     <div class="card bg-white p-5 space-y-3">
       <div class="flex items-center justify-between flex-wrap gap-2">
-        <h3 class="text-sm font-bold text-indigo-600 uppercase tracking-wide">支錢記錄</h3>
+        <h3 class="text-sm font-bold text-indigo-600 uppercase tracking-wide">支錢記錄 <span class="normal-case font-normal text-slate-400">（所有紀錄封存保留；只有 admin 可以刪除）</span></h3>
         <div class="flex items-center gap-2 flex-wrap">
           <label class="text-xs text-slate-500 flex items-center gap-1"><input type="checkbox" id="sel_all" class="accent-indigo-600"> 全選</label>
           <button id="print_btn" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-violet-600 hover:bg-violet-700 transition" disabled>🖨 列印所選</button>
@@ -217,6 +217,24 @@
         <a href="/apply/" target="_blank" class="px-3 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium transition">零用金申請</a>
         <a href="/vault/" target="_blank" class="px-3 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 font-medium transition">夾萬・現存</a>
       </div>
+    </div>
+
+    <!-- 轉正式版本（清除測試數據，admin 專用） -->
+    <div class="card bg-white p-5 space-y-3">
+      <h3 class="text-sm font-bold text-red-600 uppercase tracking-wide">🚀 轉正式版本</h3>
+      <p class="text-xs text-slate-500">而家係<b>測試版</b>，所有數據只供測試。正式上線時喺度清除測試數據重新開始。<b class="text-red-600">此操作唔可以還原。</b>舍友名單（包括已退出標記）、職員權限設定同簽名檔會保留；執行後會記低「轉正式」時間同經手人。</p>
+      <div class="space-y-2 text-sm">
+        <label class="flex items-center gap-2"><input type="checkbox" id="gl_apps" class="accent-red-600" checked> 清除所有支錢記錄 ＋ 雲端 PDF 檔案</label>
+        <label class="flex items-center gap-2"><input type="checkbox" id="gl_ledger" class="accent-red-600" checked> 清除流水賬（ledger）</label>
+        <label class="flex items-center gap-2"><input type="checkbox" id="gl_bal" class="accent-red-600" checked> 舍友結存全部歸 0</label>
+        <label class="flex items-center gap-2"><input type="checkbox" id="gl_vault" class="accent-red-600" checked> 重設四個夾萬現存（之後去「🏦 夾萬・現存」重新設定起點）</label>
+        <label class="flex items-center gap-2 flex-wrap"><input type="checkbox" id="gl_receipt" class="accent-red-600"> 收款編號重新由 CYC <input id="gl_receipt_n" type="number" min="1" step="1" value="101335" class="w-24 rounded-lg border border-slate-300 px-2 py-1 text-sm outline-none"> 開始（唔勾＝保持接續現有編號）</label>
+      </div>
+      <div class="flex items-center gap-2 flex-wrap border-t border-slate-100 pt-3">
+        <input id="gl_confirm" autocomplete="off" class="flex-1 min-w-40 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="輸入「轉正式」先可以執行">
+        <button id="gl_go" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-red-600 hover:bg-red-700 transition" disabled>執行轉正式版本</button>
+      </div>
+      <p id="gl_status" class="text-xs text-slate-500"></p>
     </div>
   </section>
 </main>
@@ -929,21 +947,35 @@ async function mgSaveBal(){
 }
 function mgRender(){
   const list = mgMembers[mgHouse] || [];
-  $('mg_list').innerHTML = list.length ? list.map((m, i) => {
-    const bal = mgBalOf(m.id);
-    return `<div class="flex items-center gap-1.5 border border-slate-200 rounded-lg px-2.5 py-1.5">
-      <span class="flex flex-col shrink-0">
-        <button data-act="up" data-id="${escapeHtml(m.id)}" class="text-slate-400 hover:text-sky-600 text-xs leading-none px-0.5 ${i === 0 ? 'invisible' : ''}" title="上移">▲</button>
-        <button data-act="down" data-id="${escapeHtml(m.id)}" class="text-slate-400 hover:text-sky-600 text-xs leading-none px-0.5 ${i === list.length - 1 ? 'invisible' : ''}" title="下移">▼</button>
-      </span>
-      <span class="w-12 shrink-0 font-mono text-xs font-bold text-slate-500">${escapeHtml(m.id)}</span>
-      <span class="flex-1 min-w-0 truncate font-medium">${escapeHtml(m.name)}</span>
-      <span class="shrink-0 text-xs ${bal !== 0 ? 'font-bold text-amber-600' : 'text-slate-400'}">現存 ${money(bal)}</span>
-      <button data-act="edit" data-id="${escapeHtml(m.id)}" class="shrink-0 px-2.5 py-1 rounded-lg bg-sky-50 text-sky-700 text-xs font-bold hover:bg-sky-100 transition">修訂</button>
-      <button data-act="xfer" data-id="${escapeHtml(m.id)}" class="shrink-0 px-2.5 py-1 rounded-lg bg-violet-50 text-violet-700 text-xs font-bold hover:bg-violet-100 transition">轉社</button>
-      <button data-act="del" data-id="${escapeHtml(m.id)}" class="shrink-0 px-2.5 py-1 rounded-lg bg-red-50 text-red-600 text-xs font-bold hover:bg-red-100 transition">刪除</button>
-    </div>`;
-  }).join('') : '<p class="text-xs text-slate-400 py-3 text-center">呢個社別仲未有舍友。</p>';
+  const active = list.filter(m => !m.exited);
+  const exited = list.filter(m => m.exited);
+  $('mg_list').innerHTML =
+    (active.length ? active.map((m, i) => {
+      const bal = mgBalOf(m.id);
+      return `<div class="flex items-center gap-1.5 border border-slate-200 rounded-lg px-2.5 py-1.5">
+        <span class="flex flex-col shrink-0">
+          <button data-act="up" data-id="${escapeHtml(m.id)}" class="text-slate-400 hover:text-sky-600 text-xs leading-none px-0.5 ${i === 0 ? 'invisible' : ''}" title="上移">▲</button>
+          <button data-act="down" data-id="${escapeHtml(m.id)}" class="text-slate-400 hover:text-sky-600 text-xs leading-none px-0.5 ${i === active.length - 1 ? 'invisible' : ''}" title="下移">▼</button>
+        </span>
+        <span class="w-12 shrink-0 font-mono text-xs font-bold text-slate-500">${escapeHtml(m.id)}</span>
+        <span class="flex-1 min-w-0 truncate font-medium">${escapeHtml(m.name)}</span>
+        <span class="shrink-0 text-xs ${bal !== 0 ? 'font-bold text-amber-600' : 'text-slate-400'}">現存 ${money(bal)}</span>
+        <button data-act="edit" data-id="${escapeHtml(m.id)}" class="shrink-0 px-2.5 py-1 rounded-lg bg-sky-50 text-sky-700 text-xs font-bold hover:bg-sky-100 transition">修訂</button>
+        <button data-act="xfer" data-id="${escapeHtml(m.id)}" class="shrink-0 px-2.5 py-1 rounded-lg bg-violet-50 text-violet-700 text-xs font-bold hover:bg-violet-100 transition">轉社</button>
+        <button data-act="exit" data-id="${escapeHtml(m.id)}" class="shrink-0 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 text-xs font-bold hover:bg-slate-200 transition">退出服務</button>
+        <button data-act="del" data-id="${escapeHtml(m.id)}" class="shrink-0 px-2.5 py-1 rounded-lg bg-red-50 text-red-600 text-xs font-bold hover:bg-red-100 transition">刪除</button>
+      </div>`;
+    }).join('') : '<p class="text-xs text-slate-400 py-3 text-center">呢個社別仲未有在住舍友。</p>')
+    + (exited.length ? `<div class="mt-3 pt-2 border-t border-dashed border-slate-200 space-y-1.5">
+        <div class="text-xs font-bold text-slate-400">已退出服務（歷史記錄同雲端 PDF 全部保留，可以喺支錢紀錄／後台查返）</div>
+        ${exited.map(m => `<div class="flex items-center gap-1.5 border border-slate-100 bg-slate-50 rounded-lg px-2.5 py-1.5 opacity-70">
+          <span class="w-12 shrink-0 font-mono text-xs font-bold text-slate-400">${escapeHtml(m.id)}</span>
+          <span class="flex-1 min-w-0 truncate text-slate-500">${escapeHtml(m.name)}</span>
+          <span class="shrink-0 text-xs text-slate-400">${m.exited_at ? '退出於 ' + String(m.exited_at).slice(0, 10) : '已退出'}</span>
+          <button data-act="restore" data-id="${escapeHtml(m.id)}" class="shrink-0 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-bold hover:bg-emerald-100 transition">恢復</button>
+          <button data-act="del" data-id="${escapeHtml(m.id)}" class="shrink-0 px-2.5 py-1 rounded-lg bg-red-50 text-red-600 text-xs font-bold hover:bg-red-100 transition">刪除</button>
+        </div>`).join('')}
+      </div>` : '');
 }
 document.querySelectorAll('.mg-house-tab').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -974,20 +1006,43 @@ $('mg_list').addEventListener('click', async e => {
   if (!btn) return;
   const id = btn.dataset.id, act = btn.dataset.act;
   const list = mgMembers[mgHouse] || [];
-  const idx = list.findIndex(m => m.id === id);
-  if (idx < 0) return;
+  const m = list.find(x => x.id === id);
+  if (!m) return;
   if (act === 'up' || act === 'down') {
+    const active = list.filter(x => !x.exited);
+    const idx = active.findIndex(x => x.id === id);
     const j = act === 'up' ? idx - 1 : idx + 1;
-    if (j < 0 || j >= list.length) return;
-    [list[idx], list[j]] = [list[j], list[idx]];
+    if (idx < 0 || j < 0 || j >= active.length) return;
+    [active[idx], active[j]] = [active[j], active[idx]];
+    mgMembers[mgHouse] = active.concat(list.filter(x => x.exited));   // 在住排前、已退出排尾
     try { await mgSaveMembers(); mgRender(); }
-    catch (err) { [list[idx], list[j]] = [list[j], list[idx]]; alert('儲存失敗：' + err.message); }
+    catch (err) { alert('儲存失敗：' + err.message); mgLoad(); }
     return;
   }
+  if (act === 'exit') {
+    const bal = mgBalOf(id);
+    if (bal !== 0) {
+      alert(`❌ 唔可以退出服務\n\n「${m.name}」現存 ${money(bal)} 未歸 0。\n請先處理結存（支返俾舍友／存入對沖），戶口歸 0 之後先可以退出服務。`);
+      return;
+    }
+    if (!confirm(`確定 ${m.name}（${id}）退出服務？\n\n退出後：\n・唔會再出現喺支錢／存入名單\n・歷史記錄同雲端 PDF 全部保留，可以喺支錢紀錄／後台查返\n・隨時可以撳「恢復」復原`)) return;
+    m.exited = true; m.exited_at = new Date().toISOString();
+    try { await mgSaveMembers(); toast(`已標記 ${m.name} 退出服務。`); mgRender(); }
+    catch (err) { alert('儲存失敗：' + err.message); mgLoad(); }
+    return;
+  }
+  if (act === 'restore') {
+    if (!confirm(`恢復 ${m.name}（${id}）？佢會重新出現喺支錢／存入名單。`)) return;
+    delete m.exited; delete m.exited_at;
+    try { await mgSaveMembers(); toast(`已恢復 ${m.name}。`); mgRender(); }
+    catch (err) { alert('儲存失敗：' + err.message); mgLoad(); }
+    return;
+  }
+  const idx = list.findIndex(x => x.id === id);
   if (act === 'del') {
-    const m = list[idx], bal = mgBalOf(id);
-    if (bal !== 0) { alert(`「${m.name}」現存 ${money(bal)} 未歸 0，唔可以刪除。\n請先去「🏦 夾萬・現存」頁將佢嘅結存調整為 0。`); return; }
-    if (!confirm(`確定刪除 ${id} ${m.name}（${mgHouse}）？\n歷史支錢記錄會保留唔變。`)) return;
+    const bal = mgBalOf(id);
+    if (bal !== 0) { alert(`「${m.name}」現存 ${money(bal)} 未歸 0，唔可以刪除。\n請先去「🏦 夾萬・現存」頁將佢嘅結存調整為 0。\n\n注意：一般舍友離宿請用「退出服務」（保留記錄），刪除只用於錯誤新增嘅戶口。`); return; }
+    if (!confirm(`確定刪除 ${id} ${m.name}（${mgHouse}）？\n歷史支錢記錄會保留唔變。\n\n注意：一般舍友離宿請用「退出服務」（保留喺名單底部），刪除只用於錯誤新增嘅戶口。`)) return;
     list.splice(idx, 1);
     if (id in mgBal) delete mgBal[id];
     try { await mgSaveMembers(); await mgSaveBal(); toast('已刪除舍友。'); mgRender(); }
@@ -1097,6 +1152,66 @@ $('mg_x_ok').addEventListener('click', async () => {
     alert(`✅ 轉社完成\n\n${m.name} 已由 ${oldHouse}（${m.id}）轉去 ${newHouse}（新編號 ${newId}）\n結存 ${money(B)} 已一併轉移。`);
     mgLoad();
   } catch (err) { alert('轉社失敗：' + err.message); mgLoad(); }
+});
+
+// ---- 轉正式版本：按勾選清除測試數據（唔可以還原；名單／權限／簽名檔保留）----
+$('gl_confirm').addEventListener('input', () => { $('gl_go').disabled = $('gl_confirm').value.trim() !== '轉正式'; });
+$('gl_go').addEventListener('click', async () => {
+  const opt = {
+    apps: $('gl_apps').checked, ledger: $('gl_ledger').checked, bal: $('gl_bal').checked,
+    vault: $('gl_vault').checked, receipt: $('gl_receipt').checked
+  };
+  if (!opt.apps && !opt.ledger && !opt.bal && !opt.vault && !opt.receipt) { alert('冇勾選任何項目。'); return; }
+  const rn = Math.floor(Number($('gl_receipt_n').value));
+  if (opt.receipt && (!Number.isFinite(rn) || rn < 1)) { alert('收款編號唔有效。'); return; }
+  if (!confirm('⚠️ 最後確認\n\n轉正式版本會按勾選項目清除測試數據，唔可以還原。\n舍友名單、權限設定同簽名檔會保留。\n\n確定執行？')) return;
+  $('gl_go').disabled = true;
+  const st = [];
+  try {
+    if (opt.apps) {
+      const { data: apps, error } = await sb.from('applications').select('id,pdf_path').limit(10000);
+      if (error) throw new Error(error.message);
+      const paths = (apps || []).map(r => r.pdf_path).filter(Boolean);
+      if (paths.length) {
+        const { error: se } = await sb.storage.from('apply-archive').remove(paths);
+        if (se) throw new Error(se.message);
+      }
+      const { error: de } = await sb.from('applications').delete().not('id', 'is', null);
+      if (de) throw new Error(de.message);
+      st.push(`支錢記錄 ${apps ? apps.length : 0} 張＋雲端 PDF ${paths.length} 份已清除`);
+    }
+    if (opt.ledger) {
+      const { error } = await sb.from('ledger').delete().not('id', 'is', null);
+      if (error) throw new Error(error.message);
+      st.push('流水賬已清除');
+    }
+    if (opt.bal) {
+      const zero = {};
+      ['忠社', '孝社'].forEach(h => (mgMembers[h] || []).forEach(m => { zero[m.id] = 0; }));
+      const { error } = await sb.from('settings').upsert({ key: 'member_bal', value: zero });
+      if (error) throw new Error(error.message);
+      st.push('舍友結存已全部歸 0');
+    }
+    if (opt.vault) {
+      const { error } = await sb.from('settings').delete().eq('key', 'safe_vault');
+      if (error) throw new Error(error.message);
+      st.push('四個夾萬現存已重設（未設定狀態）');
+    }
+    if (opt.receipt) {
+      const { error } = await sb.from('settings').upsert({ key: 'receipt_counter', value: rn });
+      if (error) throw new Error(error.message);
+      st.push(`收款編號由 CYC ${rn} 重新開始`);
+    }
+    await sb.from('settings').upsert({ key: 'go_live', value: { at: new Date().toISOString(), by: mgStaffName() } });
+    $('gl_status').textContent = '✅ ' + st.join('；');
+    alert('✅ 轉正式版本完成\n\n' + st.join('\n'));
+    $('gl_confirm').value = '';
+    loadData(); mgLoad();
+  } catch (e) {
+    $('gl_status').textContent = '❌ 失敗：' + e.message;
+    alert('執行失敗：' + e.message);
+  }
+  $('gl_go').disabled = $('gl_confirm').value.trim() !== '轉正式';
 });
 
 // ---- 初始化 ----

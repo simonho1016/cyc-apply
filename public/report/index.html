@@ -78,9 +78,16 @@
   .mr-sum { display: flex; justify-content: space-between; gap: 24px; margin-top: 14px; align-items: flex-start; }
   .mr-sum table { width: 52%; }
   .mr-sum th, .mr-sum td { text-align: center; font-size: 12.5px; }
-  .mr-sig { font-size: 14px; line-height: 2.3; }
-  .mr-sig .line { display: inline-block; width: 170px; border-bottom: 1.5px solid #000; vertical-align: bottom; }
-  .mr-sig .brack { display: inline-block; width: 70px; text-align: center; }
+  .mr-sig { font-size: 14.5px; width: 47%; }
+  .mr-sig .row { display: flex; align-items: flex-end; justify-content: flex-end; gap: 4px; margin-bottom: 8px; }
+  .mr-sig .row.gap { margin-top: 18px; }
+  .mr-sig .row.full { justify-content: flex-start; }
+  .mr-sig .lbl { min-width: 5.2em; text-align: right; white-space: nowrap; }
+  .mr-sig .row.full .lbl { min-width: 0; text-align: left; }
+  .mr-sig small { font-size: 10px; white-space: nowrap; }
+  .mr-sig .line { display: inline-block; width: 140px; height: 1.25em; border-bottom: 1.5px solid #000; position: relative; vertical-align: bottom; }
+  .mr-sig .row.full .line { flex: 1; }
+  .mr-sig .brack { position: absolute; right: 0; bottom: 0; line-height: 1; font-size: 13px; }
 
   @media print {
     @page { size: A4; margin: 12mm 12mm; }
@@ -479,10 +486,10 @@ function memberSheetHtml(st){
         <tr><td colspan="2"><b>總計</b></td><td class="ms-num"><b>$${fmtMoney(st.totIn)}</b></td><td class="ms-num"><b>$${fmtMoney(st.totOut)}</b></td><td class="ms-num"><b>$${fmtMoney(st.closing)}</b></td></tr>
       </tbody></table>
       <div class="mr-sig">
-        <div>舍友簽署： <span class="line"></span></div>
-        <div>負責職員：<small>（姓名及簽署）</small> <span class="line"></span> <span class="brack">（　　）</span></div>
-        <div>審核職員：<small>（姓名及簽署）</small> <span class="line"></span> <span class="brack">（　　）</span></div>
-        <div style="margin-top:14px;">社工：<small>（姓名及簽署）</small> <span class="line"></span> <span class="brack">（　　）</span></div>
+        <div class="row full"><span class="lbl">舍友簽署：</span><span class="line"></span></div>
+        <div class="row"><span class="lbl">負責職員：</span><small>（姓名及簽署）</small><span class="line"><span class="brack">（　　）</span></span></div>
+        <div class="row"><span class="lbl">審核職員：</span><small>（姓名及簽署）</small><span class="line"><span class="brack">（　　）</span></span></div>
+        <div class="row gap"><span class="lbl">社工：</span><small>（姓名及簽署）</small><span class="line"><span class="brack">（　　）</span></span></div>
       </div>
     </div>
   </div>`;

@@ -174,7 +174,7 @@
           <button id="mr_all" class="px-2 py-0.5 rounded text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">全選</button>
           <button id="mr_none" class="px-2 py-0.5 rounded text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">全唔選</button>
         </div>
-        <div id="mr_members" class="flex flex-wrap gap-1.5 text-sm"></div>
+        <div id="mr_members" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 text-sm border-2 border-slate-900 rounded-xl overflow-hidden"></div>
       </div>
     </div>
 
@@ -471,7 +471,7 @@ function memberSheetHtml(st){
   return `<div class="ms-sheet mr-sheet">
     <h1>香港扶幼會 香港扶幼會則仁中心</h1>
     <h2>舍友零用金收支紀錄表</h2>
-    <div class="mr-head"><span>姓名：${escapeHtml(st.name)}（${st.houseName}） 編號：${escapeHtml(st.id)}</span><span>時段：${fmtD(st.start)} – ${fmtD(new Date(st.end.getTime() - 86400000))}</span></div>
+    <div class="mr-head"><span>姓名：${escapeHtml(st.id)} ${escapeHtml(st.name)}（${st.houseName}）</span><span>時段：${fmtD(st.start)} – ${fmtD(new Date(st.end.getTime() - 86400000))}</span></div>
     <table class="tx"><thead><tr>
       <th style="width:17%;">日期 時間</th><th>類別 / 備註</th>
       <th style="width:9%;" class="ms-num">存入</th><th style="width:9%;" class="ms-num">支出</th>
@@ -511,8 +511,9 @@ async function loadMemberPicker(){
   } catch { /* 用預設名單 */ }
   if (!base) base = DEFAULT_MEMBERS[house] || [];
   box.innerHTML = base.map(mm => `
-    <label class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 cursor-pointer select-none">
-      <input type="checkbox" class="mr_pick accent-teal-600 w-4 h-4" value="${escapeHtml(mm.id || mm.name)}" checked> ${escapeHtml(mm.name)}
+    <label class="flex items-center gap-2 px-3 py-2 border border-slate-300 cursor-pointer select-none transition hover:bg-teal-50 ${mm.exited ? 'opacity-50 bg-slate-50' : ''}">
+      <input type="checkbox" class="mr_pick accent-teal-600 w-4 h-4 shrink-0" value="${escapeHtml(mm.id || mm.name)}" checked>
+      <span class="min-w-0 truncate"><b class="font-mono text-xs text-slate-500">${escapeHtml(mm.id || '')}</b> ${escapeHtml(mm.name)}${mm.exited ? ' <span class="text-xs text-slate-400">（已退出）</span>' : ''}</span>
     </label>`).join('');
 }
 $('mr_house').addEventListener('change', loadMemberPicker);

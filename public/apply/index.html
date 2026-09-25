@@ -614,7 +614,8 @@ if (SIM_NOW) {
   $('simStopBtn').addEventListener('click', () => { sessionStorage.removeItem('cyc-sim'); location.reload(); });
 }
 
-// ---- 按登入電郵預設支款人（其他同事嘅對照表稍後加入） ----
+// ---- 按登入電郵預設支款人 ----
+// v1.13.0 起雲端名冊（settings.staff_dir，後台帳號管理）優先，hardcode 對照只做後備
 const EMAIL_STAFF_MAP = {
   'tan.kl@sbccyc.org.hk': '滕家麟',
   'pun.yf@sbccyc.org.hk': '潘耀鋒',
@@ -624,6 +625,13 @@ const EMAIL_STAFF_MAP = {
   'wong.tw@sbccyc.org.hk': '王子維',
   'man.yc@sbccyc.org.hk': '文然澤'
 };
+let CLOUD_STAFF_DIR = {};
+function staffNameOf(email){
+  const e = (email || '').toLowerCase();
+  const c = CLOUD_STAFF_DIR[e];
+  if (c && !c.deleted && c.name) return c.name;
+  return EMAIL_STAFF_MAP[e] || '';
+}
 
 // 填充支款人下拉（填單用）
 function fillStaffSelects(){
@@ -1666,7 +1674,7 @@ $('saveStaffBtn').addEventListener('click', async () => {
 // 模擬檢視中唔會自動解鎖簽名檔（保護簽名）
 // 非 admin：支款人鎖定係自己（唔可以用其他人名義支錢）；冇對照就提示聯絡 admin
 function setupStaffFromLogin(){
-  const name = EMAIL_STAFF_MAP[sessionEmail()];
+  const name = staffNameOf(sessionEmail());
   if (ROLE_NOW === 'admin') {
     if (!name || !CFG.staff.some(s => s.name === name)) return;
     if (!simInfo()) sessionStorage.setItem('staff-ok-' + name, JSON.stringify({ exp: Date.now() + STAFF_OK_MS }));
@@ -1694,7 +1702,13 @@ function setupStaffFromLogin(){
 if (!dbConfigured) $('demoBanner').classList.remove('hidden');
 enterForm();           // 直入填單頁，唔使全員登入
 fitSheet();
-loadSettings().then(setupStaffFromLogin);
+loadSettings().then(async () => {
+  try {
+    const s = await DB.getSettings();
+    if (s && s.staff_dir && typeof s.staff_dir === 'object') CLOUD_STAFF_DIR = s.staff_dir;
+  } catch { /* 用 hardcode 後備 */ }
+  setupStaffFromLogin();
+});
 window.addEventListener('load', fitSheet);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitSheet);
 </script>

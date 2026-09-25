@@ -248,10 +248,39 @@ const STAFF_TITLE = {
   '王子維': '導師', '文然澤': '導師'
 };
 // 有對照就顯示「何文諾 社工」；冇對照就用 Google 帳戶名
+// v1.13.0 起雲端名冊（settings.staff_dir）優先，hardcode 對照只做後備
+let STAFF_DIR = null;
 function displayName(email, fallback){
-  const n = EMAIL_STAFF_MAP[(email || '').toLowerCase()];
+  const e = (email || '').toLowerCase();
+  const c = STAFF_DIR && STAFF_DIR[e];
+  if (c && !c.deleted && c.name) return c.name + (c.title ? ' ' + c.title : '');
+  const n = EMAIL_STAFF_MAP[e];
   return n ? n + ' ' + (STAFF_TITLE[n] || '') : (fallback || email || '');
 }
+// 載入雲端名冊（完成後重繪登入列，等姓名職級即時更新）
+async function loadStaffDir(){
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/settings?key=eq.staff_dir&select=value', { headers: { apikey: SUPABASE_ANON_KEY } });
+    const rows = await res.json();
+    STAFF_DIR = (rows && rows[0] && rows[0].value && typeof rows[0].value === 'object') ? rows[0].value : {};
+  } catch { STAFF_DIR = {}; }
+  refreshAuthUI();
+}
+// 記錄登入過嘅網域電郵（admin 後台「未登記同事」用佢補資料）
+async function recordSeen(email, gname){
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/settings?key=eq.staff_seen&select=value', { headers: { apikey: SUPABASE_ANON_KEY } });
+    const rows = await res.json();
+    const map = (rows && rows[0] && rows[0].value && typeof rows[0].value === 'object') ? rows[0].value : {};
+    map[email] = { name: gname || '', last: new Date().toISOString() };
+    await fetch(SUPABASE_URL + '/rest/v1/settings', {
+      method: 'POST',
+      headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+      body: JSON.stringify({ key: 'staff_seen', value: map })
+    });
+  } catch { /* 記錄失敗唔阻登入 */ }
+}
+loadStaffDir();
 
 // ── 模擬檢視：真 admin 可以用其他角色視角預覽（cyc-sim 只影響呢個分頁） ──
 function realRole() {
@@ -314,6 +343,7 @@ async function handleGoogleCred(res) {
   }
   const role = roleFor(email, await getRolesMap());
   portalLogin('google:' + email, { email, name: payload.name || email, admin: role === 'admin', role });
+  recordSeen(email, payload.name || '');
   showMain();
 }
 // GIS script 係 async，載入完成先整登入掣

@@ -179,19 +179,32 @@
       <div id="rec_list" class="space-y-2"></div>
     </div>
 
-    <!-- 權限管理（Google 登入職員角色） -->
+    <!-- 帳號及權限管理（admin 專用） -->
     <div class="card bg-white p-5 space-y-3">
-      <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wide">權限管理</h3>
-      <p class="text-xs text-slate-500">用 Google 登入嘅職員預設係「<b>普通</b>」：只可以支錢同檢視文件。喺度可以將任何 @sbccyc.org.hk 職員改做「<b>支錢負責</b>」（支錢、舍友存入、製作及下載文件）或「<b>admin</b>」（所有權限，包括新增其他 admin）。ho.ml／ho.lh@sbccyc.org.hk 係永久 admin，唔可以改。設定喺職員下次登入時生效。</p>
+      <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wide">👥 帳號及權限管理</h3>
+      <p class="text-xs text-slate-500">所有 <b>@sbccyc.org.hk</b> 網域登入嘅同事預設係「<b>普通</b>」（只可以支錢同檢視文件）。新同事第一次登入後會出現喺「未登記同事」區，由 admin 補返姓名同職級。admin 可以新增、修改、刪除任何帳號，<b>包括新增其他 admin</b>；ho.ml／ho.lh 係永久 admin，唔可以改。設定喺同事下次登入時生效。</p>
       <div id="role_list" class="space-y-2 text-sm"></div>
-      <div class="flex gap-2 flex-wrap items-center">
-        <input id="role_email" type="email" autocomplete="off" class="flex-1 min-w-48 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="職員電郵（xxx@sbccyc.org.hk）">
-        <select id="role_role" class="rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white outline-none">
-          <option value="cashier">支錢負責</option>
-          <option value="admin">admin</option>
-          <option value="normal">普通（移除設定）</option>
-        </select>
-        <button id="role_save" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition">儲存</button>
+      <div id="seen_wrap" class="hidden space-y-2">
+        <div class="text-xs font-bold text-amber-600">⚠️ 未登記同事（已登入過但未設定姓名／職級）</div>
+        <div id="seen_list" class="space-y-2 text-sm"></div>
+      </div>
+      <div class="border-t border-slate-100 pt-3 space-y-2">
+        <div class="text-xs font-bold text-slate-500">新增／修訂帳號（填電郵＋姓名＋職級＋權限）</div>
+        <div class="flex gap-2 flex-wrap items-center">
+          <input id="sf_email" type="email" autocomplete="off" class="flex-1 min-w-44 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="電郵（xxx@sbccyc.org.hk）">
+          <input id="sf_name" type="text" maxlength="10" autocomplete="off" class="w-28 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="姓名">
+          <select id="sf_title" class="rounded-lg border border-slate-300 px-2 py-2 text-sm bg-white outline-none">
+            <option value="">職級…</option>
+            <option>導師</option><option>社工</option><option>專責個案社工</option>
+            <option>主任</option><option>副院長</option><option>院長</option>
+          </select>
+          <select id="sf_role" class="rounded-lg border border-slate-300 px-2 py-2 text-sm bg-white outline-none">
+            <option value="normal">普通</option>
+            <option value="cashier">支錢負責</option>
+            <option value="admin">admin</option>
+          </select>
+          <button id="sf_save" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition">儲存帳號</button>
+        </div>
       </div>
     </div>
 
@@ -826,9 +839,11 @@ $('settle_ok').addEventListener('click', async () => {
   } catch (e) { alert('結算失敗：' + e.message); }
 });
 
-// ---- 權限管理（settings 嘅 roles：電郵 → cashier/admin；冇設定嘅網域職員預設普通） ----
+// ---- 帳號及權限管理 ----
+// settings keys：roles（電郵→cashier/admin，冇＝普通）、staff_dir（電郵→{name,title}；{deleted:true}＝隱藏預設同事）、staff_seen（登入過嘅電郵→{name,last}，前置頁自動記錄）
 const ROLE_LABELS = { admin: 'admin', cashier: '支錢負責', normal: '普通' };
-// 已登記同事對照表（同前置頁一致）；perm = 永久 admin 唔可以改
+const TITLES = ['導師', '社工', '專責個案社工', '主任', '副院長', '院長'];
+// 已登記同事對照表（同前置頁一致）；perm = 永久 admin 唔可以改／刪
 const KNOWN_STAFF = [
   { email: 'ho.ml@sbccyc.org.hk',   name: '何文諾', title: '社工', perm: true },
   { email: 'ho.lh@sbccyc.org.hk',   name: '何樂軒', title: '社工', perm: true },
@@ -838,67 +853,145 @@ const KNOWN_STAFF = [
   { email: 'wong.tw@sbccyc.org.hk', name: '王子維', title: '導師' },
   { email: 'man.yc@sbccyc.org.hk',  name: '文然澤', title: '導師' }
 ];
+let ROLES_MAP = {}, STAFF_DIR = {}, STAFF_SEEN = {};
+function dirMerged(){
+  const out = [];
+  const used = new Set();
+  KNOWN_STAFF.forEach(s => {
+    used.add(s.email);
+    const c = STAFF_DIR[s.email];
+    if (!s.perm && c && c.deleted) return;              // 被刪除嘅預設同事唔再顯示
+    out.push({ email: s.email, name: (c && !c.deleted && c.name) || s.name, title: (c && !c.deleted && c.title) || s.title, perm: !!s.perm });
+  });
+  Object.keys(STAFF_DIR).sort().forEach(em => {
+    if (used.has(em)) return;
+    const c = STAFF_DIR[em];
+    if (!c || c.deleted || !c.name) return;
+    out.push({ email: em, name: c.name, title: c.title || '', perm: false });
+  });
+  return out;
+}
+const roleSel = (email, cur) => `<select class="role_sel shrink-0 rounded-lg border border-slate-300 px-2 py-1 text-xs bg-white outline-none" data-email="${email}">
+  <option value="normal"${cur === 'normal' ? ' selected' : ''}>普通</option>
+  <option value="cashier"${cur === 'cashier' ? ' selected' : ''}>支錢負責</option>
+  <option value="admin"${cur === 'admin' ? ' selected' : ''}>admin</option>
+</select>`;
+const titleSel = (email, cur) => `<select class="title_sel shrink-0 rounded-lg border border-slate-300 px-2 py-1 text-xs bg-white outline-none" data-email="${email}">
+  <option value=""${!cur ? ' selected' : ''}>職級…</option>${TITLES.map(t => `<option${cur === t ? ' selected' : ''}>${t}</option>`).join('')}
+</select>`;
+const delBtn = email => `<button class="staff_del shrink-0 px-2.5 py-1 rounded-lg bg-red-50 text-red-600 text-xs font-bold hover:bg-red-100 transition" data-email="${email}">刪除</button>`;
+async function saveRoles(){
+  const { error } = await sb.from('settings').upsert({ key: 'roles', value: ROLES_MAP });
+  if (error) throw new Error(error.message);
+}
+async function saveDir(){
+  const { error } = await sb.from('settings').upsert({ key: 'staff_dir', value: STAFF_DIR });
+  if (error) throw new Error(error.message);
+}
 async function loadRoles(){
   const box = $('role_list');
   box.innerHTML = '<p class="text-xs text-slate-400">載入中…</p>';
-  let map = {};
   try {
-    const { data, error } = await sb.from('settings').select('value').eq('key', 'roles').maybeSingle();
-    if (error) throw error;
-    map = (data && data.value && typeof data.value === 'object' && !Array.isArray(data.value)) ? data.value : {};
+    const [r, d, sn] = await Promise.all([getSettingValue('roles'), getSettingValue('staff_dir'), getSettingValue('staff_seen')]);
+    ROLES_MAP = (r && typeof r === 'object' && !Array.isArray(r)) ? r : {};
+    STAFF_DIR = (d && typeof d === 'object' && !Array.isArray(d)) ? d : {};
+    STAFF_SEEN = (sn && typeof sn === 'object' && !Array.isArray(sn)) ? sn : {};
   } catch (e) { box.innerHTML = `<p class="text-xs text-red-500">讀取失敗：${escapeHtml(e.message)}</p>`; return; }
-  const sel = (email, cur) => `<select class="role_sel shrink-0 rounded-lg border border-slate-300 px-2 py-1 text-xs bg-white outline-none" data-email="${email}">
-    <option value="normal"${cur === 'normal' ? ' selected' : ''}>普通</option>
-    <option value="cashier"${cur === 'cashier' ? ' selected' : ''}>支錢負責</option>
-    <option value="admin"${cur === 'admin' ? ' selected' : ''}>admin</option>
-  </select>`;
-  const rows = KNOWN_STAFF.map(s => {
-    const cur = s.perm ? 'admin' : (map[s.email] || 'normal');
+  const list = dirMerged();
+  box.innerHTML = list.map(s => {
+    const cur = s.perm ? 'admin' : (ROLES_MAP[s.email] || 'normal');
     const right = s.perm
       ? '<span class="shrink-0 text-xs font-bold text-indigo-600">永久 admin</span>'
-      : sel(s.email, cur);
+      : titleSel(s.email, s.title) + roleSel(s.email, cur) + delBtn(s.email);
     return `<div class="flex items-center justify-between gap-2 border border-slate-200 rounded-lg px-3 py-2">
-      <span class="min-w-0 truncate"><b>${s.name}</b> <span class="text-xs text-slate-400">${s.title} · ${s.email}</span></span>${right}</div>`;
-  });
-  // 對照表以外嘅自訂電郵（例如新同事）
-  const knownEmails = KNOWN_STAFF.map(s => s.email);
-  Object.keys(map).filter(em => !knownEmails.includes(em)).sort().forEach(em => {
-    rows.push(`<div class="flex items-center justify-between gap-2 border border-dashed border-slate-300 rounded-lg px-3 py-2">
-      <span class="min-w-0 truncate text-slate-600">${escapeHtml(em)}</span>${sel(escapeHtml(em), map[em] || 'normal')}</div>`);
-  });
-  box.innerHTML = rows.join('');
+      <span class="min-w-0 truncate"><b>${escapeHtml(s.name)}</b> <span class="text-xs text-slate-400">${escapeHtml(s.email)}</span></span>
+      <span class="flex items-center gap-1.5 shrink-0">${right}</span></div>`;
+  }).join('');
+  // 未登記同事：登入過（staff_seen）但名冊冇嘅網域電郵
+  const known = new Set(list.map(s => s.email));
+  const unseen = Object.keys(STAFF_SEEN).filter(em => !known.has(em) && em.endsWith('@sbccyc.org.hk')).sort();
+  $('seen_wrap').classList.toggle('hidden', !unseen.length);
+  $('seen_list').innerHTML = unseen.map(em => `
+    <div class="flex items-center gap-2 flex-wrap border border-dashed border-amber-300 bg-amber-50 rounded-lg px-3 py-2">
+      <span class="min-w-0 flex-1 text-xs text-slate-500 truncate">${escapeHtml(em)}<br>Google 名：${escapeHtml((STAFF_SEEN[em] || {}).name || '—')}</span>
+      <input class="seen_name w-24 rounded-lg border border-slate-300 px-2 py-1 text-xs outline-none" data-email="${em}" placeholder="姓名" maxlength="10">
+      ${titleSel(em, '')}
+      ${roleSel(em, ROLES_MAP[em] || 'normal')}
+      ${delBtn(em)}
+    </div>`).join('');
 }
-// 下拉即改即存（升 admin 要先確認）
-$('role_list').addEventListener('change', async e => {
-  const s = e.target.closest('.role_sel');
-  if (!s) return;
+// 改權限／職級（即改即存；升 admin 要確認）
+async function onRoleChange(s){
   const em = s.dataset.email, role = s.value;
-  if (role === 'admin' && !confirm(`確定將 ${em} 升做 admin？\n\nadmin 擁有所有權限：結算、刪除記錄、舍友戶口管理、權限管理（包括再新增其他 admin）、轉正式版本。`)) { loadRoles(); return; }
+  if (role === 'admin' && !confirm(`確定將 ${em} 升做 admin？\n\nadmin 擁有所有權限：結算、刪除記錄、舍友戶口管理、帳號及權限管理（包括再新增其他 admin）、轉正式版本。`)) { loadRoles(); return; }
   try {
-    const { data, error } = await sb.from('settings').select('value').eq('key', 'roles').maybeSingle();
-    if (error) throw error;
-    const map = (data && data.value && typeof data.value === 'object' && !Array.isArray(data.value)) ? { ...data.value } : {};
-    if (role === 'normal') delete map[em]; else map[em] = role;
-    const { error: e2 } = await sb.from('settings').upsert({ key: 'roles', value: map });
-    if (e2) throw e2;
+    if (role === 'normal') delete ROLES_MAP[em]; else ROLES_MAP[em] = role;
+    await saveRoles();
     toast(`已更新 ${em} 為「${ROLE_LABELS[role]}」，下次登入生效。`);
     loadRoles();
   } catch (err) { alert('儲存失敗：' + err.message); loadRoles(); }
-});
-$('role_save').addEventListener('click', async () => {
-  const em = $('role_email').value.trim().toLowerCase();
-  const role = $('role_role').value;
-  if (!em || !em.endsWith('@sbccyc.org.hk')) { alert('請輸入 @sbccyc.org.hk 電郵。'); return; }
-  if (ADMIN_EMAILS.includes(em)) { alert('呢個係永久 admin，唔使設定。'); return; }
+}
+async function onTitleChange(s){
+  const em = s.dataset.email, title = s.value;
+  const entry = dirMerged().find(x => x.email === em);
+  let name = entry ? entry.name : '';
+  if (!name) {
+    const inp = document.querySelector(`.seen_name[data-email="${em}"]`);
+    name = inp ? inp.value.trim() : '';
+    if (!name) { alert('請先幫呢位同事填姓名，再揀職級。'); loadRoles(); return; }
+  }
   try {
-    const { data, error } = await sb.from('settings').select('value').eq('key', 'roles').maybeSingle();
-    if (error) throw error;
-    const map = (data && data.value && typeof data.value === 'object' && !Array.isArray(data.value)) ? { ...data.value } : {};
-    if (role === 'normal') delete map[em]; else map[em] = role;
-    const { error: e2 } = await sb.from('settings').upsert({ key: 'roles', value: map });
-    if (e2) throw e2;
-    $('role_email').value = '';
-    toast(role === 'normal' ? `已移除 ${em} 嘅特別設定（回復普通權限）。` : `已設定 ${em} 為「${ROLE_LABELS[role]}」，下次登入生效。`);
+    STAFF_DIR[em] = { name, title };
+    await saveDir();
+    toast(`已更新 ${name} 嘅職級為「${title || '未設定'}」。`);
+    loadRoles();
+  } catch (err) { alert('儲存失敗：' + err.message); loadRoles(); }
+}
+$('role_list').addEventListener('change', e => {
+  const rs = e.target.closest('.role_sel'), ts = e.target.closest('.title_sel');
+  if (rs) onRoleChange(rs); else if (ts) onTitleChange(ts);
+});
+$('seen_list').addEventListener('change', e => {
+  const rs = e.target.closest('.role_sel'), ts = e.target.closest('.title_sel');
+  if (rs) onRoleChange(rs); else if (ts) onTitleChange(ts);
+});
+// 刪除同事資料（名冊＋權限一齊刪；預設 7 人用隱藏標記；永久 admin 唔刪得）
+async function onStaffDel(btn){
+  const em = btn.dataset.email;
+  if (ADMIN_EMAILS.includes(em)) { alert('永久 admin 唔可以刪除。'); return; }
+  const entry = dirMerged().find(x => x.email === em);
+  const label = entry ? `${entry.name}（${em}）` : em;
+  if (!confirm(`確定刪除 ${label} 嘅帳號資料？\n\n・名冊（姓名／職級）同權限設定會刪除\n・佢下次登入會變返「普通」＋未登記狀態\n・過往嘅支錢記錄同簽名唔受影響`)) return;
+  try {
+    if (KNOWN_STAFF.some(s => s.email === em)) STAFF_DIR[em] = { deleted: true };
+    else delete STAFF_DIR[em];
+    delete ROLES_MAP[em];
+    await saveDir();
+    await saveRoles();
+    toast(`已刪除 ${label}。`);
+    loadRoles();
+  } catch (err) { alert('刪除失敗：' + err.message); loadRoles(); }
+}
+$('role_list').addEventListener('click', e => { const b = e.target.closest('.staff_del'); if (b) onStaffDel(b); });
+$('seen_list').addEventListener('click', e => { const b = e.target.closest('.staff_del'); if (b) onStaffDel(b); });
+// 新增／修訂帳號（電郵＋姓名＋職級＋權限）
+$('sf_save').addEventListener('click', async () => {
+  const em = $('sf_email').value.trim().toLowerCase();
+  const name = $('sf_name').value.trim();
+  const title = $('sf_title').value;
+  const role = $('sf_role').value;
+  if (!em || !em.endsWith('@sbccyc.org.hk')) { alert('請輸入 @sbccyc.org.hk 電郵。'); return; }
+  if (ADMIN_EMAILS.includes(em)) { alert('呢個係永久 admin，唔可以喺度修改。'); return; }
+  if (!name) { alert('請填同事姓名。'); $('sf_name').focus(); return; }
+  if (!title) { alert('請揀職級。'); $('sf_title').focus(); return; }
+  if (role === 'admin' && !confirm(`確定將 ${name}（${em}）設定為 admin？\nadmin 擁有所有權限，包括新增其他 admin。`)) return;
+  try {
+    STAFF_DIR[em] = { name, title };
+    if (role === 'normal') delete ROLES_MAP[em]; else ROLES_MAP[em] = role;
+    await saveDir();
+    await saveRoles();
+    $('sf_email').value = ''; $('sf_name').value = ''; $('sf_title').value = ''; $('sf_role').value = 'normal';
+    toast(`已儲存帳號：${name}（${title} · ${ROLE_LABELS[role]}），下次登入生效。`);
     loadRoles();
   } catch (e) { alert('儲存失敗：' + e.message); }
 });

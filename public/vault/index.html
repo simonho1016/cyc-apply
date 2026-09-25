@@ -47,7 +47,9 @@
       <p class="text-xs text-slate-500">夾萬現存 → 過錢 → 舍友結存 → 自動對數</p>
     </div>
     <div class="flex items-center gap-2">
-      <button onclick="location.href='https://cycportal.netlify.app/'" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">⌂ 宿舍服務主頁</button>
+      <button onclick="location.href='/apply/'" class="px-3 py-2 rounded-lg text-sm font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition">💰 零用金申請</button>
+      <button onclick="location.href='/records/'" class="px-3 py-2 rounded-lg text-sm font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 transition">🧾 支錢紀錄</button>
+      <button id="t_report" onclick="location.href='/report/'" class="px-3 py-2 rounded-lg text-sm font-bold text-sky-700 bg-sky-50 hover:bg-sky-100 transition">📈 月結報告</button>
       <button id="t_admin" onclick="location.href='/admin/'" class="px-3 py-2 rounded-lg text-sm font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition">📊 後台管理</button>
       <button id="adminLogout" class="hidden px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">← 入口頁</button>
     </div>
@@ -282,6 +284,7 @@ function showMain(){
     $('receipt_next').disabled = true;
     $('receipt_next_save').classList.add('hidden');
     $('t_admin').classList.add('hidden');
+    $('t_report').classList.add('hidden');   // 普通級唔入得月結報告
     $('roBanner').classList.remove('hidden');
   } else if (!isFullAdmin()) {
     // 支錢負責（cashier）：只可以用「舍友存入」；夾萬改數、過錢、舍友現存修正、結存起點、收款編號設定全部收起

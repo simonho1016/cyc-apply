@@ -123,9 +123,11 @@
       <p class="text-xs text-slate-500">每月結算舍友支出及收入，列印社別月結同舍友收支紀錄表</p>
     </div>
     <div class="flex items-center gap-2 flex-wrap justify-end">
-      <button id="t_admin" onclick="location.href='/admin/'" class="px-3 py-2 rounded-lg text-sm font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition">📊 後台管理</button>
+      <button onclick="location.href='/apply/'" class="px-3 py-2 rounded-lg text-sm font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition">💰 零用金申請</button>
+      <button onclick="location.href='/records/'" class="px-3 py-2 rounded-lg text-sm font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 transition">🧾 支錢紀錄</button>
       <button id="t_vault" onclick="location.href='/vault/'" class="px-3 py-2 rounded-lg text-sm font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 transition">🏦 夾萬・現存</button>
-      <button onclick="location.href='/'" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">← 返回</button>
+      <button id="t_admin" onclick="location.href='/admin/'" class="px-3 py-2 rounded-lg text-sm font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition">📊 後台管理</button>
+      <button onclick="location.href='/'" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">← 入口頁</button>
     </div>
   </div>
 </header>
@@ -223,10 +225,9 @@ const ROLE_NOW = sessionRole();
 if (ROLE_NOW === 'normal') {
   $('noPerm').classList.remove('hidden');
   $('t_admin').classList.add('hidden');
-  $('t_vault').classList.add('hidden');
 } else {
   $('reportMain').classList.remove('hidden');
-  if (ROLE_NOW === 'cashier') { $('t_admin').classList.add('hidden'); $('t_vault').classList.add('hidden'); }
+  if (ROLE_NOW === 'cashier') { $('t_admin').classList.add('hidden'); }   // t_vault 支錢負責入得（舍友存入），唔收埋
 }
 
 // 模擬檢視提示橫額

@@ -81,15 +81,32 @@
       <p id="roleHint" class="text-xs text-slate-500">舍友逐個喺電話簽署收支紀錄表，全部簽晒（或豁免）先列印月結</p>
     </div>
     <div class="flex items-center gap-2 flex-wrap justify-end">
-      <button onclick="location.href='/apply/'" class="px-3 py-2 rounded-lg text-sm font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition">💰 零用金申請</button>
-      <button onclick="location.href='/records/'" class="px-3 py-2 rounded-lg text-sm font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 transition">🧾 支錢紀錄</button>
-      <button onclick="location.href='/vault/'" class="px-3 py-2 rounded-lg text-sm font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 transition">🏦 夾萬・現存</button>
-      <button onclick="location.href='/report/'" class="px-3 py-2 rounded-lg text-sm font-bold text-sky-700 bg-sky-50 hover:bg-sky-100 transition">📈 月結報告</button>
-      <button id="t_admin" onclick="location.href='/admin/'" class="px-3 py-2 rounded-lg text-sm font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition">📊 後台管理</button>
-      <button onclick="location.href='/'" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">← 入口頁</button>
+      <div class="relative shrink-0">
+        <button id="navBtn" class="px-3 py-2 rounded-lg text-sm font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition">☰ 功能選單</button>
+        <div id="navMenu" class="hidden absolute right-0 top-full mt-2 w-44 z-50 bg-white rounded-xl overflow-hidden" style="border:2.5px solid #141414; box-shadow:4px 4px 0 #141414;">
+          <button data-nav="/apply/" onclick="location.href='/apply/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-emerald-700 hover:bg-emerald-50 transition">💰 零用金申請</button>
+          <button data-nav="/records/" onclick="location.href='/records/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-teal-700 hover:bg-teal-50 transition">🧾 支錢紀錄</button>
+          <button data-nav="/vault/" onclick="location.href='/vault/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-amber-700 hover:bg-amber-50 transition">🏦 夾萬・現存</button>
+          <button data-nav="/sign/" onclick="location.href='/sign/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-violet-700 hover:bg-violet-50 transition">✍️ 月結簽署</button>
+          <button data-nav="/report/" onclick="location.href='/report/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-sky-700 hover:bg-sky-50 transition">📈 月結報告</button>
+          <button data-nav="/admin/" id="t_admin" onclick="location.href='/admin/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-indigo-600 hover:bg-indigo-50 transition">📊 後台管理</button>
+          <button data-nav="/" onclick="location.href='/'" class="block w-full text-left px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 transition border-t border-slate-200">🏠 入口頁</button>
+        </div>
+      </div>
     </div>
   </div>
 </header>
+<script>
+// 功能選單下拉：撳 ☰ 開關；撳出面收埋；當前頁項目唔顯示
+(function(){
+  var btn = document.getElementById('navBtn'), menu = document.getElementById('navMenu');
+  if (!btn || !menu) return;
+  var cur = location.pathname;
+  menu.querySelectorAll('[data-nav]').forEach(function(b){ if (b.getAttribute('data-nav') === cur) b.classList.add('hidden'); });
+  btn.addEventListener('click', function(e){ e.stopPropagation(); menu.classList.toggle('hidden'); });
+  document.addEventListener('click', function(e){ if (!menu.classList.contains('hidden') && !menu.contains(e.target) && e.target !== btn) menu.classList.add('hidden'); });
+})();
+</script>
 
 <!-- 模擬檢視提示 -->
 <div id="simBanner" class="hidden bg-amber-100 border-b border-amber-300 text-amber-800 text-xs px-4 py-2 text-center"></div>

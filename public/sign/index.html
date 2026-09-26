@@ -114,7 +114,7 @@
         <button id="s_load" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-violet-600 hover:bg-violet-700 transition">載入名單</button>
         <button id="s_build" class="px-4 py-2 rounded-lg text-sm font-bold text-violet-700 bg-violet-50 hover:bg-violet-100 transition" title="將該社現有舍友加入簽署名單；已簽／已豁免嘅唔會被覆蓋">➕ 建立／補入名單</button>
       </div>
-      <p class="text-xs text-slate-500">流程：揀社別月份 → 建立名單 → 攞電話俾每位舍友逐個簽名（未能簽嘅撳「豁免」）→ 下方三個職員簽署 → 全部完成後去「📈 月結報告」列印，簽名會自動印落相應欄位。</p>
+      <p class="text-xs text-slate-500">流程：揀社別月份 → 建立名單 → 攞電話俾每位舍友<b>先睇當月收支紀錄，確認無誤後簽名</b>（未能簽嘅撳「豁免」）→ 下方三個職員簽署 → 全部完成後去「📈 月結報告」列印，簽名會自動印落相應欄位。</p>
     </div>
 
     <!-- 進度 -->
@@ -177,6 +177,22 @@
     #signModal .sign-btns button { padding: 6px 10px; font-size: 13px; }
   }
 </style>
+
+<!-- ====================== 收支紀錄預覽（簽署前必經步驟） ====================== -->
+<div id="stmtModal" class="fixed inset-0 z-40 hidden">
+  <div class="absolute inset-0 bg-black/40"></div>
+  <div class="relative max-w-2xl mx-auto mt-6 mb-6 bg-white rounded-2xl p-4 sm:p-5 flex flex-col" style="max-height:calc(100dvh - 3rem);">
+    <div class="shrink-0">
+      <h3 class="font-bold text-slate-900 text-base">📄 當月收支紀錄：<strong id="stmtWho"></strong></h3>
+      <p class="text-xs text-slate-500 mt-0.5">請舍友先核對以下支出及收入紀錄，確認無誤後先撳「我已查看，進行簽署」。</p>
+    </div>
+    <div id="stmtBody" class="flex-1 min-h-0 overflow-y-auto mt-3 rounded-xl border-2 border-slate-200"></div>
+    <div class="flex gap-2 justify-end mt-3 shrink-0 flex-wrap">
+      <button id="stmtCancel" class="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">取消</button>
+      <button id="stmtOk" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-violet-600 hover:bg-violet-700 transition" disabled>✅ 我已查看，進行簽署</button>
+    </div>
+  </div>
+</div>
 
 <div id="toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 text-white text-sm px-4 py-2 rounded-full shadow-lg"></div>
 
@@ -528,6 +544,8 @@ $('signList').addEventListener('click', async e => {
   const staff = myStaffName();
   if (btn.dataset.act === 'sign' || btn.dataset.act === 'resign') {
     if (btn.dataset.act === 'resign' && !confirm(`幫 ${r.member_name} 重簽？舊簽名會被覆蓋。`)) return;
+    const viewed = await openStmtPreview(r);   // 簽署前必經：先睇當月收支紀錄
+    if (!viewed) return;
     const dataUrl = await openSignPad(`${r.member_name}（${r.member_id}）`);
     if (!dataUrl) return;
     try {
@@ -600,6 +618,90 @@ $('staffList').addEventListener('click', async e => {
     } catch (err) { alert('還原失敗：' + err.message); }
   }
 });
+
+// ---- 收支紀錄預覽（簽署前必經：等舍友睇清楚自己當月紀錄先簽） ----
+const r2 = n => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+const fmtMoney = n => Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtDHM = d => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+
+let stmtResolve = null;
+function closeStmtModal(result){
+  $('stmtModal').classList.add('hidden');
+  document.body.style.overflow = '';
+  const r = stmtResolve; stmtResolve = null;
+  if (r) r(result);
+}
+$('stmtCancel').addEventListener('click', () => closeStmtModal(false));
+$('stmtOk').addEventListener('click', () => closeStmtModal(true));
+
+async function openStmtPreview(r){
+  const house = $('s_house').value, month = $('s_month').value;
+  const hk = houseKeyNow();
+  const [y, m] = month.split('-').map(Number);
+  const start = new Date(y, m - 1, 1), end = new Date(y, m, 1);
+  $('stmtWho').textContent = `${r.member_name}（${r.member_id}）· ${house} ${y} 年 ${m} 月`;
+  $('stmtBody').innerHTML = '<p class="p-4 text-sm text-slate-500 font-bold">載入紀錄中…</p>';
+  $('stmtOk').disabled = true;
+  $('stmtModal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  const done = new Promise(res => { stmtResolve = res; });
+  try {
+    const { data, error } = await sb.from('ledger').select('*').eq('house', hk)
+      .eq('member_id', r.member_id).lt('created_at', end.toISOString())
+      .order('created_at', { ascending: true }).limit(2000);
+    if (error) throw new Error(error.message);
+    const before = [], during = [];
+    (data || []).forEach(x => (new Date(x.created_at) < start ? before : during).push(x));
+    const bRows = before.filter(x => x.member_bal_after !== null && x.member_bal_after !== undefined);
+    const opening = bRows.length ? Number(bRows[bRows.length - 1].member_bal_after) : 0;
+    let bal = opening, totIn = 0, totOut = 0;
+    const txRows = [];
+    during.forEach(x => {
+      const delta = Number(x.member_delta || 0);
+      if (x.kind === 'deposit') {
+        bal = r2(bal + delta); totIn = r2(totIn + delta);
+        txRows.push({ d: new Date(x.created_at), desc: escapeHtml(x.note || '存入') + (x.receipt_no ? `（${escapeHtml(x.receipt_no)}）` : ''), inn: delta, out: null, bal });
+      } else if (x.kind === 'expense') {
+        const amt = -delta || Number(x.amount || 0); bal = r2(bal - amt); totOut = r2(totOut + amt);
+        txRows.push({ d: new Date(x.created_at), desc: escapeHtml(x.note || '支錢') + (x.serial ? `　#${escapeHtml(x.serial)}` : ''), inn: null, out: amt, bal });
+      } else if (x.kind === 'rollback') {
+        const amt = delta || Number(x.amount || 0); bal = r2(bal + amt); totOut = r2(totOut - amt);
+        txRows.push({ d: new Date(x.created_at), desc: '刪單回補' + (x.serial ? `　#${escapeHtml(x.serial)}` : ''), inn: amt, out: null, bal });
+      } else if (x.kind === 'transfer_in') {
+        bal = r2(bal + delta); totIn = r2(totIn + delta);
+        txRows.push({ d: new Date(x.created_at), desc: escapeHtml(x.note || '轉社轉入'), inn: delta, out: null, bal });
+      } else if (x.kind === 'transfer_out') {
+        const amt = -delta || Number(x.amount || 0); bal = r2(bal - amt); totOut = r2(totOut + amt);
+        txRows.push({ d: new Date(x.created_at), desc: escapeHtml(x.note || '轉社轉出'), inn: null, out: amt, bal });
+      }
+      // settle 行唔影響舍友結存，唔顯示
+    });
+    const bodyRows = txRows.map(t => `<tr class="border-t border-slate-100">
+        <td class="px-2 py-1.5 whitespace-nowrap">${fmtDHM(t.d)}</td>
+        <td class="px-2 py-1.5">${t.desc}</td>
+        <td class="px-2 py-1.5 text-right text-emerald-700 font-bold">${t.inn !== null ? '+' + fmtMoney(t.inn) : ''}</td>
+        <td class="px-2 py-1.5 text-right text-red-600 font-bold">${t.out !== null ? '−' + fmtMoney(t.out) : ''}</td>
+        <td class="px-2 py-1.5 text-right font-mono">${fmtMoney(t.bal)}</td></tr>`).join('');
+    $('stmtBody').innerHTML = `<table class="w-full text-xs sm:text-sm">
+      <thead class="sticky top-0 bg-slate-100"><tr>
+        <th class="px-2 py-1.5 text-left">日期</th><th class="px-2 py-1.5 text-left">項目</th>
+        <th class="px-2 py-1.5 text-right">存入</th><th class="px-2 py-1.5 text-right">支出</th><th class="px-2 py-1.5 text-right">結餘</th></tr></thead>
+      <tbody>
+        <tr class="border-t border-slate-200 bg-slate-50"><td class="px-2 py-1.5">${String(start.getDate()).padStart(2,'0')}/${String(start.getMonth()+1).padStart(2,'0')}</td><td class="px-2 py-1.5">承前結餘</td><td></td><td></td><td class="px-2 py-1.5 text-right font-mono">${fmtMoney(opening)}</td></tr>
+        ${bodyRows || '<tr class="border-t border-slate-100"><td colspan="5" class="px-2 py-3 text-center text-slate-400">今個月冇收支紀錄</td></tr>'}
+      </tbody>
+      <tfoot><tr class="border-t-2 border-slate-300 font-bold bg-amber-50">
+        <td colspan="2" class="px-2 py-1.5">總計</td>
+        <td class="px-2 py-1.5 text-right text-emerald-700">+${fmtMoney(totIn)}</td>
+        <td class="px-2 py-1.5 text-right text-red-600">−${fmtMoney(totOut)}</td>
+        <td class="px-2 py-1.5 text-right font-mono">${fmtMoney(bal)}</td></tr></tfoot>
+    </table>`;
+    $('stmtOk').disabled = false;
+  } catch (e) {
+    $('stmtBody').innerHTML = `<p class="p-4 text-sm text-red-600 font-bold">未能載入紀錄：${escapeHtml(e.message)}</p>`;
+  }
+  return done;
+}
 
 // ====================== 簽名板（同支錢頁同一套邏輯） ======================
 const signCanvas = $('signCanvas');

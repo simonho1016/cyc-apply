@@ -12,6 +12,8 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/signatures.js"></script>
 <style>
@@ -120,7 +122,24 @@
       <button data-tab="settled" class="tab-btn px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">已結算</button>
     </div>
     <select id="staffFilter" class="hidden px-3 py-2 rounded-lg text-sm text-slate-700"></select>
+    <select id="f_house" class="px-3 py-2 rounded-lg text-sm text-slate-700">
+      <option value="">全部社別</option>
+      <option value="忠社">忠社</option>
+      <option value="孝社">孝社</option>
+    </select>
+    <input id="f_from" type="date" class="px-3 py-2 rounded-lg text-sm text-slate-700" title="日期由">
+    <input id="f_to" type="date" class="px-3 py-2 rounded-lg text-sm text-slate-700" title="日期至">
     <button id="refreshBtn" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">🔄 重新整理</button>
+  </div>
+
+  <!-- 批量操作列（管理夾萬同工／管理級／admin）；結算只限 admin＋管理夾萬同工；刪除仍然只限後台 admin -->
+  <div id="batchBar" class="hidden bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex items-center gap-2 flex-wrap">
+    <label class="text-xs text-slate-500 flex items-center gap-1"><input type="checkbox" id="sel_all" class="accent-teal-600"> 全選</label>
+    <button id="print_btn" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-violet-600 hover:bg-violet-700 transition" disabled>🖨 列印所選</button>
+    <button id="zip_btn" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition" disabled>📦 下載 PDF（ZIP）</button>
+    <button id="csv_btn" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-slate-700 hover:bg-slate-800 transition">⬇ 匯出 CSV</button>
+    <button id="settle_btn" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition" disabled>💰 結算所選</button>
+    <span class="text-xs text-slate-400">列印／ZIP／CSV：管理夾萬同工起可用　｜　結算：管理夾萬同工＋admin　｜　刪除：只限 admin 後台</span>
   </div>
 
   <div id="noMapWarn" class="hidden bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl px-4 py-3">
@@ -199,6 +218,23 @@
   </div>
 </div>
 
+<!-- 結算確認 modal（admin＋管理夾萬同工） -->
+<div id="settleModal" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/40"></div>
+  <div class="relative max-w-sm mx-auto mt-32 bg-white rounded-2xl p-5 space-y-4 shadow-xl">
+    <h3 class="font-bold text-slate-900">💰 確認結算</h3>
+    <div id="settle_summary" class="text-sm space-y-1.5 max-h-60 overflow-y-auto"></div>
+    <div>
+      <span class="text-xs font-medium text-slate-500">經手人（結算同事）</span>
+      <input id="settle_by" type="text" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="你嘅姓名">
+    </div>
+    <div class="flex gap-2">
+      <button id="settle_cancel" class="flex-1 py-2.5 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">取消</button>
+      <button id="settle_ok" class="flex-1 py-2.5 rounded-lg text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition">確認結算</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-800 text-white text-sm px-4 py-2 rounded-full shadow-lg"></div>
 
 <script>
@@ -234,8 +270,21 @@ function sessionEmail(){
 }
 const ROLE_NOW = sessionRole();
 const CAN_MANAGE_FILES = ROLE_NOW !== 'normal';
+const CAN_BATCH = ['admin', 'manager', 'cashier'].includes(ROLE_NOW);   // 批量列印／ZIP／CSV
+const CAN_SETTLE = ['admin', 'cashier'].includes(ROLE_NOW);             // 結算：admin＋管理夾萬同工（管理級唔可以結算）
 if (ROLE_NOW !== 'admin') $('t_admin').classList.add('hidden');
 if (ROLE_NOW === 'normal') $('t_report').classList.add('hidden');
+if (CAN_BATCH) $('batchBar').classList.remove('hidden');
+if (!CAN_SETTLE) $('settle_btn').classList.add('hidden');
+{
+  const hint = {
+    admin: '全部紀錄：批量列印／ZIP／CSV／結算（刪除請去後台管理）',
+    manager: '全部紀錄：批量列印／ZIP／CSV（結算由管理夾萬同工或 admin 處理）',
+    cashier: '全部紀錄：批量列印／ZIP／CSV／結算',
+    normal: '查返自己嘅支錢紀錄，隨時列印'
+  };
+  $('roleHint').textContent = hint[ROLE_NOW] || hint.normal;
+}
 
 const EMAIL_STAFF_MAP = {
   'tan.kl@sbccyc.org.hk': '滕家麟',
@@ -309,13 +358,18 @@ function myStaffName(){ return EMAIL_STAFF_MAP[sessionEmail()] || ''; }
 
 function visibleRows(){
   let rows = allRows;
-  if (ROLE_NOW === 'admin') {
+  if (CAN_BATCH) {
     const f = $('staffFilter').value;
     if (f) rows = rows.filter(r => (r.staff || '') === f);
   } else {
     const me = myStaffName();
     rows = rows.filter(r => (r.staff || '') === me);
   }
+  const h = $('f_house').value;
+  if (h) rows = rows.filter(r => (r.house || '') === h);
+  const from = $('f_from').value, to = $('f_to').value;
+  if (from) rows = rows.filter(r => (r.decided_at || r.created_at || '') >= from);
+  if (to) rows = rows.filter(r => (r.decided_at || r.created_at || '') <= to + 'T23:59:59');
   if (tabNow === 'settled') rows = rows.filter(r => !!r.settled_at);
   else if (tabNow === 'unsettled') rows = rows.filter(r => !r.settled_at);
   return rows;
@@ -332,16 +386,18 @@ function settleBadge(r){
 function renderList(){
   const box = $('r_list');
   const rows = visibleRows();
-  if (!rows.length) { box.innerHTML = '<p class="text-sm text-slate-500 text-center mt-8">冇符合嘅紀錄。</p>'; return; }
+  if (!rows.length) { box.innerHTML = '<p class="text-sm text-slate-500 text-center mt-8">冇符合嘅紀錄。</p>'; box._rows = rows; refreshBatchBtns(); return; }
   box.innerHTML = rows.map(r => `
     <div class="bg-white border border-slate-200 rounded-2xl p-4 text-sm shadow-sm">
       <div class="flex justify-between items-start gap-2 flex-wrap">
-        <div class="min-w-0">
+        ${CAN_BATCH ? `<input type="checkbox" class="sel_rec mt-1.5 accent-teal-600 shrink-0" data-id="${r.id}">` : ''}
+        <div class="min-w-0 flex-1">
           <div class="font-bold text-slate-900 text-base">${escapeHtml(r.payee)} <span class="text-xs font-normal text-slate-400">${escapeHtml(r.payee_id || '')} · ${escapeHtml(r.house || '')}</span> ${settleBadge(r)}</div>
           <div class="text-lg font-bold text-blue-700 mt-0.5">港幣$${escapeHtml(r.amount)}</div>
           <div class="text-xs text-slate-500 mt-1">類別：${escapeHtml((r.cats || []).join('、'))}${r.cat_other ? '（' + escapeHtml(r.cat_other) + '）' : ''}</div>
           ${r.remark ? `<div class="text-xs text-slate-500 mt-0.5">備註：${escapeHtml(r.remark)}</div>` : ''}
-          <div class="text-xs text-slate-400 mt-1">支款人：${escapeHtml(r.staff || '')} · ${fmtTime(r.decided_at || r.created_at)}${r.serial ? ' · 序號 ' + escapeHtml(r.serial) : ''}${r.doc_no ? ' · 編號 ' + escapeHtml(r.doc_no) : ''}</div>
+          <div class="text-xs text-slate-400 mt-1">支款人：${escapeHtml(r.staff || '')} · ${fmtTime(r.decided_at || r.created_at)}${r.serial ? ' · 序號 ' + escapeHtml(r.serial) : ''}${r.doc_no ? ' · 編號 ' + escapeHtml(r.doc_no) : ''}${r.pdf_path ? ' · 📎 有雲端 PDF' : ''}</div>
+          ${r.settled_at && !r.safe_pay ? `<div class="text-xs text-emerald-600 mt-0.5">✅ 已結算：${fmtTime(r.settled_at)}${r.settled_by ? ' · 經手 ' + escapeHtml(r.settled_by) : ''}</div>` : ''}
         </div>
         <div class="flex flex-col gap-2 items-stretch shrink-0">
           <button data-act="print" data-id="${r.id}" class="px-4 py-2 rounded-lg bg-teal-50 text-teal-700 text-sm font-bold hover:bg-teal-100 transition">🖨️ 列印</button>
@@ -350,25 +406,58 @@ function renderList(){
       </div>
     </div>`).join('');
   box._rows = rows;
+  if (CAN_BATCH) { $('sel_all').checked = false; }
+  refreshBatchBtns();
+}
+
+// ---- 批量勾選 ----
+function selectedIds(){
+  return [...document.querySelectorAll('.sel_rec:checked')].map(cb => cb.dataset.id);
+}
+function selectedRows(){
+  const ids = selectedIds();
+  return ($('r_list')._rows || []).filter(r => ids.includes(String(r.id)));
+}
+function refreshBatchBtns(){
+  if (!CAN_BATCH) return;
+  const sel = selectedRows();
+  const unsettledN = sel.filter(r => !r.settled_at).length;
+  const pdfN = sel.filter(r => r.pdf_path).length;
+  $('print_btn').disabled = !pdfN;
+  $('print_btn').textContent = pdfN ? `🖨 列印所選（${pdfN} 份）` : '🖨 列印所選';
+  $('zip_btn').disabled = !pdfN;
+  $('zip_btn').textContent = pdfN ? `📦 下載 PDF（ZIP，${pdfN} 份）` : '📦 下載 PDF（ZIP）';
+  if (CAN_SETTLE) {
+    $('settle_btn').disabled = !unsettledN;
+    $('settle_btn').textContent = unsettledN ? `💰 結算所選（${unsettledN} 張）` : '💰 結算所選';
+  }
 }
 
 async function loadRecords(){
   const box = $('r_list');
   box.innerHTML = '<p class="text-sm text-slate-500">載入中…</p>';
-  // 非 admin 冇對照 → 提示＋唔顯示任何紀錄
-  if (ROLE_NOW !== 'admin' && !myStaffName()) {
+  // 非批量角色冇對照 → 提示＋唔顯示任何紀錄
+  if (!CAN_BATCH && !myStaffName()) {
     $('noMapWarn').classList.remove('hidden');
     box.innerHTML = '';
     return;
   }
   $('noMapWarn').classList.add('hidden');
   try {
-    allRows = await listDone(200);
-    // admin：職員篩選下拉
-    if (ROLE_NOW === 'admin') {
+    allRows = await listDone(500);
+    // 批量角色：職員篩選下拉
+    if (CAN_BATCH) {
+      const cur = $('staffFilter').value;
       const names = [...new Set(allRows.map(r => r.staff).filter(Boolean))];
-      $('staffFilter').innerHTML = '<option value="">全部職員</option>' + names.map(n => `<option>${escapeHtml(n)}</option>`).join('');
+      $('staffFilter').innerHTML = '<option value="">全部職員</option>' + names.map(n => `<option${n === cur ? ' selected' : ''}>${escapeHtml(n)}</option>`).join('');
       $('staffFilter').classList.remove('hidden');
+    }
+    // 結算欄位探測（欄位未開通就唔可以結算）
+    if (CAN_SETTLE) {
+      try {
+        const { error } = await sb.from('applications').select('settled_at').limit(1);
+        settleColsOk = !error;
+      } catch { settleColsOk = false; }
     }
     renderList();
   } catch (e) {
@@ -387,7 +476,15 @@ $('tabs').addEventListener('click', e => {
   renderList();
 });
 $('staffFilter').addEventListener('change', renderList);
+['f_house', 'f_from', 'f_to'].forEach(id => $(id).addEventListener('change', renderList));
 $('refreshBtn').addEventListener('click', loadRecords);
+if (CAN_BATCH) {
+  $('sel_all').addEventListener('change', () => {
+    document.querySelectorAll('.sel_rec').forEach(cb => cb.checked = $('sel_all').checked);
+    refreshBatchBtns();
+  });
+  $('r_list').addEventListener('change', e => { if (e.target.classList.contains('sel_rec')) refreshBatchBtns(); });
+}
 
 // ---- 由記錄重繪單據 → 列印 PDF ----
 let printing = false;
@@ -471,6 +568,237 @@ $('r_list').addEventListener('click', async e => {
     } catch (err) { alert('下載失敗：' + err.message); }
   }
 });
+
+// ====================== 批量操作（管理夾萬同工／管理級／admin） ======================
+const money = n => '$' + Number(n || 0).toFixed(2);
+const r2 = n => Math.round(n * 100) / 100;
+function houseKey(h){ return h === '孝社' ? 'xiao' : 'zhong'; }
+let settleColsOk = true;
+const SETTLE_SQL = 'alter table applications add column if not exists settled_at timestamptz, add column if not exists settled_by text;';
+
+async function getSettingValue(key){
+  try {
+    const { data, error } = await sb.from('settings').select('value').eq('key', key).maybeSingle();
+    if (!error && data) return data.value;
+  } catch {}
+  return null;
+}
+async function getSafeVault(){
+  const v = await getSettingValue('safe_vault');
+  if (v && typeof v === 'object') {
+    return {
+      zhong_big: Number(v.zhong_big) || 0, zhong_small: Number(v.zhong_small) || 0,
+      xiao_big: Number(v.xiao_big) || 0,   xiao_small: Number(v.xiao_small) || 0,
+      init: ('zhong_small' in v || 'xiao_small' in v)
+    };
+  }
+  return { zhong_big: 0, zhong_small: 0, xiao_big: 0, xiao_small: 0, init: false };
+}
+async function saveSafeVault(v){
+  const { error } = await sb.from('settings').upsert({ key: 'safe_vault', value: {
+    zhong_big: r2(v.zhong_big), zhong_small: r2(v.zhong_small),
+    xiao_big: r2(v.xiao_big),   xiao_small: r2(v.xiao_small)
+  } });
+  if (error) throw new Error(error.message);
+}
+let ledgerWarned = false;
+async function ledgerInsert(rows){
+  try {
+    const { error } = await sb.from('ledger').insert(rows);
+    if (error) throw new Error(error.message);
+  } catch (e) {
+    console.warn('ledger 寫入失敗', e);
+    if (!ledgerWarned) {
+      ledgerWarned = true;
+      alert('⚠️ 流水賬寫入失敗：' + e.message + '\n（主流程不受影響，但月結紀錄會缺少呢筆數；如未開 ledger 表請去 Supabase SQL Editor 開）');
+    }
+  }
+}
+
+if (CAN_BATCH) {
+  // ---- 匯出 CSV（按而家篩選結果，Excel 可直接開） ----
+  const csvCell = v => {
+    const s = String(v ?? '');
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  $('csv_btn').addEventListener('click', () => {
+    const rows = visibleRows();
+    if (!rows.length) { alert('冇記錄可以匯出。'); return; }
+    const head = ['序號','單據編號','Notion ID','社別','舍友編號','收款人','金額','類別','其他原因','備註','支款人（同事）','日期時間','夾萬支付','結算時間','結算經手人','雲端PDF'];
+    const lines = rows.map(r => [
+      r.serial || '', r.doc_no || '', r.notion_id || '', r.house || '', r.payee_id || '', r.payee || '',
+      Number(r.amount || 0).toFixed(2), (r.cats || []).join('、'), r.cat_other || '', r.remark || '',
+      r.staff || '', fmtTime(r.decided_at || r.created_at), r.safe_pay ? '夾萬' : '',
+      r.settled_at ? fmtTime(r.settled_at) : '', r.settled_by || '', r.pdf_path ? '有' : ''
+    ].map(csvCell).join(','));
+    const csv = '﻿' + head.join(',') + '\n' + lines.join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const p = n => String(n).padStart(2, '0');
+    const d = new Date();
+    a.download = `零用金記錄_${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast(`已匯出 ${rows.length} 張記錄。`);
+  });
+
+  // ---- 勾選記錄 → 雲端 PDF 打包 ZIP 下載 ----
+  let zipping = false;
+  $('zip_btn').addEventListener('click', async () => {
+    if (zipping) return;
+    const list = selectedRows().filter(r => r.pdf_path);
+    if (!list.length) { alert('所選記錄冇雲端 PDF。'); return; }
+    if (!window.JSZip) { alert('ZIP 元件未載入，請檢查網絡後重新整理。'); return; }
+    zipping = true;
+    const zip = new JSZip();
+    let done = 0, fail = 0;
+    try {
+      for (const r of list) {
+        $('zip_btn').textContent = `📦 下載中 ${done + 1}/${list.length}…`;
+        try {
+          const { data, error } = await sb.storage.from(ARCHIVE_BUCKET).download(r.pdf_path);
+          if (error) throw new Error(error.message);
+          zip.file(r.pdf_path, data);
+        } catch { fail++; }
+        done++;
+      }
+      if (!Object.keys(zip.files).length) throw new Error('全部 PDF 下載失敗。');
+      $('zip_btn').textContent = '📦 壓縮中…';
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      const p = n => String(n).padStart(2, '0');
+      const d = new Date();
+      a.download = `零用金PDF_${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}.zip`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast(`已下載 ${done - fail} 份 PDF（ZIP）${fail ? `，${fail} 份失敗` : ''}。`);
+    } catch (e) {
+      alert('ZIP 下載失敗：' + e.message);
+    }
+    zipping = false;
+    refreshBatchBtns();
+  });
+
+  // ---- 勾選記錄 → 合併 PDF 直接列印（全選列印都得） ----
+  let printingSel = false;
+  $('print_btn').addEventListener('click', async () => {
+    if (printingSel) return;
+    const list = selectedRows().filter(r => r.pdf_path);
+    if (!list.length) { alert('所選記錄冇雲端 PDF。'); return; }
+    if (!window.PDFLib) { alert('PDF 合併元件未載入，請檢查網絡後重新整理。'); return; }
+    printingSel = true;
+    try {
+      const merged = await PDFLib.PDFDocument.create();
+      let done = 0, fail = 0;
+      for (const r of list) {
+        $('print_btn').textContent = `🖨 準備中 ${done + 1}/${list.length}…`;
+        try {
+          const { data, error } = await sb.storage.from(ARCHIVE_BUCKET).download(r.pdf_path);
+          if (error) throw new Error(error.message);
+          const src = await PDFLib.PDFDocument.load(await data.arrayBuffer(), { ignoreEncryption: true });
+          const pages = await merged.copyPages(src, src.getPageIndices());
+          pages.forEach(p => merged.addPage(p));
+        } catch { fail++; }
+        done++;
+      }
+      if (!merged.getPageCount()) throw new Error('全部 PDF 讀取失敗。');
+      $('print_btn').textContent = '🖨 開啟列印…';
+      const bytes = await merged.save();
+      const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+      const ifr = document.createElement('iframe');
+      ifr.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
+      ifr.src = url;
+      document.body.appendChild(ifr);
+      let printed = false;
+      ifr.onload = () => {
+        try { ifr.contentWindow.focus(); ifr.contentWindow.print(); printed = true; } catch { /* 落入 fallback */ }
+        if (!printed) window.open(url, '_blank');
+      };
+      setTimeout(() => { URL.revokeObjectURL(url); ifr.remove(); }, 60000);
+      toast(`已合併 ${done - fail} 份 PDF 準備列印${fail ? `，${fail} 份失敗` : ''}。`);
+    } catch (e) {
+      alert('列印準備失敗：' + e.message);
+    }
+    printingSel = false;
+    refreshBatchBtns();
+  });
+}
+
+// ====================== 結算（只限 admin＋管理夾萬同工；管理級唔可以結算） ======================
+if (CAN_SETTLE) {
+  $('settle_btn').addEventListener('click', async () => {
+    if (!settleColsOk) { alert('結算欄位未開通，請先去 Supabase → SQL Editor 跑：\n' + SETTLE_SQL); return; }
+    const sel = selectedRows().filter(r => !r.settled_at);   // 已結算嘅自動跳過
+    if (!sel.length) { alert('所選記錄全部已結算。'); return; }
+    // 檢查代管現金夠唔夠錢結算（夾萬未設定就跳過檢查，照舊結算）
+    const vault = await getSafeVault();
+    if (vault.init) {
+      const need = { zhong: 0, xiao: 0 };
+      sel.forEach(r => { need[houseKey(r.house)] = r2(need[houseKey(r.house)] + Number(r.amount || 0)); });
+      const lacks = [];
+      if (need.zhong > vault.zhong_small) lacks.push(`忠社代管現金：需要 ${money(need.zhong)}，現存 ${money(vault.zhong_small)}（差 ${money(r2(need.zhong - vault.zhong_small))}）`);
+      if (need.xiao > vault.xiao_small) lacks.push(`孝社代管現金：需要 ${money(need.xiao)}，現存 ${money(vault.xiao_small)}（差 ${money(r2(need.xiao - vault.xiao_small))}）`);
+      if (lacks.length) { alert('代管現金唔夠錢，未能結算：\n' + lacks.join('\n') + '\n\n請通知管理級或以上同事去「🏦 夾萬・現存」頁由現存現金過錢俾代管現金。'); return; }
+    }
+    // 按同事（墊支人）分項：結算即係由夾萬攞錢俾返墊支嘅同事
+    const byS = {};
+    sel.forEach(r => {
+      const k = r.staff || '（未填）';
+      byS[k] = byS[k] || { total: 0, n: 0 };
+      byS[k].total += Number(r.amount || 0); byS[k].n++;
+    });
+    const grand = sel.reduce((a, r) => a + Number(r.amount || 0), 0);
+    $('settle_summary').innerHTML =
+      '<p class="text-xs text-slate-500 pb-1">以下同事墊支嘅款項，結算後要由夾萬俾返：</p>' +
+      Object.entries(byS).sort((a, b) => b[1].total - a[1].total).map(([name, v]) => `
+        <div class="flex justify-between border-b border-slate-100 pb-1"><span>${escapeHtml(name)} <span class="text-xs text-slate-400">${v.n} 張</span></span><span class="font-bold">${money(v.total)}</span></div>`).join('') +
+      `<div class="flex justify-between pt-2 text-base"><span class="font-bold">合計</span><span class="font-black text-emerald-700">${money(grand)}</span></div>`;
+    $('settle_by').value = myStaffName();   // 經手人預填登入同事
+    $('settleModal').classList.remove('hidden');
+  });
+  $('settle_cancel').addEventListener('click', () => $('settleModal').classList.add('hidden'));
+  $('settle_ok').addEventListener('click', async () => {
+    const by = $('settle_by').value.trim();
+    if (!by) { alert('請填經手人姓名。'); $('settle_by').focus(); return; }
+    const targets = selectedRows().filter(r => !r.settled_at);
+    const n = targets.length;
+    if (!n) { $('settleModal').classList.add('hidden'); return; }
+    const now = new Date().toISOString();
+    try {
+      const { error } = await sb.from('applications').update({ settled_at: now, settled_by: by }).in('id', targets.map(r => r.id)).is('settled_at', null);
+      if (error) throw new Error(error.message + (/column|schema cache/i.test(error.message) ? '（請去 Supabase → SQL Editor 跑：' + SETTLE_SQL + '）' : ''));
+      // 結算成功 → 由該社代管現金扣數（夾萬未設定就唔扣）
+      let deducted = false;
+      try {
+        const vault = await getSafeVault();
+        if (vault.init) {
+          const need = { zhong: 0, xiao: 0 };
+          targets.forEach(r => { need[houseKey(r.house)] = r2(need[houseKey(r.house)] + Number(r.amount || 0)); });
+          await saveSafeVault({
+            zhong_big: vault.zhong_big, zhong_small: r2(vault.zhong_small - need.zhong),
+            xiao_big: vault.xiao_big,   xiao_small: r2(vault.xiao_small - need.xiao)
+          });
+          deducted = true;
+          // 流水賬：每張單一筆 settle，代管現金結餘逐張累扣
+          const run = { zhong: vault.zhong_small, xiao: vault.xiao_small };
+          const now2 = new Date().toISOString();
+          await ledgerInsert(targets.map(r => {
+            const hk = houseKey(r.house);
+            run[hk] = r2(run[hk] - Number(r.amount || 0));
+            return { created_at: now2, house: hk, kind: 'settle', member_id: r.payee_id || '', member_name: r.payee,
+              amount: Number(r.amount || 0), account: 'small', account_delta: -Number(r.amount || 0), account_bal_after: run[hk],
+              serial: r.serial || '', staff: by };
+          }));
+        }
+      } catch { /* 扣數失敗唔阻結算，可去「夾萬・現存」頁手動改返 */ }
+      $('settleModal').classList.add('hidden');
+      $('settle_by').value = '';
+      toast(`已結算 ${n} 張單${deducted ? '，代管現金已扣數' : ''}。`);
+      loadRecords();
+    } catch (e) { alert('結算失敗：' + e.message); }
+  });
+}
 
 loadRecords();
 </script>

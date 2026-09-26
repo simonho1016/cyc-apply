@@ -72,7 +72,8 @@
   .ms-sig { display: flex; justify-content: space-between; margin-top: 26px; font-size: 14.5px; }
   .ms-sig .col div { margin-bottom: 20px; }
   .ms-line { display: inline-block; width: 190px; border-bottom: 1.5px solid #000; position: relative; vertical-align: bottom; }
-  .ms-line .sig-img { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); height: 40px; max-width: 170px; object-fit: contain; }
+  .ms-line .sig-img { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); height: 32px; max-width: 150px; object-fit: contain; }
+  .ms-sig .col div:has(.sig-img) { padding-top: 20px; }   /* 有簽名嗰行預留空間，唔會壓住上一行 */
 
   /* ── 舍友收支紀錄表（每人每月一版，report2 格式） ── */
   .mr-sheet { page-break-after: always; width: 186mm; max-width: 186mm; }   /* 固定 A4 列印寬度，螢幕預覽同列印一致 */
@@ -90,11 +91,13 @@
   .mr-sig .lbl { min-width: 5.2em; text-align: right; white-space: nowrap; }
   .mr-sig .row.full .lbl { min-width: 0; text-align: left; }
   .mr-sig small { font-size: 10px; white-space: nowrap; }
-  .mr-sig .line { display: inline-block; width: 140px; height: 1.25em; border-bottom: 1.5px solid #000; position: relative; vertical-align: bottom; }
+  .mr-sig .line { display: inline-block; width: 140px; height: 1.25em; border-bottom: 1.5px solid #000; position: relative; vertical-align: bottom; flex-shrink: 0; }
   .mr-sig .row.full .line { flex: 1; }
   .mr-sig .brack { position: absolute; right: 0; bottom: 0; line-height: 1; font-size: 13px; }
-  .mr-sig .sig-img { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); height: 40px; max-width: 132px; object-fit: contain; }
-  .mr-sig .sig-img.staff { left: 2px; transform: none; }   /* 職員簽名靠左，右邊留位畀（姓名） */
+  .mr-sig .sig-img { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); height: 30px; max-width: 120px; object-fit: contain; }
+  .mr-sig .sig-img.staff { left: 0; transform: none; max-width: 88px; }   /* 職員簽名靠左，右邊留位畀（姓名） */
+  .mr-sig .line.wide { width: 178px; }   /* 職員已簽嗰行加長底線，簽名同（姓名）唔會互撞 */
+  .mr-sig .row:has(.sig-img) { padding-top: 26px; }   /* 有簽名嗰行預留空間，簽名唔會壓住上一行文字 */
   .mr-sig .exempt-note { position: absolute; bottom: 2px; left: 2px; font-size: 10px; color: #555; white-space: nowrap; }
 
   @media print {
@@ -504,9 +507,9 @@ function memberSheetHtml(st){
       </tbody></table>
       <div class="mr-sig">
         <div class="row full"><span class="lbl">舍友簽署：</span>${sigLine}</div>
-        <div class="row"><span class="lbl">負責職員：</span><small>（姓名及簽署）</small>${staffLine('officer')}</div>
-        <div class="row"><span class="lbl">審核職員：</span><small>（姓名及簽署）</small>${staffLine('reviewer')}</div>
-        <div class="row gap"><span class="lbl">社工：</span><small>（姓名及簽署）</small>${staffLine('social')}</div>
+        ${staffRow('負責職員：', 'officer')}
+        ${staffRow('審核職員：', 'reviewer')}
+        ${staffRow('社工：', 'social', true)}
       </div>
     </div>
   </div>`;
@@ -521,8 +524,13 @@ const SLOT_LABEL = { social: '社工簽署', officer: '負責職員', reviewer: 
 function staffLine(slot){
   const r = STAFF_SIG[slot];
   return r && r.signature
-    ? `<span class="line"><img class="sig-img staff" src="${r.signature}" alt=""><span class="brack">（${escapeHtml(r.staff_name || '')}）</span></span>`
+    ? `<span class="line wide"><img class="sig-img staff" src="${r.signature}" alt=""><span class="brack">（${escapeHtml(r.staff_name || '')}）</span></span>`
     : '<span class="line"><span class="brack">（　　）</span></span>';
+}
+// 職員行（已簽就唔使再顯示「（姓名及簽署）」提示字，騰位畀簽名）
+function staffRow(lbl, slot, gap){
+  const signed = !!(STAFF_SIG[slot] && STAFF_SIG[slot].signature);
+  return `<div class="row${gap ? ' gap' : ''}"><span class="lbl">${lbl}</span>${signed ? '' : '<small>（姓名及簽署）</small>'}${staffLine(slot)}</div>`;
 }
 async function loadStaffSigns(house, ym){
   STAFF_SIG = {};

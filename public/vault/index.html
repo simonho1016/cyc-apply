@@ -75,7 +75,35 @@
 
     <div id="roBanner" class="hidden card bg-sky-50 border-sky-200 p-3 text-xs text-sky-800">👀 普通權限：呢頁只可以<b>睇</b>夾萬現存同各舍友現存（用嚟確認夠唔夠錢支錢），唔可以改數或存入。需要存入請搵管理夾萬同工，改數或過錢請搵管理級／admin。</div>
 
-    <!-- 夾萬現存（admin 專用） -->
+    <!-- 支錢狀況總覽（所有同事可見：各舍友支錢狀況＋夾萬狀況一目了然） -->
+    <div class="card bg-white p-5 space-y-3" id="cardStats">
+      <h3 class="text-sm font-bold text-teal-600 uppercase tracking-wide">📊 支錢狀況總覽</h3>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="rounded-xl border-2 border-slate-200 p-3">
+          <div class="text-xs text-slate-500">總支出（累計）</div>
+          <div id="st_total" class="text-xl font-black text-slate-800 mt-0.5">—</div>
+          <div id="st_total_n" class="text-xs text-slate-400 mt-0.5">載入中…</div>
+        </div>
+        <div class="rounded-xl border-2 border-rose-200 bg-rose-50/50 p-3">
+          <div class="text-xs text-rose-500">忠社支出</div>
+          <div id="st_zhong" class="text-xl font-black text-rose-600 mt-0.5">—</div>
+          <div id="st_zhong_n" class="text-xs text-rose-400 mt-0.5"></div>
+        </div>
+        <div class="rounded-xl border-2 border-blue-200 bg-blue-50/50 p-3">
+          <div class="text-xs text-blue-500">孝社支出</div>
+          <div id="st_xiao" class="text-xl font-black text-blue-600 mt-0.5">—</div>
+          <div id="st_xiao_n" class="text-xs text-blue-400 mt-0.5"></div>
+        </div>
+        <div class="rounded-xl border-2 border-amber-200 bg-amber-50/50 p-3">
+          <div class="text-xs text-amber-600">未結算金額</div>
+          <div id="st_unsettled" class="text-xl font-black text-amber-600 mt-0.5">—</div>
+          <div id="st_unsettled_n" class="text-xs text-amber-500 mt-0.5"></div>
+        </div>
+      </div>
+      <p class="text-xs text-slate-400">未結算金額＝同事墊支咗、未由夾萬攞返嘅錢（「夾萬支付」嘅單會即時自動結算，唔計入）；結算由管理夾萬同工或 admin 喺「🧾 支錢紀錄」頁處理。</p>
+    </div>
+
+    <!-- 夾萬現存（admin 改數；管理級可過錢；管理夾萬同工／普通同工唯讀） -->
     <div class="card bg-white p-5 space-y-3" id="cardVault">
       <div class="flex items-center justify-between flex-wrap gap-2">
         <h3 class="text-sm font-bold text-amber-600 uppercase tracking-wide">🏦 夾萬現存</h3>
@@ -129,7 +157,7 @@
       </div>
     </div>
 
-    <!-- 舍友現存（admin 專用） -->
+    <!-- 舍友現存（admin 改數；其他角色唯讀） -->
     <div class="card bg-white p-5 space-y-3" id="cardBal">
       <div class="flex items-center justify-between flex-wrap gap-2">
         <h3 class="text-sm font-bold text-indigo-600 uppercase tracking-wide">👥 舍友現存</h3>
@@ -286,7 +314,7 @@ function staffNameOf(email){
   return EMAIL_STAFF_MAP[e] || '';
 }
 
-// ---- 出入閘：任何已登入職員都入得；normal（普通同工）唯讀睇數；cashier（管理夾萬同工）只可以用「舍友存入」；manager（管理級）＝存入＋過錢＋睇數；admin 全用 ----
+// ---- 出入閘：任何已登入職員都入得；normal（普通同工）唯讀睇數；cashier（管理夾萬同工）＝唯讀睇數＋舍友存入；manager（管理級）＝存入＋過錢＋睇數；admin 全用 ----
 let READONLY = false;   // 普通權限／管理級唯讀模式（舍友現存唔可以改）
 $('adminLogout').addEventListener('click', () => { location.href = '/'; });
 setInterval(() => {
@@ -316,11 +344,16 @@ function showMain(){
     $('t_report').classList.add('hidden');   // 普通級唔入得月結報告
     $('roBanner').classList.remove('hidden');
   } else if (role === 'cashier') {
-    // 管理夾萬同工：只可以用「舍友存入」；夾萬改數、過錢、舍友現存修正、結存起點、收款編號設定全部收起
-    ['cardVault', 'cardBal', 'cardSeed'].forEach(id => { const el = $(id); if (el) el.classList.add('hidden'); });
+    // 管理夾萬同工：觀看夾萬現存＋各舍友結存（結算前要知道夠唔夠錢）＋舍友存入；唔可以改夾萬數、過錢、改舍友結存
+    READONLY = true;
+    ['vault_zhong_big', 'vault_zhong_small', 'vault_xiao_big', 'vault_xiao_small'].forEach(id => { const el = $(id); if (el) el.disabled = true; });
+    $('vault_save').classList.add('hidden');
+    $('vaultXferRow').classList.add('hidden');
+    $('member_bal_save').classList.add('hidden');
+    const seed = $('cardSeed'); if (seed) seed.classList.add('hidden');
     $('receipt_next').disabled = true;
     $('receipt_next_save').classList.add('hidden');
-    $('t_admin').classList.add('hidden');   // 管理夾萬同工冇後台管理
+    $('t_admin').classList.add('hidden');
   } else if (role === 'manager') {
     // 管理級：夾萬「現存→代管」過錢＋舍友存入＋睇數；夾萬直接改數、舍友現存修正、結存起點、收款編號設定仍然係 admin 專用
     READONLY = true;   // 舍友現存唯讀（mbal 輸入停用）
@@ -449,6 +482,30 @@ async function renderVault(){
       if (r.house === '忠社' || r.house === '孝社') advHouse[r.house] = r2(advHouse[r.house] + a);
     });
   } catch { advOk = false; }
+  // 支錢狀況總覽（總支出／分社支出／未結算；所有角色可見）
+  try {
+    const { data: allApps, error: stErr } = await sb.from('applications').select('amount,house').neq('status', 'pending').limit(1000);
+    if (stErr) throw new Error(stErr.message);
+    const arr = allApps || [];
+    const sumH = h => arr.filter(r => r.house === h);
+    const tot = arr.reduce((a, r) => a + Number(r.amount || 0), 0);
+    const zh = sumH('忠社'), xi = sumH('孝社');
+    $('st_total').textContent = money(tot);
+    $('st_total_n').textContent = arr.length + ' 張單';
+    $('st_zhong').textContent = money(zh.reduce((a, r) => a + Number(r.amount || 0), 0));
+    $('st_zhong_n').textContent = zh.length + ' 張單';
+    $('st_xiao').textContent = money(xi.reduce((a, r) => a + Number(r.amount || 0), 0));
+    $('st_xiao_n').textContent = xi.length + ' 張單';
+    if (advOk) {
+      $('st_unsettled').textContent = money(adv);
+      $('st_unsettled_n').textContent = `忠社 ${money(advHouse['忠社'])} ｜ 孝社 ${money(advHouse['孝社'])}`;
+    } else {
+      $('st_unsettled').textContent = '—';
+      $('st_unsettled_n').textContent = '（結算欄位未開通）';
+    }
+  } catch {
+    $('st_total_n').textContent = '未能載入';
+  }
   // 對照：分社夾萬（現存＋代管）vs 分社舍友結存＋墊支，再加兩社總對數
   const vaultHouse = { '忠社': r2(v.zhong_big + v.zhong_small), '孝社': r2(v.xiao_big + v.xiao_small) };
   const vaultTotal = r2(vaultHouse['忠社'] + vaultHouse['孝社']);

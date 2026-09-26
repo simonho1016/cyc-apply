@@ -139,6 +139,7 @@
     <button id="zip_btn" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition" disabled>📦 下載 PDF（ZIP）</button>
     <button id="csv_btn" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-slate-700 hover:bg-slate-800 transition">⬇ 匯出 CSV</button>
     <button id="settle_btn" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition" disabled>💰 結算所選</button>
+    <span id="safe_hint" class="hidden text-xs font-bold"></span>
     <span class="text-xs text-slate-400">列印／ZIP／CSV：管理夾萬同工起可用　｜　結算：管理夾萬同工＋admin　｜　刪除：只限 admin 後台</span>
   </div>
 
@@ -458,6 +459,21 @@ async function loadRecords(){
         const { error } = await sb.from('applications').select('settled_at').limit(1);
         settleColsOk = !error;
       } catch { settleColsOk = false; }
+      // 代管現金 vs 未結算提示（結算同事要知道夠唔夠錢）
+      try {
+        const v = await getSafeVault();
+        const hint = $('safe_hint');
+        if (v.init) {
+          const need = { zhong: 0, xiao: 0 };
+          allRows.forEach(r => { if (!r.settled_at) need[houseKey(r.house)] = r2(need[houseKey(r.house)] + Number(r.amount || 0)); });
+          const cell = (label, have, want) => {
+            const ok = have >= want - 0.005;
+            return `<span class="${ok ? 'text-emerald-700' : 'text-red-600'}">${label}代管現金 ${money(have)}${want ? `（未結算 ${money(want)} ${ok ? '✅ 夠' : '⚠️ 唔夠'}）` : ''}</span>`;
+          };
+          hint.innerHTML = '🏦 ' + cell('忠社', v.zhong_small, need.zhong) + ' ｜ ' + cell('孝社', v.xiao_small, need.xiao);
+          hint.classList.remove('hidden');
+        }
+      } catch { /* 顯示唔到都唔阻主流程 */ }
     }
     renderList();
   } catch (e) {

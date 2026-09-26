@@ -92,6 +92,8 @@
   .mr-sig .line { display: inline-block; width: 140px; height: 1.25em; border-bottom: 1.5px solid #000; position: relative; vertical-align: bottom; }
   .mr-sig .row.full .line { flex: 1; }
   .mr-sig .brack { position: absolute; right: 0; bottom: 0; line-height: 1; font-size: 13px; }
+  .mr-sig .sig-img { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); height: 40px; max-width: 132px; object-fit: contain; }
+  .mr-sig .exempt-note { position: absolute; bottom: 2px; left: 2px; font-size: 10px; color: #555; white-space: nowrap; }
 
   @media print {
     @page { size: A4; margin: 12mm 12mm; }
@@ -130,6 +132,7 @@
       <button onclick="location.href='/apply/'" class="px-3 py-2 rounded-lg text-sm font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition">💰 零用金申請</button>
       <button onclick="location.href='/records/'" class="px-3 py-2 rounded-lg text-sm font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 transition">🧾 支錢紀錄</button>
       <button id="t_vault" onclick="location.href='/vault/'" class="px-3 py-2 rounded-lg text-sm font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 transition">🏦 夾萬・現存</button>
+      <button onclick="location.href='/sign/'" class="px-3 py-2 rounded-lg text-sm font-bold text-violet-700 bg-violet-50 hover:bg-violet-100 transition">✍️ 月結簽署</button>
       <button id="t_admin" onclick="location.href='/admin/'" class="px-3 py-2 rounded-lg text-sm font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition">📊 後台管理</button>
       <button onclick="location.href='/'" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">← 入口頁</button>
     </div>
@@ -462,6 +465,13 @@ async function buildMemberStatements(houseName, ym){
 
 function memberSheetHtml(st){
   const ROWS = 21;   // 交易行連承前結餘填到咁多行，夠晒一版 A4
+  // 舍友電子簽署（report_sign）：已簽 → 簽名圖；豁免 → 標註原因；冇記錄 → 留空橫線
+  const sg = SIG_MAP[st.id];
+  const sigLine = sg && sg.status === 'signed' && sg.signature
+    ? `<span class="line"><img class="sig-img" src="${sg.signature}" alt=""></span>`
+    : sg && sg.status === 'exempt'
+      ? `<span class="line"><span class="exempt-note">豁免電子簽署${sg.exempt_note ? '（' + escapeHtml(sg.exempt_note) + '）' : ''}</span></span>`
+      : '<span class="line"></span>';
   const txRows = st.txns.map(t => `
     <tr><td>${fmtDHM(t.d)}</td><td class="desc">${t.desc}</td>
       <td class="ms-num">${t.in !== null ? fmtMoney(t.in) : ''}</td>
@@ -491,7 +501,7 @@ function memberSheetHtml(st){
         <tr><td colspan="2"><b>總計</b></td><td class="ms-num"><b>$${fmtMoney(st.totIn)}</b></td><td class="ms-num"><b>$${fmtMoney(st.totOut)}</b></td><td class="ms-num"><b>$${fmtMoney(st.closing)}</b></td></tr>
       </tbody></table>
       <div class="mr-sig">
-        <div class="row full"><span class="lbl">舍友簽署：</span><span class="line"></span></div>
+        <div class="row full"><span class="lbl">舍友簽署：</span>${sigLine}</div>
         <div class="row"><span class="lbl">負責職員：</span><small>（姓名及簽署）</small><span class="line"><span class="brack">（　　）</span></span></div>
         <div class="row"><span class="lbl">審核職員：</span><small>（姓名及簽署）</small><span class="line"><span class="brack">（　　）</span></span></div>
         <div class="row gap"><span class="lbl">社工：</span><small>（姓名及簽署）</small><span class="line"><span class="brack">（　　）</span></span></div>
@@ -501,8 +511,15 @@ function memberSheetHtml(st){
 }
 
 // ====================== 操作 ======================
+let SIG_MAP = {};   // 舍友電子簽署（report_sign：member_id → row），memberSheetHtml 嵌入用
 $('ms_month').value = new Date().toLocaleDateString('sv').slice(0, 7);
 $('mr_month').value = new Date().toLocaleDateString('sv').slice(0, 7);
+// URL 參數（由「✍️ 月結簽署」頁跳入）：?house=zhong|xiao&month=YYYY-MM
+try {
+  const q = new URLSearchParams(location.search);
+  if (q.get('house')) { $('mr_house').value = q.get('house') === 'xiao' ? '孝社' : '忠社'; $('ms_house').value = $('mr_house').value; }
+  if (q.get('month')) { $('mr_month').value = q.get('month'); $('ms_month').value = q.get('month'); }
+} catch {}
 
 // ---- 舍友選擇器 ----
 async function loadMemberPicker(){
@@ -564,6 +581,33 @@ $('mr_go').addEventListener('click', async () => {
   if (!ym) { alert('請揀月份。'); return; }
   const picked = new Set([...document.querySelectorAll('.mr_pick:checked')].map(c => c.value));
   if (!picked.size) { alert('請至少揀一位舍友。'); return; }
+  const house = $('mr_house').value;
+  // ---- 電子簽署檢查：有簽署名單就一定要全部簽晒／豁免先印得；未建名單就提示可以「先簽後印」 ----
+  let signRows = null;
+  try {
+    const { data, error } = await sb.from('report_sign').select('member_id,member_name,status,signature,exempt_note,signed_at,staff').eq('house', house).eq('month', ym).limit(500);
+    if (!error) signRows = data || [];
+  } catch { /* 表未開就當冇名單 */ }
+  SIG_MAP = {};
+  if (signRows && signRows.length) {
+    signRows.forEach(s => { SIG_MAP[s.member_id] = s; });
+    const notDone = [...picked].filter(id => !SIG_MAP[id] || SIG_MAP[id].status === 'pending');
+    if (notDone.length) {
+      const names = notDone.map(id => {
+        const s = SIG_MAP[id];
+        const lb = [...document.querySelectorAll('.mr_pick')].find(c => c.value === id);
+        return (s && s.member_name) || (lb ? lb.closest('label').textContent.trim() : id);
+      });
+      alert(`✋ 仲有 ${notDone.length} 位舍友未簽署或豁免，未完成前唔可以列印：\n\n${names.join('、')}\n\n請先去「✍️ 月結簽署」頁完成簽署（未能電子簽署嘅可以豁免）。`);
+      return;
+    }
+    toast('全部舍友已簽署／豁免，簽名會自動印落「舍友簽署」欄。');
+  } else if (signRows && !signRows.length) {
+    if (!confirm('呢個月份未建立電子簽署名單。\n\n按「確定」直接列印（舍友簽署欄留空）；\n按「取消」轉去「✍️ 月結簽署」先簽後印。')) {
+      location.href = `/sign/?house=${houseKey(house)}&month=${encodeURIComponent(ym)}`;
+      return;
+    }
+  }
   $('mr_go').disabled = true;
   try {
     const list = (await buildMemberStatements($('mr_house').value, ym)).filter(st => picked.has(st.id));

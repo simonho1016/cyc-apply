@@ -53,6 +53,7 @@
     <div class="flex items-center gap-2">
       <button onclick="location.href='/apply/'" class="px-3 py-2 rounded-lg text-sm font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition">💰 零用金申請</button>
       <button onclick="location.href='/records/'" class="px-3 py-2 rounded-lg text-sm font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 transition">🧾 支錢紀錄</button>
+      <button id="t_sign" onclick="location.href='/sign/'" class="px-3 py-2 rounded-lg text-sm font-bold text-violet-700 bg-violet-50 hover:bg-violet-100 transition">✍️ 月結簽署</button>
       <button id="t_report" onclick="location.href='/report/'" class="px-3 py-2 rounded-lg text-sm font-bold text-sky-700 bg-sky-50 hover:bg-sky-100 transition">📈 月結報告</button>
       <button id="t_admin" onclick="location.href='/admin/'" class="px-3 py-2 rounded-lg text-sm font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition">📊 後台管理</button>
       <button id="adminLogout" class="hidden px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">← 入口頁</button>
@@ -346,6 +347,7 @@ function showMain(){
     $('receipt_next_save').classList.add('hidden');
     $('t_admin').classList.add('hidden');
     $('t_report').classList.add('hidden');   // 普通級唔入得月結報告
+    $('t_sign').classList.add('hidden');     // 普通級唔入得月結簽署
     $('roBanner').classList.remove('hidden');
   } else if (role === 'cashier') {
     // 管理夾萬同工：觀看夾萬現存＋各舍友結存（結算前要知道夠唔夠錢）＋舍友存入；唔可以改夾萬數、過錢、改舍友結存

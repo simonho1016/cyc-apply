@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>則仁中心 — 月結簽署</title>
+<meta name="apple-mobile-web-app-title" content="月結簽署">
+<meta name="theme-color" content="#7c3aed">
+<link rel="icon" href="/icons/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png">
+<link rel="apple-touch-icon" href="/icons/icon-180.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root { --ink: #141414; --pow: #ffd23f; }
+  body {
+    background-color: var(--pow) !important;
+    background-image: radial-gradient(rgba(20,20,20,.14) 1.6px, transparent 1.7px);
+    background-size: 15px 15px;
+    font-family: "Huninn", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif !important;
+  }
+  button, input, select, textarea { font-family: inherit !important; }
+  .bg-white:not(header) {
+    border: 3px solid var(--ink) !important;
+    border-radius: 16px !important;
+    box-shadow: 6px 6px 0 var(--ink) !important;
+  }
+  header {
+    background: #fff !important;
+    border-bottom: 4px solid var(--ink) !important;
+    box-shadow: 0 4px 0 rgba(20,20,20,.15) !important;
+  }
+  button[class*="bg-"] {
+    border: 2.5px solid var(--ink) !important;
+    box-shadow: 3px 3px 0 var(--ink) !important;
+    transition: transform .08s, box-shadow .08s, background .12s;
+  }
+  button[class*="bg-"]:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 var(--ink) !important; }
+  button[class*="bg-"]:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 var(--ink) !important; }
+  button:disabled { opacity: .45; }
+  select, input[type="month"] {
+    border: 2.5px solid var(--ink) !important;
+    border-radius: 10px !important;
+    box-shadow: 2.5px 2.5px 0 rgba(20,20,20,.2) !important;
+    background: #fff !important;
+  }
+  #toast {
+    background: var(--ink) !important;
+    border: 3px solid #fff !important;
+    box-shadow: 4px 4px 0 rgba(20,20,20,.35) !important;
+    font-size: 15px;
+  }
+  header h1 { text-shadow: 2px 2px 0 rgba(20,20,20,.12); }
+  .sig-row { border: 2.5px solid var(--ink) !important; box-shadow: 3px 3px 0 rgba(20,20,20,.25) !important; }
+</style>
+</head>
+<body class="text-slate-800">
+
+<script>
+// ====================== 入口頁統一登入 ======================
+(function(){
+  function ok(){
+    try {
+      var a = JSON.parse(sessionStorage.getItem('cyc-portal-auth') || 'null');
+      return a && typeof a.p === 'string' && a.p && Number.isFinite(a.exp) && Date.now() < a.exp;
+    } catch (e) { return false; }
+  }
+  if (!ok()) { location.replace('/'); return; }
+  setInterval(function(){ if (!ok()) location.replace('/'); }, 15000);
+})();
+</script>
+
+<header class="sticky top-0 z-20">
+  <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+    <div class="min-w-0">
+      <h1 class="text-base sm:text-lg font-bold text-slate-900 leading-tight">香港扶幼會 則仁中心 · 月結簽署</h1>
+      <p id="roleHint" class="text-xs text-slate-500">舍友逐個喺電話簽署收支紀錄表，全部簽晒（或豁免）先列印月結</p>
+    </div>
+    <div class="flex items-center gap-2 flex-wrap justify-end">
+      <button onclick="location.href='/apply/'" class="px-3 py-2 rounded-lg text-sm font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition">💰 零用金申請</button>
+      <button onclick="location.href='/records/'" class="px-3 py-2 rounded-lg text-sm font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 transition">🧾 支錢紀錄</button>
+      <button onclick="location.href='/vault/'" class="px-3 py-2 rounded-lg text-sm font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 transition">🏦 夾萬・現存</button>
+      <button onclick="location.href='/report/'" class="px-3 py-2 rounded-lg text-sm font-bold text-sky-700 bg-sky-50 hover:bg-sky-100 transition">📈 月結報告</button>
+      <button id="t_admin" onclick="location.href='/admin/'" class="px-3 py-2 rounded-lg text-sm font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition">📊 後台管理</button>
+      <button onclick="location.href='/'" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">← 入口頁</button>
+    </div>
+  </div>
+</header>
+
+<!-- 模擬檢視提示 -->
+<div id="simBanner" class="hidden bg-amber-100 border-b border-amber-300 text-amber-800 text-xs px-4 py-2 text-center"></div>
+
+<main class="max-w-5xl mx-auto px-4 py-6 space-y-4">
+
+  <div id="noPerm" class="hidden bg-white rounded-2xl p-6 text-center text-sm text-slate-500">
+    ⛔ 月結簽署只供「管理夾萬同工」、「管理級」及 admin 使用。
+  </div>
+
+  <div id="signMain" class="hidden space-y-4">
+
+    <!-- 揀社別＋月份 -->
+    <div class="bg-white rounded-2xl p-4 space-y-3">
+      <div class="flex items-end gap-2 flex-wrap">
+        <label class="block"><span class="text-xs font-medium text-slate-500">社別</span>
+          <select id="s_house" class="mt-1 px-3 py-2 text-sm outline-none">
+            <option>忠社</option><option>孝社</option>
+          </select></label>
+        <label class="block"><span class="text-xs font-medium text-slate-500">月份</span>
+          <input id="s_month" type="month" class="mt-1 px-3 py-2 text-sm outline-none"></label>
+        <button id="s_load" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-violet-600 hover:bg-violet-700 transition">載入名單</button>
+        <button id="s_build" class="px-4 py-2 rounded-lg text-sm font-bold text-violet-700 bg-violet-50 hover:bg-violet-100 transition" title="將該社現有舍友加入簽署名單；已簽／已豁免嘅唔會被覆蓋">➕ 建立／補入名單</button>
+      </div>
+      <p class="text-xs text-slate-500">流程：揀社別月份 → 建立名單 → 攞電話俾每位舍友逐個簽名（未能簽嘅撳「豁免」）→ 全部完成後去「📈 月結報告」列印，簽名會自動印落「舍友簽署」欄。</p>
+    </div>
+
+    <!-- 進度 -->
+    <div id="progCard" class="hidden bg-white rounded-2xl p-4 space-y-2">
+      <div class="flex items-center justify-between flex-wrap gap-2">
+        <span id="progText" class="text-sm font-bold text-slate-800"></span>
+        <button id="goReport" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 transition" disabled>🖨 去月結報告列印</button>
+      </div>
+      <div class="h-3 rounded-full bg-slate-100 overflow-hidden border border-slate-300">
+        <div id="progBar" class="h-full bg-emerald-500 transition-all" style="width:0%"></div>
+      </div>
+      <div id="allDone" class="hidden rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-800 text-sm font-bold px-3 py-2">✅ 全部舍友已簽署或豁免，可以列印月結文件！</div>
+    </div>
+
+    <!-- 名單 -->
+    <div id="signList" class="space-y-3"></div>
+  </div>
+</main>
+
+<!-- ====================== 簽名板（全螢幕橫向，同支錢頁一致） ====================== -->
+<div id="signModal" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-white flex flex-col">
+    <div class="flex items-center justify-between gap-2 flex-wrap px-3 py-2 border-b border-slate-200 shrink-0">
+      <div class="min-w-0">
+        <h3 class="font-bold text-slate-900 text-sm sm:text-base">✍️ 月結簽署：<strong id="signWho" class="text-slate-900"></strong></h3>
+        <p class="sign-hint text-xs text-slate-500">📱 直機會自動轉橫（將手機向左轉就係正確方向）；舍友確認收支紀錄無誤後簽名</p>
+      </div>
+      <div class="sign-btns flex gap-2 shrink-0">
+        <button id="signRotate" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">🔄 旋轉</button>
+        <button id="signClear" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">🧽 清除</button>
+        <button id="signCancel" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">取消</button>
+        <button id="signOk" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-violet-600 hover:bg-violet-700 transition" disabled>✔️ 確認簽名</button>
+      </div>
+    </div>
+    <div class="flex-1 min-h-0 m-2 rounded-xl overflow-hidden" style="border:3px solid #141414; box-shadow:4px 4px 0 #141414;">
+      <canvas id="signCanvas" class="w-full h-full block touch-none"></canvas>
+    </div>
+  </div>
+</div>
+<style>
+  #signModal > div { transition: transform .25s ease; }
+  #signModal.sign-rot > div {
+    inset: auto; top: 50%; left: 50%;
+    width: 100vh; height: 100vw;
+    width: 100dvh; height: 100dvw;
+    transform: translate(-50%, -50%) rotate(90deg);
+  }
+  @media (max-height: 480px) {
+    #signModal .sign-hint { display: none; }
+    #signModal h3 { font-size: 13px; }
+    #signModal .sign-btns button { padding: 6px 10px; font-size: 13px; }
+  }
+</style>
+
+<div id="toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 text-white text-sm px-4 py-2 rounded-full shadow-lg"></div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+
+const SUPABASE_URL = 'https://abtsyfbbtpvozywqaofs.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_beq8adbuLrISIgnpbAaLEw_Da1Fva-r';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const SIGN_SQL = `create table if not exists report_sign (
+  id uuid primary key default gen_random_uuid(),
+  house text not null, month text not null,
+  member_id text not null, member_name text,
+  status text not null default 'pending',
+  signature text, exempt_note text,
+  signed_at timestamptz, staff text,
+  unique(house, month, member_id)
+);
+alter table report_sign enable row level security;
+create policy "anon report_sign all" on report_sign for all to anon using (true) with check (true);`;
+
+// ---- 角色 ----
+function realRole(){
+  try {
+    const a = JSON.parse(sessionStorage.getItem('cyc-portal-auth') || 'null');
+    return (a && (a.role === 'admin' || a.role === 'manager' || a.role === 'cashier')) ? a.role : 'normal';
+  } catch { return 'normal'; }
+}
+function simInfo(){
+  if (realRole() !== 'admin') return null;
+  try {
+    const s = JSON.parse(sessionStorage.getItem('cyc-sim') || 'null');
+    return (s && ['admin', 'manager', 'cashier', 'normal'].includes(s.role)) ? s : null;
+  } catch { return null; }
+}
+function sessionRole(){ const s = simInfo(); return s ? s.role : realRole(); }
+function sessionEmail(){
+  const s = simInfo();
+  if (s && s.email) return s.email;
+  try {
+    const a = JSON.parse(sessionStorage.getItem('cyc-portal-auth') || 'null');
+    return (a && a.email) || '';
+  } catch { return ''; }
+}
+const ROLE_NOW = sessionRole();
+if (ROLE_NOW === 'normal') {
+  $('noPerm').classList.remove('hidden');
+  $('t_admin').classList.add('hidden');
+} else {
+  $('signMain').classList.remove('hidden');
+  if (ROLE_NOW !== 'admin') $('t_admin').classList.add('hidden');
+}
+const SIM_NOW = simInfo();
+if (SIM_NOW) {
+  const RL = { admin: 'admin', manager: '管理級', cashier: '管理夾萬同工', normal: '普通同工' };
+  const simWho = SIM_NOW.name || SIM_NOW.email || '';
+  $('simBanner').classList.remove('hidden');
+  $('simBanner').innerHTML = '🔭 模擬檢視中：以「' + RL[SIM_NOW.role] + '」' + (simWho ? '（' + simWho + '）' : '') + ' 視角瀏覽 · 操作會真實生效，請小心 · <button id="simStopBtn" class="underline font-bold">取消模擬</button>';
+  $('simStopBtn').addEventListener('click', () => { sessionStorage.removeItem('cyc-sim'); location.reload(); });
+}
+
+// ---- 職員姓名（簽署記錄「經手職員」用） ----
+const EMAIL_STAFF_MAP = {
+  'tan.kl@sbccyc.org.hk': '滕家麟', 'pun.yf@sbccyc.org.hk': '潘耀鋒', 'yung.ck@sbccyc.org.hk': '容俊杰',
+  'ho.ml@sbccyc.org.hk': '何文諾', 'ho.lh@sbccyc.org.hk': '何樂軒',
+  'wong.tw@sbccyc.org.hk': '王子維', 'man.yc@sbccyc.org.hk': '文然澤'
+};
+let CLOUD_STAFF_DIR = {};
+function myStaffName(){
+  const e = (sessionEmail() || '').toLowerCase();
+  const c = CLOUD_STAFF_DIR[e];
+  if (c && !c.deleted && c.name) return c.name;
+  return EMAIL_STAFF_MAP[e] || '';
+}
+(async () => {
+  try {
+    const { data } = await sb.from('settings').select('value').eq('key', 'staff_dir').maybeSingle();
+    if (data && data.value && typeof data.value === 'object') CLOUD_STAFF_DIR = data.value;
+  } catch {}
+})();
+
+// ---- 工具 ----
+let toastTimer;
+function toast(msg){
+  const t = $('toast');
+  t.textContent = msg; t.classList.remove('hidden');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.add('hidden'), 2600);
+}
+function escapeHtml(s){ return (s || '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function fmtTime(iso){
+  if (!iso) return '';
+  const d = new Date(iso);
+  const p = n => String(n).padStart(2, '0');
+  return `${p(d.getDate())}/${p(d.getMonth()+1)} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+// ---- 舍友名單（同其他頁一致） ----
+const DEFAULT_MEMBERS = {
+  '忠社': [
+    {id:'A01',name:'王嘉星'},{id:'A02',name:'莫志樂'},{id:'A03',name:'劉柏曦'},{id:'A10',name:'王駿騰'},
+    {id:'A11',name:'梁柏狄'},{id:'A12',name:'賴元朮'},{id:'A13',name:'魏浩男'},{id:'A15',name:'姚瑄政'},
+    {id:'A16',name:'林子誠'},{id:'A17',name:'蕭冠稀'},{id:'A18',name:'蕭栢稀'},{id:'A19',name:'趙君介'},
+    {id:'A22',name:'高政'},{id:'B08',name:'冼子朗'}
+  ],
+  '孝社': [
+    {id:'B01',name:'陳允浠'},{id:'B02',name:'潘韋霖'},{id:'B03',name:'莊咏賢'},{id:'B04',name:'黃仲明'},
+    {id:'B05',name:'李祐承'},{id:'B06',name:'劉俊希'},{id:'B07',name:'曹振袁'},{id:'B09',name:'程浩銘'},
+    {id:'B10',name:'蔡浩鈞'},{id:'B11',name:'陳冠喬'},{id:'B12',name:'鄭子倫'},{id:'B14',name:'吳培燊'},
+    {id:'B17',name:'翁梓峻'},{id:'B18',name:'鄧國賢'},{id:'B22',name:'徐櫻俊'},{id:'B24',name:'蘇鎮'},
+    {id:'B26',name:'林戩翹'}
+  ]
+};
+async function memberBase(house){
+  try {
+    const { data } = await sb.from('settings').select('value').eq('key', 'members').maybeSingle();
+    if (data && data.value && Array.isArray(data.value[house]) && data.value[house].length) return data.value[house];
+  } catch {}
+  return DEFAULT_MEMBERS[house] || [];
+}
+
+// ---- 簽署名單（report_sign 表） ----
+let rows = [];          // 當月當社嘅簽署記錄
+let tableOk = true;
+
+async function loadSignRows(){
+  const house = $('s_house').value, month = $('s_month').value;
+  if (!month) { alert('請揀月份。'); return; }
+  $('signList').innerHTML = '<p class="text-sm text-slate-600 font-bold">載入中…</p>';
+  try {
+    const { data, error } = await sb.from('report_sign').select('*').eq('house', house).eq('month', month).order('member_id');
+    if (error) throw new Error(error.message);
+    tableOk = true;
+    rows = data || [];
+    renderList();
+  } catch (e) {
+    tableOk = false;
+    rows = [];
+    $('progCard').classList.add('hidden');
+    $('signList').innerHTML = `<div class="bg-white rounded-2xl p-4 text-sm">
+      <p class="font-bold text-red-600">⚠️ 簽署表（report_sign）未開通。</p>
+      <p class="text-slate-500 mt-1">請 admin 去 Supabase → SQL Editor 跑以下 SQL，之後撳「載入名單」：</p>
+      <pre class="mt-2 p-2 bg-slate-100 rounded-lg text-xs select-all whitespace-pre-wrap">${escapeHtml(SIGN_SQL)}</pre>
+    </div>`;
+  }
+}
+
+function renderList(){
+  const box = $('signList');
+  if (!rows.length) {
+    $('progCard').classList.add('hidden');
+    box.innerHTML = '<p class="text-sm text-slate-600 font-bold text-center py-6">呢個月份未有名單。撳「➕ 建立／補入名單」開始。</p>';
+    return;
+  }
+  const badge = {
+    pending: '<span class="rounded-full px-2.5 py-0.5 text-xs font-bold bg-amber-100 text-amber-700">⏳ 待簽署</span>',
+    signed: '<span class="rounded-full px-2.5 py-0.5 text-xs font-bold bg-emerald-100 text-emerald-700">✅ 已簽署</span>',
+    exempt: '<span class="rounded-full px-2.5 py-0.5 text-xs font-bold bg-slate-200 text-slate-600">🚫 豁免</span>'
+  };
+  box.innerHTML = rows.map(r => `
+    <div class="sig-row bg-white rounded-2xl p-3 flex items-center gap-3 flex-wrap">
+      <div class="min-w-0 flex-1">
+        <div class="font-bold text-slate-900">${escapeHtml(r.member_name || '')} <span class="text-xs font-normal text-slate-400">${escapeHtml(r.member_id)}</span> ${badge[r.status] || badge.pending}</div>
+        ${r.status === 'signed' ? `<div class="text-xs text-slate-400 mt-0.5">${fmtTime(r.signed_at)}${r.staff ? ' · 經手 ' + escapeHtml(r.staff) : ''}</div>` : ''}
+        ${r.status === 'exempt' ? `<div class="text-xs text-slate-500 mt-0.5">原因：${escapeHtml(r.exempt_note || '—')}${r.staff ? ' · 經手 ' + escapeHtml(r.staff) : ''}</div>` : ''}
+      </div>
+      ${r.status === 'signed' && r.signature ? `<img src="${r.signature}" class="h-10 max-w-32 object-contain border border-slate-200 rounded-lg bg-white" alt="簽名">` : ''}
+      <div class="flex gap-2 shrink-0">
+        ${r.status !== 'signed' ? `<button data-act="sign" data-id="${r.id}" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-violet-600 hover:bg-violet-700 transition">✍️ 簽署</button>` : ''}
+        ${r.status === 'signed' ? `<button data-act="resign" data-id="${r.id}" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">重簽</button>` : ''}
+        ${r.status === 'pending' ? `<button data-act="exempt" data-id="${r.id}" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">豁免</button>` : ''}
+        ${r.status !== 'pending' ? `<button data-act="reset" data-id="${r.id}" class="px-3 py-2 rounded-lg text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 transition">↩️ 還原</button>` : ''}
+      </div>
+    </div>`).join('');
+  // 進度
+  const total = rows.length;
+  const signed = rows.filter(r => r.status === 'signed').length;
+  const exempt = rows.filter(r => r.status === 'exempt').length;
+  const done = signed + exempt;
+  $('progCard').classList.remove('hidden');
+  $('progText').textContent = `✅ 已簽 ${signed} ｜ 🚫 豁免 ${exempt} ｜ ⏳ 待簽 ${total - done} ｜ 共 ${total} 位`;
+  $('progBar').style.width = (total ? Math.round(done / total * 100) : 0) + '%';
+  const allDone = total > 0 && done === total;
+  $('allDone').classList.toggle('hidden', !allDone);
+  $('goReport').disabled = !allDone;
+}
+
+// ---- 建立／補入名單（唔會覆蓋已簽／已豁免） ----
+$('s_build').addEventListener('click', async () => {
+  if (!tableOk) { alert('請先開通 report_sign 表（SQL 見下方紅色提示）。'); return; }
+  const house = $('s_house').value, month = $('s_month').value;
+  if (!month) { alert('請揀月份。'); return; }
+  const base = await memberBase(house);
+  const active = base.filter(m => !m.exited);
+  if (!active.length) { alert('呢個社冇舍友名單。'); return; }
+  const exist = new Set(rows.map(r => r.member_id));
+  const toAdd = active.filter(m => !exist.has(m.id || m.name));
+  if (!toAdd.length) { toast('名單已經齊，冇新舍友要補入。'); return; }
+  if (!confirm(`將 ${toAdd.length} 位舍友加入 ${house} ${month} 嘅簽署名單？（已簽／已豁免嘅記錄唔會受影響）`)) return;
+  try {
+    const { error } = await sb.from('report_sign').insert(toAdd.map(m => ({
+      house, month, member_id: m.id || m.name, member_name: m.name, status: 'pending'
+    })));
+    if (error) throw new Error(error.message);
+    toast(`已加入 ${toAdd.length} 位舍友。`);
+    loadSignRows();
+  } catch (e) { alert('建立名單失敗：' + e.message); }
+});
+$('s_load').addEventListener('click', loadSignRows);
+$('s_house').addEventListener('change', loadSignRows);
+$('s_month').addEventListener('change', loadSignRows);
+$('goReport').addEventListener('click', () => {
+  const hk = $('s_house').value === '孝社' ? 'xiao' : 'zhong';
+  location.href = `/report/?house=${hk}&month=${encodeURIComponent($('s_month').value)}`;
+});
+
+// ---- 名單操作 ----
+$('signList').addEventListener('click', async e => {
+  const btn = e.target.closest('button[data-act]');
+  if (!btn) return;
+  const r = rows.find(x => String(x.id) === btn.dataset.id);
+  if (!r) return;
+  const staff = myStaffName();
+  if (btn.dataset.act === 'sign' || btn.dataset.act === 'resign') {
+    if (btn.dataset.act === 'resign' && !confirm(`幫 ${r.member_name} 重簽？舊簽名會被覆蓋。`)) return;
+    const dataUrl = await openSignPad(`${r.member_name}（${r.member_id}）`);
+    if (!dataUrl) return;
+    try {
+      const { error } = await sb.from('report_sign').update({
+        status: 'signed', signature: dataUrl, exempt_note: null,
+        signed_at: new Date().toISOString(), staff
+      }).eq('id', r.id);
+      if (error) throw new Error(error.message);
+      toast(`✅ ${r.member_name} 已簽署。`);
+      loadSignRows();
+    } catch (err) { alert('儲存簽名失敗：' + err.message); }
+  } else if (btn.dataset.act === 'exempt') {
+    const note = prompt(`豁免 ${r.member_name} 電子簽署嘅原因：`, '舍友未能電子簽署（紙本補簽）');
+    if (note === null) return;
+    try {
+      const { error } = await sb.from('report_sign').update({
+        status: 'exempt', signature: null, exempt_note: note.trim(),
+        signed_at: new Date().toISOString(), staff
+      }).eq('id', r.id);
+      if (error) throw new Error(error.message);
+      toast(`已豁免 ${r.member_name}。`);
+      loadSignRows();
+    } catch (err) { alert('豁免失敗：' + err.message); }
+  } else if (btn.dataset.act === 'reset') {
+    if (!confirm(`還原 ${r.member_name} 做「待簽署」？${r.status === 'signed' ? '簽名會刪除。' : '豁免記錄會刪除。'}`)) return;
+    try {
+      const { error } = await sb.from('report_sign').update({
+        status: 'pending', signature: null, exempt_note: null, signed_at: null, staff: null
+      }).eq('id', r.id);
+      if (error) throw new Error(error.message);
+      toast('已還原做待簽署。');
+      loadSignRows();
+    } catch (err) { alert('還原失敗：' + err.message); }
+  }
+});
+
+// ====================== 簽名板（同支錢頁同一套邏輯） ======================
+const signCanvas = $('signCanvas');
+const sctx = signCanvas.getContext('2d');
+let signing = false, signDrawn = false, signLast = null;
+
+function sizeSignCanvas(preserve){
+  const prev = document.createElement('canvas');
+  if (preserve && signCanvas.width) {
+    prev.width = signCanvas.width; prev.height = signCanvas.height;
+    prev.getContext('2d').drawImage(signCanvas, 0, 0);
+  }
+  const dpr = window.devicePixelRatio || 1;
+  signCanvas.width = Math.max(1, Math.round(signCanvas.clientWidth * dpr));
+  signCanvas.height = Math.max(1, Math.round(signCanvas.clientHeight * dpr));
+  sctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  sctx.lineWidth = 3; sctx.lineCap = 'round'; sctx.lineJoin = 'round'; sctx.strokeStyle = '#111';
+  if (preserve && prev.width) {
+    sctx.save();
+    sctx.setTransform(1, 0, 0, 1, 0, 0);
+    sctx.drawImage(prev, 0, 0, signCanvas.width, signCanvas.height);
+    sctx.restore();
+  }
+}
+window.addEventListener('resize', () => {
+  if (!$('signModal').classList.contains('hidden')) updateSignRotation();
+});
+function signPos(e){
+  const r = signCanvas.getBoundingClientRect();
+  if ($('signModal').classList.contains('sign-rot')) {
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const dx = e.clientX - cx, dy = e.clientY - cy;
+    return { x: signCanvas.clientWidth / 2 + dy, y: signCanvas.clientHeight / 2 - dx };
+  }
+  return { x: e.clientX - r.left, y: e.clientY - r.top };
+}
+signCanvas.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  signing = true; signDrawn = true;
+  signLast = signPos(e);
+  try { signCanvas.setPointerCapture(e.pointerId); } catch {}
+  $('signOk').disabled = false;
+});
+signCanvas.addEventListener('pointermove', e => {
+  if (!signing) return;
+  e.preventDefault();
+  const p = signPos(e);
+  sctx.beginPath(); sctx.moveTo(signLast.x, signLast.y); sctx.lineTo(p.x, p.y); sctx.stroke();
+  signLast = p;
+});
+['pointerup', 'pointercancel', 'pointerleave'].forEach(ev =>
+  signCanvas.addEventListener(ev, () => { signing = false; }));
+
+function clearSignPad(){
+  sctx.clearRect(0, 0, signCanvas.width, signCanvas.height);
+  signDrawn = false;
+  $('signOk').disabled = true;
+}
+$('signClear').addEventListener('click', clearSignPad);
+
+function rotateSignPad(){
+  const w = signCanvas.width, h = signCanvas.height;
+  if (!w || !h || !signDrawn) return;
+  const tmp = document.createElement('canvas');
+  tmp.width = w; tmp.height = h;
+  tmp.getContext('2d').drawImage(signCanvas, 0, 0);
+  sctx.save();
+  sctx.setTransform(1, 0, 0, 1, 0, 0);
+  sctx.clearRect(0, 0, w, h);
+  sctx.translate(w / 2, h / 2);
+  sctx.rotate(-Math.PI / 2);
+  const scale = Math.min(w / h, h / w);
+  sctx.scale(scale, scale);
+  sctx.drawImage(tmp, -w / 2, -h / 2);
+  sctx.restore();
+  const dpr = window.devicePixelRatio || 1;
+  sctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  sctx.lineWidth = 3; sctx.lineCap = 'round'; sctx.lineJoin = 'round'; sctx.strokeStyle = '#111';
+}
+$('signRotate').addEventListener('click', rotateSignPad);
+
+let signResolve = null;
+async function lockLandscape(){
+  try {
+    if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+      await document.documentElement.requestFullscreen();
+    }
+  } catch {}
+  try { if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape'); } catch {}
+}
+function unlockLandscape(){
+  try { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch {}
+  try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen(); } catch {}
+}
+const mqPortrait = window.matchMedia('(orientation: portrait)');
+if (mqPortrait.addEventListener) mqPortrait.addEventListener('change', () => setTimeout(updateSignRotation, 80));
+window.addEventListener('orientationchange', () => { setTimeout(updateSignRotation, 150); setTimeout(updateSignRotation, 400); });
+function updateSignRotation(){
+  const modal = $('signModal');
+  if (modal.classList.contains('hidden')) return;
+  const portrait = mqPortrait.matches || window.innerHeight > window.innerWidth;
+  modal.classList.toggle('sign-rot', portrait);
+  requestAnimationFrame(() => sizeSignCanvas(true));
+  setTimeout(() => { if (!modal.classList.contains('hidden')) sizeSignCanvas(true); }, 300);
+}
+function openSignPad(who){
+  return new Promise(resolve => {
+    signResolve = resolve;
+    $('signWho').textContent = who || '';
+    $('signModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    lockLandscape();
+    updateSignRotation();
+    requestAnimationFrame(() => { sizeSignCanvas(); clearSignPad(); });
+    setTimeout(() => { if (!$('signModal').classList.contains('hidden')) sizeSignCanvas(true); }, 350);
+    setTimeout(() => { if (!$('signModal').classList.contains('hidden')) sizeSignCanvas(true); }, 800);
+  });
+}
+function closeSignPad(result){
+  $('signModal').classList.add('hidden');
+  $('signModal').classList.remove('sign-rot');
+  document.body.style.overflow = '';
+  unlockLandscape();
+  const r = signResolve; signResolve = null;
+  if (r) r(result);
+}
+function exportSignature(){
+  const w = signCanvas.width, h = signCanvas.height;
+  if (!w || !h) return null;
+  const data = sctx.getImageData(0, 0, w, h).data;
+  let minX = w, minY = h, maxX = -1, maxY = -1;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (data[(y * w + x) * 4 + 3] > 10) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (maxX < 0) return null;
+  const pad = Math.round(10 * (window.devicePixelRatio || 1));
+  minX = Math.max(0, minX - pad); minY = Math.max(0, minY - pad);
+  maxX = Math.min(w - 1, maxX + pad); maxY = Math.min(h - 1, maxY + pad);
+  const cw = maxX - minX + 1, ch = maxY - minY + 1;
+  const out = document.createElement('canvas');
+  out.width = cw; out.height = ch;
+  out.getContext('2d').drawImage(signCanvas, minX, minY, cw, ch, 0, 0, cw, ch);
+  return out.toDataURL('image/png');
+}
+$('signOk').addEventListener('click', () => {
+  if (!signDrawn) return;
+  closeSignPad(exportSignature());
+});
+$('signCancel').addEventListener('click', () => closeSignPad(null));
+
+// ---- 初始化 ----
+$('s_month').value = new Date().toLocaleDateString('sv').slice(0, 7);
+// URL 參數：?house=zhong|xiao&month=YYYY-MM
+try {
+  const q = new URLSearchParams(location.search);
+  if (q.get('house')) $('s_house').value = q.get('house') === 'xiao' ? '孝社' : '忠社';
+  if (q.get('month')) $('s_month').value = q.get('month');
+} catch {}
+if (ROLE_NOW !== 'normal') loadSignRows();
+</script>
+</body>
+</html>

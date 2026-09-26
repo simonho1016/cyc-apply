@@ -121,6 +121,8 @@
   .card-records .card-icon{background:#fff;transform:rotate(-2deg)}
   .card-report{background-color:#dcfce7}
   .card-report .card-icon{background:#fff;transform:rotate(2deg)}
+  .card-sign{background-color:#ede9fe}
+  .card-sign .card-icon{background:#fff;transform:rotate(-2deg)}
 
   .portal-link{
     display:inline-block;margin-top:26px;font:inherit;font-size:15px;color:var(--sub);
@@ -196,6 +198,13 @@
           <span class="card-name">月結報告</span>
           <span class="card-desc">每月結算舍友支出及收入：<br>社別月結＋舍友收支紀錄表列印。</span>
           <span class="card-url">/report/</span>
+        </div>
+
+        <div class="card card-sign" id="cardSignLink" data-url="/sign/" role="link" tabindex="0" aria-label="月結簽署">
+          <span class="card-icon" aria-hidden="true">✍️</span>
+          <span class="card-name">月結簽署</span>
+          <span class="card-desc">舍友喺電話逐個電子簽署收支紀錄表，<br>全部簽晒（或豁免）先列印月結文件。</span>
+          <span class="card-url">/sign/</span>
         </div>
       </div>
 
@@ -374,6 +383,7 @@ function showMain() {
   const role = effectiveRole();
   $('cardVaultLink').style.display = '';                    // 普通級都入得（唯讀睇數）
   $('cardReportLink').style.display = role === 'normal' ? 'none' : '';
+  $('cardSignLink').style.display = role === 'normal' ? 'none' : '';
   $('cardAdminLink').style.display = role === 'admin' ? '' : 'none';
   // 模擬檢視提示橫額
   const s = simInfo();

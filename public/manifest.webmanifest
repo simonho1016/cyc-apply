@@ -1,0 +1,13 @@
+{
+  "name": "則仁中心 零用金支錢系統",
+  "short_name": "支錢系統",
+  "description": "香港扶幼會則仁中心 忠孝宿舍零用金支錢、夾萬及月結系統",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffd23f",
+  "theme_color": "#ffd23f",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

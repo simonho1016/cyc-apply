@@ -114,7 +114,7 @@
         <button id="s_load" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-violet-600 hover:bg-violet-700 transition">載入名單</button>
         <button id="s_build" class="px-4 py-2 rounded-lg text-sm font-bold text-violet-700 bg-violet-50 hover:bg-violet-100 transition" title="將該社現有舍友加入簽署名單；已簽／已豁免嘅唔會被覆蓋">➕ 建立／補入名單</button>
       </div>
-      <p class="text-xs text-slate-500">流程：揀社別月份 → 建立名單 → 攞電話俾每位舍友逐個簽名（未能簽嘅撳「豁免」）→ 全部完成後去「📈 月結報告」列印，簽名會自動印落「舍友簽署」欄。</p>
+      <p class="text-xs text-slate-500">流程：揀社別月份 → 建立名單 → 攞電話俾每位舍友逐個簽名（未能簽嘅撳「豁免」）→ 下方三個職員簽署 → 全部完成後去「📈 月結報告」列印，簽名會自動印落相應欄位。</p>
     </div>
 
     <!-- 進度 -->
@@ -126,11 +126,20 @@
       <div class="h-3 rounded-full bg-slate-100 overflow-hidden border border-slate-300">
         <div id="progBar" class="h-full bg-emerald-500 transition-all" style="width:0%"></div>
       </div>
-      <div id="allDone" class="hidden rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-800 text-sm font-bold px-3 py-2">✅ 全部舍友已簽署或豁免，可以列印月結文件！</div>
+      <div id="allDone" class="hidden rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-800 text-sm font-bold px-3 py-2">✅ 舍友及三個職員簽署全部完成，可以列印月結文件！</div>
     </div>
 
     <!-- 名單 -->
     <div id="signList" class="space-y-3"></div>
+
+    <!-- 職員簽署（三個職位各簽一次，適用於該月所有表格） -->
+    <div class="bg-white rounded-2xl p-4 space-y-3">
+      <div>
+        <h2 class="font-bold text-slate-900">🖊 職員簽署</h2>
+        <p class="text-xs text-slate-500 mt-0.5">三個職位各簽一次就適用於該月該社嘅所有表格（社別月結＋每位舍友收支紀錄表），唔使逐張簽。<b>全部舍友＋三個職員簽署齊晒先可以列印月結。</b></p>
+      </div>
+      <div id="staffList" class="space-y-3"></div>
+    </div>
   </div>
 </main>
 
@@ -189,7 +198,30 @@ const SIGN_SQL = `create table if not exists report_sign (
   unique(house, month, member_id)
 );
 alter table report_sign enable row level security;
-create policy "anon report_sign all" on report_sign for all to anon using (true) with check (true);`;
+create policy "anon report_sign all" on report_sign for all to anon using (true) with check (true);
+
+create table if not exists report_staff_sign (
+  id uuid primary key default gen_random_uuid(),
+  house text not null, month text not null,
+  slot text not null,
+  staff_name text, staff_email text,
+  signature text, signed_at timestamptz,
+  unique(house, month, slot)
+);
+alter table report_staff_sign enable row level security;
+create policy "anon report_staff_sign all" on report_staff_sign for all to anon using (true) with check (true);`;
+
+// 職員簽署表獨立 SQL（未開通時喺職員簽署區顯示）
+const STAFF_SQL = `create table if not exists report_staff_sign (
+  id uuid primary key default gen_random_uuid(),
+  house text not null, month text not null,
+  slot text not null,
+  staff_name text, staff_email text,
+  signature text, signed_at timestamptz,
+  unique(house, month, slot)
+);
+alter table report_staff_sign enable row level security;
+create policy "anon report_staff_sign all" on report_staff_sign for all to anon using (true) with check (true);`;
 
 // ---- 角色 ----
 function realRole(){
@@ -238,16 +270,38 @@ const EMAIL_STAFF_MAP = {
   'wong.tw@sbccyc.org.hk': '王子維', 'man.yc@sbccyc.org.hk': '文然澤'
 };
 let CLOUD_STAFF_DIR = {};
+let ROLES = {};   // settings roles：email → admin/manager/cashier（冇＝普通同工）
 function myStaffName(){
   const e = (sessionEmail() || '').toLowerCase();
   const c = CLOUD_STAFF_DIR[e];
   if (c && !c.deleted && c.name) return c.name;
   return EMAIL_STAFF_MAP[e] || '';
 }
+function staffNameOf(em){
+  const c = CLOUD_STAFF_DIR[(em || '').toLowerCase()];
+  if (c && !c.deleted && c.name) return c.name;
+  return EMAIL_STAFF_MAP[(em || '').toLowerCase()] || em || '';
+}
+const EMAIL_TITLE_MAP = {
+  'tan.kl@sbccyc.org.hk': '社工', 'pun.yf@sbccyc.org.hk': '社工', 'yung.ck@sbccyc.org.hk': '社工',
+  'ho.ml@sbccyc.org.hk': '社工', 'ho.lh@sbccyc.org.hk': '社工',
+  'wong.tw@sbccyc.org.hk': '導師', 'man.yc@sbccyc.org.hk': '導師'
+};
+function myTitle(){
+  const e = (sessionEmail() || '').toLowerCase();
+  const c = CLOUD_STAFF_DIR[e];
+  if (c && !c.deleted && c.title) return c.title;
+  return EMAIL_TITLE_MAP[e] || '';
+}
 (async () => {
   try {
-    const { data } = await sb.from('settings').select('value').eq('key', 'staff_dir').maybeSingle();
-    if (data && data.value && typeof data.value === 'object') CLOUD_STAFF_DIR = data.value;
+    const [d, r] = await Promise.all([
+      sb.from('settings').select('value').eq('key', 'staff_dir').maybeSingle(),
+      sb.from('settings').select('value').eq('key', 'roles').maybeSingle()
+    ]);
+    if (d.data && d.data.value && typeof d.data.value === 'object') CLOUD_STAFF_DIR = d.data.value;
+    if (r.data && r.data.value && typeof r.data.value === 'object') ROLES = r.data.value;
+    renderStaffList();   // 職銜同夾萬社別指派載入後重繪（預期簽署人姓名）
   } catch {}
 })();
 
@@ -295,10 +349,76 @@ async function memberBase(house){
 let rows = [];          // 當月當社嘅簽署記錄
 let tableOk = true;
 
+// ---- 職員簽署（report_staff_sign 表：house+month+slot 一筆過，簽一次適用於全月所有表格） ----
+let staffRows = [];
+let staffTableOk = true;   // 表未開通時退回舊行為（唔阻列印），並喺職員簽署區顯示 SQL
+const STAFF_SLOTS = [
+  { slot: 'social',   label: '社工簽署', hint: '須由「社工」職級同事簽署' },
+  { slot: 'officer',  label: '負責職員', hint: '須由該社「管理夾萬同工」簽署' },
+  { slot: 'reviewer', label: '審核職員', hint: '須由「管理級」同事簽署' }
+];
+function houseKeyNow(){ return $('s_house').value === '孝社' ? 'xiao' : 'zhong'; }
+// 該社被指派嘅管理夾萬同工（負責職員括號預期姓名）
+function expectedOfficers(){
+  const hk = houseKeyNow();
+  return Object.keys(ROLES).filter(em => {
+    if (ROLES[em] !== 'cashier') return false;
+    const c = CLOUD_STAFF_DIR[em.toLowerCase()];
+    return c && !c.deleted && c.house === hk;
+  }).map(staffNameOf);
+}
+function canSignSlot(slot){
+  if (ROLE_NOW === 'admin') return true;   // Admin 可以簽晒三個位
+  if (slot === 'social') return ['社工', '專責個案社工'].includes(myTitle());
+  if (slot === 'officer') return ROLE_NOW === 'cashier';
+  if (slot === 'reviewer') return ROLE_NOW === 'manager';
+  return false;
+}
+function staffSignedCount(){ return STAFF_SLOTS.filter(sl => staffRows.some(r => r.slot === sl.slot && r.signature)).length; }
+function renderStaffList(){
+  const box = $('staffList');
+  if (!box) return;
+  if (!staffTableOk) {
+    box.innerHTML = `<div class="rounded-2xl p-3 text-sm bg-red-50">
+      <p class="font-bold text-red-600">⚠️ 職員簽署表（report_staff_sign）未開通，暫時唔可以職員簽署（舍友簽署唔受影響）。</p>
+      <p class="text-slate-500 mt-1">請 admin 去 Supabase → SQL Editor 跑以下 SQL：</p>
+      <pre class="mt-2 p-2 bg-slate-100 rounded-lg text-xs select-all whitespace-pre-wrap">${escapeHtml(STAFF_SQL)}</pre>
+    </div>`;
+    return;
+  }
+  const bySlot = {};
+  staffRows.forEach(r => { bySlot[r.slot] = r; });
+  const officers = expectedOfficers();
+  box.innerHTML = STAFF_SLOTS.map(sl => {
+    const r = bySlot[sl.slot];
+    const signed = !!(r && r.signature);
+    // 括號內姓名：已簽→簽署人；未簽嘅負責職員→該社管理夾萬同工（預期簽署人）
+    const nameInBrack = signed ? (r.staff_name || '') : (sl.slot === 'officer' && officers.length ? officers.join('、') : '');
+    const can = canSignSlot(sl.slot);
+    const badge = signed
+      ? '<span class="rounded-full px-2.5 py-0.5 text-xs font-bold bg-emerald-100 text-emerald-700">✅ 已簽署</span>'
+      : '<span class="rounded-full px-2.5 py-0.5 text-xs font-bold bg-amber-100 text-amber-700">⏳ 待簽署</span>';
+    return `<div class="sig-row bg-slate-50 rounded-2xl p-3 flex items-center gap-3 flex-wrap">
+      <div class="min-w-0 flex-1">
+        <div class="font-bold text-slate-900">${sl.label}${nameInBrack ? `（${escapeHtml(nameInBrack)}）` : ''} ${badge}</div>
+        <div class="text-xs text-slate-400 mt-0.5">${sl.hint}${signed && r.signed_at ? ' · ' + fmtTime(r.signed_at) : ''}</div>
+      </div>
+      ${signed ? `<img src="${r.signature}" class="h-10 max-w-32 object-contain border border-slate-200 rounded-lg bg-white" alt="簽名">` : ''}
+      <div class="flex gap-2 shrink-0 items-center">
+        ${!signed && can ? `<button data-ssign="${sl.slot}" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-violet-600 hover:bg-violet-700 transition">✍️ 簽署</button>` : ''}
+        ${!signed && !can ? `<span class="text-xs text-slate-400">🔒 你嘅權限／職級唔可以簽呢個位</span>` : ''}
+        ${signed && can ? `<button data-ssign="${sl.slot}" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">重簽</button>` : ''}
+        ${signed && (can || ROLE_NOW === 'admin') ? `<button data-sreset="${sl.slot}" class="px-3 py-2 rounded-lg text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 transition">↩️ 還原</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
 async function loadSignRows(){
   const house = $('s_house').value, month = $('s_month').value;
   if (!month) { alert('請揀月份。'); return; }
   $('signList').innerHTML = '<p class="text-sm text-slate-600 font-bold">載入中…</p>';
+  // 舍友簽署名單
   try {
     const { data, error } = await sb.from('report_sign').select('*').eq('house', house).eq('month', month).order('member_id');
     if (error) throw new Error(error.message);
@@ -315,6 +435,18 @@ async function loadSignRows(){
       <pre class="mt-2 p-2 bg-slate-100 rounded-lg text-xs select-all whitespace-pre-wrap">${escapeHtml(SIGN_SQL)}</pre>
     </div>`;
   }
+  // 職員簽署（獨立處理：表未開通唔影響舍友簽署，只喺職員區顯示 SQL）
+  try {
+    const { data, error } = await sb.from('report_staff_sign').select('*').eq('house', house).eq('month', month).limit(10);
+    if (error) throw new Error(error.message);
+    staffTableOk = true;
+    staffRows = data || [];
+  } catch (e) {
+    staffTableOk = false;
+    staffRows = [];
+  }
+  renderStaffList();
+  if (rows.length) renderList();   // 更新進度（職員簽署計入閘門）
 }
 
 function renderList(){
@@ -344,15 +476,16 @@ function renderList(){
         ${r.status !== 'pending' ? `<button data-act="reset" data-id="${r.id}" class="px-3 py-2 rounded-lg text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 transition">↩️ 還原</button>` : ''}
       </div>
     </div>`).join('');
-  // 進度
+  // 進度（舍友＋三個職員簽署齊晒先印得）
   const total = rows.length;
   const signed = rows.filter(r => r.status === 'signed').length;
   const exempt = rows.filter(r => r.status === 'exempt').length;
   const done = signed + exempt;
+  const sDone = staffSignedCount();
   $('progCard').classList.remove('hidden');
-  $('progText').textContent = `✅ 已簽 ${signed} ｜ 🚫 豁免 ${exempt} ｜ ⏳ 待簽 ${total - done} ｜ 共 ${total} 位`;
+  $('progText').textContent = `✅ 已簽 ${signed} ｜ 🚫 豁免 ${exempt} ｜ ⏳ 待簽 ${total - done} ｜ 共 ${total} 位 ｜ 🖊 職員簽署 ${staffTableOk ? sDone + '/3' : '表未開通'}`;
   $('progBar').style.width = (total ? Math.round(done / total * 100) : 0) + '%';
-  const allDone = total > 0 && done === total;
+  const allDone = total > 0 && done === total && (!staffTableOk || sDone === 3);   // 職員表未開通時退回舊閘門（唔阻列印）
   $('allDone').classList.toggle('hidden', !allDone);
   $('goReport').disabled = !allDone;
 }
@@ -424,6 +557,43 @@ $('signList').addEventListener('click', async e => {
       const { error } = await sb.from('report_sign').update({
         status: 'pending', signature: null, exempt_note: null, signed_at: null, staff: null
       }).eq('id', r.id);
+      if (error) throw new Error(error.message);
+      toast('已還原做待簽署。');
+      loadSignRows();
+    } catch (err) { alert('還原失敗：' + err.message); }
+  }
+});
+
+// ---- 職員簽署操作（upsert：house+month+slot 唯一，簽一次適用於全月所有表格） ----
+$('staffList').addEventListener('click', async e => {
+  const btn = e.target.closest('button[data-ssign], button[data-sreset]');
+  if (!btn) return;
+  const slot = btn.dataset.ssign || btn.dataset.sreset;
+  const sl = STAFF_SLOTS.find(x => x.slot === slot);
+  if (!sl) return;
+  const house = $('s_house').value, month = $('s_month').value;
+  if (!month) { alert('請揀月份。'); return; }
+  if (!staffTableOk) { alert('請先開通 report_staff_sign 表（SQL 見職員簽署區紅色提示）。'); return; }
+  const existing = staffRows.find(r => r.slot === slot);
+  if (btn.dataset.ssign !== undefined) {
+    if (!canSignSlot(slot)) { alert('你嘅權限／職級唔可以簽「' + sl.label + '」。'); return; }
+    if (existing && existing.signature && !confirm(`重簽「${sl.label}」？舊簽名會被覆蓋。`)) return;
+    const dataUrl = await openSignPad(`${sl.label}：${myStaffName() || sessionEmail()}`);
+    if (!dataUrl) return;
+    try {
+      const { error } = await sb.from('report_staff_sign').upsert({
+        house, month, slot,
+        staff_name: myStaffName(), staff_email: (sessionEmail() || '').toLowerCase(),
+        signature: dataUrl, signed_at: new Date().toISOString()
+      }, { onConflict: 'house,month,slot' });
+      if (error) throw new Error(error.message);
+      toast(`✅ ${sl.label}已完成（${myStaffName()}），適用於全月所有表格。`);
+      loadSignRows();
+    } catch (err) { alert('儲存簽名失敗：' + err.message); }
+  } else {
+    if (!confirm(`還原「${sl.label}」做「待簽署」？簽名會刪除。`)) return;
+    try {
+      const { error } = await sb.from('report_staff_sign').delete().eq('house', house).eq('month', month).eq('slot', slot);
       if (error) throw new Error(error.message);
       toast('已還原做待簽署。');
       loadSignRows();

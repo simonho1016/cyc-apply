@@ -27,16 +27,23 @@
 // ====================== 入口頁統一登入 ======================
 (function(){
   try {
+    // 舊 sessionStorage 登入自動搬落 localStorage（一次性遷移）
+    var mig = sessionStorage.getItem('cyc-portal-auth');
+    if (mig && !localStorage.getItem('cyc-portal-auth')) localStorage.setItem('cyc-portal-auth', mig);
+    if (mig) sessionStorage.removeItem('cyc-portal-auth');
     var h = new URLSearchParams(location.hash.slice(1)), k = h.get('key'), t = Number(h.get('t'));
     if (k && isFinite(t) && Math.abs(Date.now() - t) < 86400000) {
-      sessionStorage.setItem('cyc-portal-auth', JSON.stringify({ p: k, exp: Date.now() + 365 * 24 * 60 * 60 * 1000 }));
+      localStorage.setItem('cyc-portal-auth', JSON.stringify({ p: k, exp: Date.now() + 30 * 24 * 60 * 60 * 1000 }));
     }
     if (k || h.get('t')) history.replaceState(null, '', location.pathname + location.search);
   } catch (e) {}
   function ok(){
     try {
-      var a = JSON.parse(sessionStorage.getItem('cyc-portal-auth') || 'null');
-      return a && typeof a.p === 'string' && a.p && Number.isFinite(a.exp) && Date.now() < a.exp;
+      var a = JSON.parse(localStorage.getItem('cyc-portal-auth') || 'null');
+      if (!(a && typeof a.p === 'string' && a.p && Number.isFinite(a.exp) && Date.now() < a.exp)) return false;
+      a.exp = Date.now() + 30 * 24 * 60 * 60 * 1000;   // 滑動續期：有使用自動續 30 日
+      localStorage.setItem('cyc-portal-auth', JSON.stringify(a));
+      return true;
     } catch (e) { return false; }
   }
   if (!ok()) { location.replace('/'); return; }
@@ -326,7 +333,7 @@ function sessionEmail(){
   const s = simInfo();
   if (s && s.email) return s.email;
   try {
-    const a = JSON.parse(sessionStorage.getItem('cyc-portal-auth') || 'null');
+    const a = JSON.parse(localStorage.getItem('cyc-portal-auth') || 'null');
     return (a && a.email) ? String(a.email).toLowerCase() : '';
   } catch { return ''; }
 }
@@ -826,13 +833,13 @@ const ADMIN_EMAILS = ['ho.ml@sbccyc.org.hk', 'ho.lh@sbccyc.org.hk'];
 const VALID_ROLES = ['admin', 'manager', 'cashier', 'sw', 'tutor'];
 function isLoggedIn(){
   try {
-    const a = JSON.parse(sessionStorage.getItem('cyc-portal-auth') || 'null');
+    const a = JSON.parse(localStorage.getItem('cyc-portal-auth') || 'null');
     return !!(a && Number.isFinite(a.exp) && Date.now() < a.exp);
   } catch { return false; }
 }
 function realRole(){
   try {
-    const a = JSON.parse(sessionStorage.getItem('cyc-portal-auth') || 'null');
+    const a = JSON.parse(localStorage.getItem('cyc-portal-auth') || 'null');
     if (!a || !Number.isFinite(a.exp) || Date.now() >= a.exp) return 'tutor';
     if (a.email && ADMIN_EMAILS.includes(a.email)) return 'admin';
     return VALID_ROLES.includes(a.role) ? a.role : 'tutor';

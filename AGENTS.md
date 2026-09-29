@@ -6,7 +6,7 @@
 
 ## 頁面結構
 
-- `public/index.html` — 前置登入頁。密碼統一喺度輸入，驗證方式係讀 Supabase `settings` 表嘅 `admin_pw`（同後台同一組密碼，可喺後台更改；預設 `8888`）。登入後寫兩個 sessionStorage：`cyc-portal-auth`（{p, exp}，15 分鐘）同 `cyc-admin-auth`（{exp}），所以入 /admin/ 同 /vault/ 唔使再入密碼。撳功能卡會經 `#key=...&t=...` hash 帶密碼過頁。
+- `public/index.html` — 前置登入頁。密碼統一喺度輸入，驗證方式係讀 Supabase `settings` 表嘅 `admin_pw`（同後台同一組密碼，可喺後台更改；預設 `8888`）。登入後寫 `cyc-portal-auth`（{p, exp, email, name, role}）落 **localStorage**（v1.20.0 起；舊版用 sessionStorage 會自動遷移），30 日滑動過期：任何頁面使用時自動續期 30 日，30 日完全冇用先會登出。撳功能卡會經 `#key=...&t=...` hash 帶密碼過頁。
 - `public/apply/index.html` — 支錢主頁：填單 → 簽名（全螢幕橫向簽名板，自動轉正）→ 列印海報風格 PDF／電子存檔上 Supabase Storage bucket `apply-archive`。何文諾、何樂軒有簽名檔保護，支錢時要佢哋各自密碼（`staff-ok-<name>` session，15 分鐘）。
 - `public/admin/index.html` — 後台：統計圖表、按社別/職員分類、匯出 CSV、勾選下載 ZIP／列印 PDF、結算、刪除記錄（只有呢頁可以刪）。
 - `public/vault/index.html` — 夾萬・舍友現存：忠孝各有大夾萬（宿舍夾萬）同細夾萬（家社夾萬），過錢、舍友現存、對數。

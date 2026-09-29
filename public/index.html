@@ -218,7 +218,7 @@
 'use strict';
 // ── 登入：只限 Google 網域認證（@sbccyc.org.hk）；唔設時限，用到登出或關閉分頁 ──
 // ho.ml／ho.lh@sbccyc.org.hk 係永久 admin：入 /admin/ 同 /vault/ 唔使再入後台密碼
-const AUTH_SESSION_KEY = 'cyc-portal-auth', AUTH_TTL = 365 * 24 * 60 * 60 * 1000; // 實際唔會過期；sessionStorage 關分頁即清
+const AUTH_SESSION_KEY = 'cyc-portal-auth', AUTH_TTL = 30 * 24 * 60 * 60 * 1000; // 30 日滑動過期：有使用自動續期，30 日冇用先登出
 const GOOGLE_CLIENT_ID = '141456186458-t5ihfut5sir6fl0l3kqbi72hehekerlr.apps.googleusercontent.com';
 const ALLOWED_DOMAIN = 'sbccyc.org.hk';
 const ADMIN_EMAILS = ['ho.ml@sbccyc.org.hk', 'ho.lh@sbccyc.org.hk']; // 永久 admin，唔可以被後台移除
@@ -329,10 +329,21 @@ const $ = id => document.getElementById(id);
 
 function portalAuth() {
   try {
-    const a = JSON.parse(sessionStorage.getItem(AUTH_SESSION_KEY));
+    // 舊 sessionStorage 登入自動搬過嚟（一次性遷移）
+    const legacy = sessionStorage.getItem(AUTH_SESSION_KEY);
+    if (legacy && !localStorage.getItem(AUTH_SESSION_KEY)) {
+      localStorage.setItem(AUTH_SESSION_KEY, legacy);
+    }
+    if (legacy) sessionStorage.removeItem(AUTH_SESSION_KEY);
+    const a = JSON.parse(localStorage.getItem(AUTH_SESSION_KEY));
     if (a && typeof a.p === 'string' && a.p && Number.isFinite(a.exp)) {
-      if (Date.now() < a.exp) return a;
-      sessionStorage.removeItem(AUTH_SESSION_KEY);
+      if (Date.now() < a.exp) {
+        // 滑動續期：每次使用重計 30 日
+        a.exp = Date.now() + AUTH_TTL;
+        localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(a));
+        return a;
+      }
+      localStorage.removeItem(AUTH_SESSION_KEY);
     }
   } catch (e) {}
   return null;
@@ -340,11 +351,12 @@ function portalAuth() {
 function portalLogin(p, extra) {
   const exp = Date.now() + AUTH_TTL;
   try {
-    sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify({ p, exp, ...(extra || {}) }));
+    localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify({ p, exp, ...(extra || {}) }));
   } catch (e) {}
 }
 function portalLogout() {
   try {
+    localStorage.removeItem(AUTH_SESSION_KEY);
     sessionStorage.removeItem(AUTH_SESSION_KEY);
     sessionStorage.removeItem('cyc-admin-auth');   // 舊版遺留，順手清
     sessionStorage.removeItem('cyc-sim');

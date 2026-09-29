@@ -2,7 +2,7 @@
 
 ## 呢個 repo 係咩
 
-則仁中心忠孝宿舍「零用金支錢系統」，2026-09-23 起由主網站（cycportal.netlify.app，repo `simonho1016/housebnamelist`）抽離成獨立系統。純靜態網站，冇 build step，`netlify.toml` 將 `public/` 直接 publish。push `main` → Netlify 自動部署。
+則仁中心忠孝宿舍「零用金支錢系統」，2026-09-23 起由主網站（cycportal.netlify.app，repo `simonho1016/housebnamelist`）抽離成獨立系統。純靜態網站，冇 build step，`netlify.toml` 將 `public/` 直接 publish。部署用 Netlify CLI：`netlify deploy --prod --dir=public`（site `cycapply`，https://cycapply.netlify.app；2026-09-29 實測 push `main` 唔會觸發自動部署）。
 
 ## 頁面結構
 
@@ -44,10 +44,10 @@
 
 ## 測試流程
 
-1. 寫 `public/_t.html` 測試頁（開頭 set `cyc-portal-auth` sessionStorage，iframe 載目標頁，`w.eval()` 檢查，結果落 `<pre id="log">`）。
+1. 寫 `public/_t.html` 測試頁（開頭 set `cyc-portal-auth` sessionStorage，iframe 載目標頁，`w.eval()` 檢查，結果落 `<pre id="log">`）。注意 `_t.html` 喺 `.gitignore`，要 `git add -f`。
 2. `node --check` 抽 script 檢查語法。
-3. push → 等約 35 秒 Netlify 部署 → headless Chrome `--dump-dom` 讀結果。
-4. **一定要 git rm _t.html 再 push**，唔好留測試頁上線。
+3. `netlify deploy --prod --dir=public` → headless Chrome `--dump-dom` 讀結果。
+4. **一定要 git rm _t.html 再 deploy**，唔好留測試頁上線。
 
 ## commit
 

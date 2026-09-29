@@ -35,4 +35,10 @@
   <circle cx="352" cy="372" r="72" fill="#141414"/>
   <circle cx="340" cy="360" r="72" fill="#ffd23f" stroke="#141414" stroke-width="12"/>
   <text x="340" y="392" font-family="Arial Black, Arial, sans-serif" font-size="92" font-weight="900" fill="#141414" text-anchor="middle">$</text>
+
+  <!-- 本會會徽（右上角徽章，同金幣一樣黑框硬陰影風格） -->
+  <clipPath id="logoClip"><circle cx="396" cy="124" r="56"/></clipPath>
+  <circle cx="408" cy="136" r="68" fill="#141414"/>
+  <circle cx="396" cy="124" r="68" fill="#ffffff" stroke="#141414" stroke-width="12"/>
+  <image href="sbc-logo.png" x="328" y="56" width="136" height="136" clip-path="url(#logoClip)" preserveAspectRatio="xMidYMid slice"/>
 </svg>

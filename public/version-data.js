@@ -2,7 +2,11 @@
 // /version/ 公開頁同 /apply/ 系統設定頁都係用呢份數據渲染
 // 最新版本放最前；color: emerald=最新 blue=一般 slate=取消或初版
 window.VERSIONS = [
-  { v: 'v1.20.0', color: 'emerald', title: '登入改為 30 日滑動過期', date: '2026-09-29', items: [
+  { v: 'v1.20.1', color: 'emerald', title: 'App 圖示加入本會會徽', date: '2026-09-29', items: [
+    'Web app 圖示（夾萬＋金幣）右上角新增香港扶幼會會徽徽章，沿用漫畫風格黑框硬陰影',
+    '全部尺寸同步更新：favicon、32／180／192／512，iPhone 主畫面圖示一樣見到會徽'
+  ]},
+  { v: 'v1.20.0', color: 'blue', title: '登入改為 30 日滑動過期', date: '2026-09-29', items: [
     '登入狀態由 sessionStorage（關分頁即清）改為 localStorage 長期保存：登入一次，關埋瀏覽器再開都仲登入緊',
     '30 日滑動過期：任何頁面有使用就自動續期 30 日；連續 30 日完全冇用先會自動登出',
     '舊有 sessionStorage 登入會喺第一次開頁時自動搬過去，唔使重新登入'

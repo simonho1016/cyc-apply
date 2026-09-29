@@ -206,7 +206,7 @@
     <!-- 帳號及權限管理（admin 專用） -->
     <div class="card bg-white p-5 space-y-3">
       <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wide">👥 帳號及權限管理</h3>
-      <p class="text-xs text-slate-500">四層權限：<b>admin</b>（所有權限）＞ <b>管理級</b>（管理夾萬同工所有功能 ＋ 夾萬「現存→代管」過錢）＞ <b>管理夾萬同工</b>（支錢、舍友存入、製作及下載文件；要指派管理邊個社嘅夾萬）＞ <b>普通同工</b>（支錢、檢視文件）。所有 <b>@sbccyc.org.hk</b> 網域登入嘅同事預設係「普通同工」。新同事第一次登入後會出現喺「未登記同事」區，由 admin 補返姓名同職級。admin 可以新增、修改、刪除任何帳號，<b>包括新增其他 admin</b>；ho.ml／ho.lh 係永久 admin，唔可以改。設定喺同事下次登入時生效。</p>
+      <p class="text-xs text-slate-500">五層權限：<b>admin</b>（所有權限）＞ <b>管理級</b>（管理夾萬同工所有功能 ＋ 夾萬「現存→代管」過錢）＞ <b>管理夾萬同工</b>（支錢、舍友存入、製作及下載文件；要指派管理邊個社嘅夾萬）＞ <b>社工</b>（基本權限 ＋ 月結簽署，負責「社工簽署」位）＝ <b>導師</b>（基本權限：支錢、檢視文件、夾萬唯讀）。所有 <b>@sbccyc.org.hk</b> 網域登入嘅同事，冇明確指派時會按職級自動分流：職級係「社工／專責個案社工」→ 社工，其餘 → 導師。新同事第一次登入後會出現喺「未登記同事」區，由 admin 補返姓名同職級。admin 可以新增、修改、刪除任何帳號，<b>包括新增其他 admin</b>；ho.ml／ho.lh 係永久 admin，唔可以改。設定喺同事下次登入時生效。</p>
       <div id="role_list" class="space-y-2 text-sm"></div>
       <div id="seen_wrap" class="hidden space-y-2">
         <div class="text-xs font-bold text-amber-600">⚠️ 未登記同事（已登入過但未設定姓名／職級）</div>
@@ -223,7 +223,8 @@
             <option>主任</option><option>副院長</option><option>院長</option>
           </select>
           <select id="sf_role" class="rounded-lg border border-slate-300 px-2 py-2 text-sm bg-white outline-none">
-            <option value="normal">普通同工</option>
+            <option value="tutor">導師</option>
+            <option value="sw">社工</option>
             <option value="cashier">管理夾萬同工</option>
             <option value="manager">管理級</option>
             <option value="admin">admin</option>
@@ -239,7 +240,8 @@
       <p class="text-xs text-slate-500">用其他角色嘅視角睇系統實際畫面，方便檢查權限設定。模擬只影響你呢個瀏覽器分頁；期間畫面頂部會有黃色提示橫額，撳「取消模擬」即還原。<b>注意：模擬期間嘅操作（支錢、存入等）會真實生效</b>；簽名檔喺模擬時唔會自動解鎖。</p>
       <div class="flex gap-2 flex-wrap items-center">
         <select id="sim_role" class="rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white outline-none">
-          <option value="normal">普通同工</option>
+          <option value="tutor">導師</option>
+          <option value="sw">社工</option>
           <option value="cashier">管理夾萬同工</option>
           <option value="manager">管理級</option>
           <option value="admin">admin</option>
@@ -885,9 +887,10 @@ $('settle_ok').addEventListener('click', async () => {
 });
 
 // ---- 帳號及權限管理 ----
-// settings keys：roles（電郵→manager/cashier/admin，冇＝普通同工）、staff_dir（電郵→{name,title,house?}；house＝管理夾萬同工負責嘅社別 zhong/xiao；{deleted:true}＝隱藏預設同事）、staff_seen（登入過嘅電郵→{name,last}，前置頁自動記錄）
-// 四層權限：admin ＞ manager 管理級（管理夾萬同工所有功能＋夾萬過錢）＞ cashier 管理夾萬同工（支錢、存入、文件）＞ normal 普通同工
-const ROLE_LABELS = { admin: 'admin', manager: '管理級', cashier: '管理夾萬同工', normal: '普通同工' };
+// settings keys：roles（電郵→admin/manager/cashier/sw/tutor，冇＝按職級推導：社工/專責個案社工→sw 社工，其餘→tutor 導師）、staff_dir（電郵→{name,title,house?}；house＝管理夾萬同工負責嘅社別 zhong/xiao；{deleted:true}＝隱藏預設同事）、staff_seen（登入過嘅電郵→{name,last}，前置頁自動記錄）
+// 五層權限：admin ＞ manager 管理級（管理夾萬同工所有功能＋夾萬過錢）＞ cashier 管理夾萬同工（支錢、存入、文件）＞ sw 社工（基本＋月結簽署）＝ tutor 導師（基本）
+const ROLE_LABELS = { admin: 'admin', manager: '管理級', cashier: '管理夾萬同工', sw: '社工', tutor: '導師' };
+const VALID_ROLES = ['admin', 'manager', 'cashier', 'sw', 'tutor'];
 const TITLES = ['導師', '社工', '專責個案社工', '主任', '副院長', '院長'];
 // 已登記同事對照表（同前置頁一致）；perm = 永久 admin 唔可以改／刪
 const KNOWN_STAFF = [
@@ -917,8 +920,11 @@ function dirMerged(){
   });
   return out;
 }
+// 冇明確 roles 記錄時按職級推導：社工／專責個案社工 → sw，其餘 → tutor
+const derivedRole = title => ['社工', '專責個案社工'].includes(title) ? 'sw' : 'tutor';
 const roleSel = (email, cur) => `<select class="role_sel shrink-0 rounded-lg border border-slate-300 px-2 py-1 text-xs bg-white outline-none" data-email="${email}">
-  <option value="normal"${cur === 'normal' ? ' selected' : ''}>普通同工</option>
+  <option value="tutor"${cur === 'tutor' ? ' selected' : ''}>導師</option>
+  <option value="sw"${cur === 'sw' ? ' selected' : ''}>社工</option>
   <option value="cashier"${cur === 'cashier' ? ' selected' : ''}>管理夾萬同工</option>
   <option value="manager"${cur === 'manager' ? ' selected' : ''}>管理級</option>
   <option value="admin"${cur === 'admin' ? ' selected' : ''}>admin</option>
@@ -952,7 +958,7 @@ async function loadRoles(){
   } catch (e) { box.innerHTML = `<p class="text-xs text-red-500">讀取失敗：${escapeHtml(e.message)}</p>`; return; }
   const list = dirMerged();
   box.innerHTML = list.map(s => {
-    const cur = s.perm ? 'admin' : (ROLES_MAP[s.email] || 'normal');
+    const cur = s.perm ? 'admin' : (VALID_ROLES.includes(ROLES_MAP[s.email]) ? ROLES_MAP[s.email] : derivedRole(s.title));
     const right = s.perm
       ? '<span class="shrink-0 text-xs font-bold text-indigo-600">永久 admin</span>'
       : titleSel(s.email, s.title) + (cur === 'cashier' ? houseSel(s.email, s.house) : '') + roleSel(s.email, cur) + delBtn(s.email);
@@ -969,8 +975,8 @@ async function loadRoles(){
       <span class="min-w-0 flex-1 text-xs text-slate-500 truncate">${escapeHtml(em)}<br>Google 名：${escapeHtml((STAFF_SEEN[em] || {}).name || '—')}</span>
       <input class="seen_name w-24 rounded-lg border border-slate-300 px-2 py-1 text-xs outline-none" data-email="${em}" placeholder="姓名" maxlength="10">
       ${titleSel(em, '')}
-      ${(ROLES_MAP[em] || 'normal') === 'cashier' ? houseSel(em, (STAFF_DIR[em] && !STAFF_DIR[em].deleted && STAFF_DIR[em].house) || '') : ''}
-      ${roleSel(em, ROLES_MAP[em] || 'normal')}
+      ${(ROLES_MAP[em] || 'tutor') === 'cashier' ? houseSel(em, (STAFF_DIR[em] && !STAFF_DIR[em].deleted && STAFF_DIR[em].house) || '') : ''}
+      ${roleSel(em, VALID_ROLES.includes(ROLES_MAP[em]) ? ROLES_MAP[em] : 'tutor')}
       ${delBtn(em)}
     </div>`).join('');
 }
@@ -979,7 +985,8 @@ async function onRoleChange(s){
   const em = s.dataset.email, role = s.value;
   if (role === 'admin' && !confirm(`確定將 ${em} 升做 admin？\n\nadmin 擁有所有權限：結算、刪除記錄、舍友戶口管理、帳號及權限管理（包括再新增其他 admin）、轉正式版本。`)) { loadRoles(); return; }
   try {
-    if (role === 'normal') delete ROLES_MAP[em]; else ROLES_MAP[em] = role;
+    // tutor／sw 都明確存落 ROLES_MAP（明確指定優先於職級推導）
+    ROLES_MAP[em] = role;
     await saveRoles();
     toast(`已更新 ${em} 為「${ROLE_LABELS[role]}」，下次登入生效。`);
     loadRoles();
@@ -1029,7 +1036,7 @@ async function onStaffDel(btn){
   if (ADMIN_EMAILS.includes(em)) { alert('永久 admin 唔可以刪除。'); return; }
   const entry = dirMerged().find(x => x.email === em);
   const label = entry ? `${entry.name}（${em}）` : em;
-  if (!confirm(`確定刪除 ${label} 嘅帳號資料？\n\n・名冊（姓名／職級）同權限設定會刪除\n・佢下次登入會變返「普通」＋未登記狀態\n・過往嘅支錢記錄同簽名唔受影響`)) return;
+  if (!confirm(`確定刪除 ${label} 嘅帳號資料？\n\n・名冊（姓名／職級）同權限設定會刪除\n・佢下次登入會變返「導師」＋未登記狀態\n・過往嘅支錢記錄同簽名唔受影響`)) return;
   try {
     if (KNOWN_STAFF.some(s => s.email === em)) STAFF_DIR[em] = { deleted: true };
     else delete STAFF_DIR[em];
@@ -1055,10 +1062,11 @@ $('sf_save').addEventListener('click', async () => {
   if (role === 'admin' && !confirm(`確定將 ${name}（${em}）設定為 admin？\nadmin 擁有所有權限，包括新增其他 admin。`)) return;
   try {
     STAFF_DIR[em] = { name, title };
-    if (role === 'normal') delete ROLES_MAP[em]; else ROLES_MAP[em] = role;
+    // tutor／sw 都明確存落 ROLES_MAP（明確指定優先於職級推導）
+    ROLES_MAP[em] = role;
     await saveDir();
     await saveRoles();
-    $('sf_email').value = ''; $('sf_name').value = ''; $('sf_title').value = ''; $('sf_role').value = 'normal';
+    $('sf_email').value = ''; $('sf_name').value = ''; $('sf_title').value = ''; $('sf_role').value = 'tutor';
     toast(`已儲存帳號：${name}（${title} · ${ROLE_LABELS[role]}），下次登入生效。`);
     loadRoles();
   } catch (e) { alert('儲存失敗：' + e.message); }
@@ -1097,7 +1105,7 @@ $('sigpw_save').addEventListener('click', async () => {
 function refreshSimUI(){
   let s = null;
   try { s = JSON.parse(sessionStorage.getItem('cyc-sim') || 'null'); } catch {}
-  const active = !!(s && (s.role === 'admin' || s.role === 'manager' || s.role === 'cashier' || s.role === 'normal'));
+  const active = !!(s && VALID_ROLES.includes(s.role));
   $('sim_stop').classList.toggle('hidden', !active);
   $('sim_links').classList.toggle('hidden', !active);
   $('sim_links').classList.toggle('flex', active);

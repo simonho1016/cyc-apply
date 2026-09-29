@@ -10,6 +10,15 @@
 - `public/apply/index.html` — 支錢主頁：填單 → 簽名（全螢幕橫向簽名板，自動轉正）→ 列印海報風格 PDF／電子存檔上 Supabase Storage bucket `apply-archive`。何文諾、何樂軒有簽名檔保護，支錢時要佢哋各自密碼（`staff-ok-<name>` session，15 分鐘）。
 - `public/admin/index.html` — 後台：統計圖表、按社別/職員分類、匯出 CSV、勾選下載 ZIP／列印 PDF、結算、刪除記錄（只有呢頁可以刪）。
 - `public/vault/index.html` — 夾萬・舍友現存：忠孝各有大夾萬（宿舍夾萬）同細夾萬（家社夾萬），過錢、舍友現存、對數。
+- `public/sign/index.html` — 月結簽署：舍友逐個電子簽＋職員簽署（社工簽署／負責職員／審核職員三個位，一簽通用全月表格）。
+- `public/report/index.html` — 月結報告：列印月結文件（限管理夾萬同工或以上）。
+
+## 職員權限（五層，v1.19.0 起）
+
+- 級別：`admin` ＞ `manager`（管理級）＞ `cashier`（管理夾萬同工）＞ `sw`（社工）＝ `tutor`（導師）。舊 `normal`（普通同工）已取消。
+- 角色存 `settings` key=`roles`（email→級別）；冇記錄嘅按職級（`staff_dir` 嘅 title）自動推導：社工／專責個案社工 → `sw`，其餘 → `tutor`。後台明確指定優先。
+- 導師／社工基本權限一樣（支錢、睇自己紀錄、夾萬唯讀）；分別：社工入得 /sign/ 並簽「社工簽署」位（`canSignSlot('social')` 要求 `ROLE_NOW === 'sw'`），導師入唔到。
+- 各頁 `realRole()` 用 `VALID_ROLES = ['admin','manager','cashier','sw','tutor']` 驗證 session 角色，fallback `tutor`。
 
 ## 金錢邏輯（重要）
 

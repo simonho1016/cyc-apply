@@ -96,7 +96,7 @@
   <!-- ====================== 主畫面 ====================== -->
   <section id="mainScreen" class="hidden space-y-6">
 
-    <div id="roBanner" class="hidden card bg-sky-50 border-sky-200 p-3 text-xs text-sky-800">👀 普通權限：呢頁只可以<b>睇</b>夾萬現存同各舍友現存（用嚟確認夠唔夠錢支錢），唔可以改數或存入。需要存入請搵管理夾萬同工，改數或過錢請搵管理級／admin。</div>
+    <div id="roBanner" class="hidden card bg-sky-50 border-sky-200 p-3 text-xs text-sky-800">👀 導師／社工權限：呢頁只可以<b>睇</b>夾萬現存同各舍友現存（用嚟確認夠唔夠錢支錢），唔可以改數或存入。需要存入請搵管理夾萬同工，改數或過錢請搵管理級／admin。</div>
 
     <!-- 支錢狀況總覽（所有同事可見：各舍友支錢狀況＋夾萬狀況一目了然） -->
     <div class="card bg-white p-5 space-y-3" id="cardStats">
@@ -126,7 +126,7 @@
       <p class="text-xs text-slate-400">未結算金額＝同事墊支咗、未由夾萬攞返嘅錢（「夾萬支付」嘅單會即時自動結算，唔計入）；結算由管理夾萬同工或 admin 喺「🧾 支錢紀錄」頁處理。</p>
     </div>
 
-    <!-- 夾萬現存（admin 改數；管理級可過錢；管理夾萬同工／普通同工唯讀） -->
+    <!-- 夾萬現存（admin 改數；管理級可過錢；管理夾萬同工／導師／社工唯讀） -->
     <div class="card bg-white p-5 space-y-3" id="cardVault">
       <div class="flex items-center justify-between flex-wrap gap-2">
         <h3 class="text-sm font-bold text-amber-600 uppercase tracking-wide">🏦 夾萬現存</h3>
@@ -337,8 +337,8 @@ function staffNameOf(email){
   return EMAIL_STAFF_MAP[e] || '';
 }
 
-// ---- 出入閘：任何已登入職員都入得；normal（普通同工）唯讀睇數；cashier（管理夾萬同工）＝唯讀睇數＋舍友存入；manager（管理級）＝存入＋過錢＋睇數；admin 全用 ----
-let READONLY = false;   // 普通權限／管理級唯讀模式（舍友現存唔可以改）
+// ---- 出入閘：任何已登入職員都入得；tutor（導師）／sw（社工）唯讀睇數；cashier（管理夾萬同工）＝唯讀睇數＋舍友存入；manager（管理級）＝存入＋過錢＋睇數；admin 全用 ----
+let READONLY = false;   // 導師／社工／管理級唯讀模式（舍友現存唔可以改）
 $('adminLogout').addEventListener('click', () => { location.href = '/'; });
 setInterval(() => {
   if (!$('mainScreen').classList.contains('hidden') && !isLoggedIn()) {
@@ -352,8 +352,8 @@ function showMain(){
   $('mainScreen').classList.remove('hidden');
   $('adminLogout').classList.remove('hidden');
   const role = sessionRole();
-  if (role === 'normal') {
-    // 普通同工：睇夾萬現存同各舍友現存（決定支唔支到錢），但唔可以改任何嘢
+  if (role === 'tutor' || role === 'sw') {
+    // 導師／社工：睇夾萬現存同各舍友現存（決定支唔支到錢），但唔可以改任何嘢
     READONLY = true;
     ['vault_zhong_big', 'vault_zhong_small', 'vault_xiao_big', 'vault_xiao_small'].forEach(id => { const el = $(id); if (el) el.disabled = true; });
     $('vault_save').classList.add('hidden');
@@ -364,8 +364,8 @@ function showMain(){
     $('receipt_next').disabled = true;
     $('receipt_next_save').classList.add('hidden');
     $('t_admin').classList.add('hidden');
-    $('t_report').classList.add('hidden');   // 普通級唔入得月結報告
-    $('t_sign').classList.add('hidden');     // 普通級唔入得月結簽署
+    $('t_report').classList.add('hidden');   // 導師／社工唔入得月結報告
+    if (role === 'tutor') $('t_sign').classList.add('hidden');   // 導師唔入得月結簽署；社工入得
     $('roBanner').classList.remove('hidden');
   } else if (role === 'cashier') {
     // 管理夾萬同工：觀看夾萬現存＋各舍友結存（結算前要知道夠唔夠錢）＋舍友存入；唔可以改夾萬數、過錢、改舍友結存
@@ -820,9 +820,10 @@ $('seed_save').addEventListener('click', async () => {
 
 // ---- 初始化 ----
 // 角色：admin（永久 admin 電郵／後台指派）全用；manager（管理級）＝舍友存入＋現存→代管過錢＋睇數；
-// cashier（管理夾萬同工）只可以用「舍友存入」；normal（普通同工）已登入就可以入，唯讀睇夾萬同舍友現存；未登入唔入得
+// cashier（管理夾萬同工）只可以用「舍友存入」；tutor（導師）／sw（社工）已登入就可以入，唯讀睇夾萬同舍友現存；未登入唔入得
 // 模擬檢視：真 admin 可以用其他角色視角預覽（cyc-sim 只影響呢個分頁）
 const ADMIN_EMAILS = ['ho.ml@sbccyc.org.hk', 'ho.lh@sbccyc.org.hk'];
+const VALID_ROLES = ['admin', 'manager', 'cashier', 'sw', 'tutor'];
 function isLoggedIn(){
   try {
     const a = JSON.parse(sessionStorage.getItem('cyc-portal-auth') || 'null');
@@ -832,16 +833,16 @@ function isLoggedIn(){
 function realRole(){
   try {
     const a = JSON.parse(sessionStorage.getItem('cyc-portal-auth') || 'null');
-    if (!a || !Number.isFinite(a.exp) || Date.now() >= a.exp) return 'normal';
+    if (!a || !Number.isFinite(a.exp) || Date.now() >= a.exp) return 'tutor';
     if (a.email && ADMIN_EMAILS.includes(a.email)) return 'admin';
-    return (a.role === 'admin' || a.role === 'manager' || a.role === 'cashier') ? a.role : 'normal';
-  } catch { return 'normal'; }
+    return VALID_ROLES.includes(a.role) ? a.role : 'tutor';
+  } catch { return 'tutor'; }
 }
 function simInfo(){
   if (realRole() !== 'admin') return null;
   try {
     const s = JSON.parse(sessionStorage.getItem('cyc-sim') || 'null');
-    return (s && ['admin', 'manager', 'cashier', 'normal'].includes(s.role)) ? s : null;
+    return (s && VALID_ROLES.includes(s.role)) ? s : null;
   } catch { return null; }
 }
 function sessionRole(){ const s = simInfo(); return s ? s.role : realRole(); }
@@ -851,7 +852,7 @@ function isFullAdmin(){ return sessionRole() === 'admin'; }
 (function(){
   const s = simInfo();
   if (!s) return;
-  const RL = { admin: 'admin', manager: '管理級', cashier: '管理夾萬同工', normal: '普通同工' };
+  const RL = { admin: 'admin', manager: '管理級', cashier: '管理夾萬同工', sw: '社工', tutor: '導師' };
   const who = s.name || s.email || '';
   const b = $('simBanner');
   b.classList.remove('hidden');

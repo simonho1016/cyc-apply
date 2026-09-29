@@ -234,24 +234,25 @@ const SUPABASE_URL = 'https://abtsyfbbtpvozywqaofs.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_beq8adbuLrISIgnpbAaLEw_Da1Fva-r';
 
 // ---- 角色 ----
+const VALID_ROLES = ['admin', 'manager', 'cashier', 'sw', 'tutor'];
 function realRole(){
   try {
     const a = JSON.parse(sessionStorage.getItem('cyc-portal-auth') || 'null');
-    return (a && (a.role === 'admin' || a.role === 'manager' || a.role === 'cashier')) ? a.role : 'normal';
-  } catch { return 'normal'; }
+    return (a && VALID_ROLES.includes(a.role)) ? a.role : 'tutor';
+  } catch { return 'tutor'; }
 }
 function simInfo(){
   if (realRole() !== 'admin') return null;
   try {
     const s = JSON.parse(sessionStorage.getItem('cyc-sim') || 'null');
-    return (s && (s.role === 'admin' || s.role === 'manager' || s.role === 'cashier' || s.role === 'normal')) ? s : null;
+    return (s && VALID_ROLES.includes(s.role)) ? s : null;
   } catch { return null; }
 }
 function sessionRole(){ const s = simInfo(); return s ? s.role : realRole(); }
 const ROLE_NOW = sessionRole();
 
-// 普通權限唔入得
-if (ROLE_NOW === 'normal') {
+// 導師／社工唔入得（月結報告維持管理夾萬同工或以上）
+if (ROLE_NOW === 'tutor' || ROLE_NOW === 'sw') {
   $('noPerm').classList.remove('hidden');
   $('t_admin').classList.add('hidden');
 } else {
@@ -262,7 +263,7 @@ if (ROLE_NOW === 'normal') {
 // 模擬檢視提示橫額
 const SIM_NOW = simInfo();
 if (SIM_NOW) {
-  const RL = { admin: 'admin', manager: '管理級', cashier: '管理夾萬同工', normal: '普通同工' };
+  const RL = { admin: 'admin', manager: '管理級', cashier: '管理夾萬同工', sw: '社工', tutor: '導師' };
   const simWho = SIM_NOW.name || SIM_NOW.email || '';
   $('simBanner').classList.remove('hidden');
   $('simBanner').innerHTML = '🔭 模擬檢視中：以「' + RL[SIM_NOW.role] + '」' + (simWho ? '（' + simWho + '）' : '') + ' 視角瀏覽 · <button id="simStopBtn" class="underline font-bold">取消模擬</button>';

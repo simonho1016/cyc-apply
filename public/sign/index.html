@@ -114,7 +114,7 @@
 <main class="max-w-5xl mx-auto px-4 py-6 space-y-4">
 
   <div id="noPerm" class="hidden bg-white rounded-2xl p-6 text-center text-sm text-slate-500">
-    ⛔ 月結簽署只供「管理夾萬同工」、「管理級」及 admin 使用。
+    ⛔ 月結簽署只供「社工」、「管理夾萬同工」、「管理級」及 admin 使用。
   </div>
 
   <div id="signMain" class="hidden space-y-4">
@@ -257,17 +257,18 @@ alter table report_staff_sign enable row level security;
 create policy "anon report_staff_sign all" on report_staff_sign for all to anon using (true) with check (true);`;
 
 // ---- 角色 ----
+const VALID_ROLES = ['admin', 'manager', 'cashier', 'sw', 'tutor'];
 function realRole(){
   try {
     const a = JSON.parse(sessionStorage.getItem('cyc-portal-auth') || 'null');
-    return (a && (a.role === 'admin' || a.role === 'manager' || a.role === 'cashier')) ? a.role : 'normal';
-  } catch { return 'normal'; }
+    return (a && VALID_ROLES.includes(a.role)) ? a.role : 'tutor';
+  } catch { return 'tutor'; }
 }
 function simInfo(){
   if (realRole() !== 'admin') return null;
   try {
     const s = JSON.parse(sessionStorage.getItem('cyc-sim') || 'null');
-    return (s && ['admin', 'manager', 'cashier', 'normal'].includes(s.role)) ? s : null;
+    return (s && VALID_ROLES.includes(s.role)) ? s : null;
   } catch { return null; }
 }
 function sessionRole(){ const s = simInfo(); return s ? s.role : realRole(); }
@@ -280,7 +281,7 @@ function sessionEmail(){
   } catch { return ''; }
 }
 const ROLE_NOW = sessionRole();
-if (ROLE_NOW === 'normal') {
+if (ROLE_NOW === 'tutor') {
   $('noPerm').classList.remove('hidden');
   $('t_admin').classList.add('hidden');
 } else {
@@ -289,7 +290,7 @@ if (ROLE_NOW === 'normal') {
 }
 const SIM_NOW = simInfo();
 if (SIM_NOW) {
-  const RL = { admin: 'admin', manager: '管理級', cashier: '管理夾萬同工', normal: '普通同工' };
+  const RL = { admin: 'admin', manager: '管理級', cashier: '管理夾萬同工', sw: '社工', tutor: '導師' };
   const simWho = SIM_NOW.name || SIM_NOW.email || '';
   $('simBanner').classList.remove('hidden');
   $('simBanner').innerHTML = '🔭 模擬檢視中：以「' + RL[SIM_NOW.role] + '」' + (simWho ? '（' + simWho + '）' : '') + ' 視角瀏覽 · 操作會真實生效，請小心 · <button id="simStopBtn" class="underline font-bold">取消模擬</button>';
@@ -303,7 +304,7 @@ const EMAIL_STAFF_MAP = {
   'wong.tw@sbccyc.org.hk': '王子維', 'man.yc@sbccyc.org.hk': '文然澤'
 };
 let CLOUD_STAFF_DIR = {};
-let ROLES = {};   // settings roles：email → admin/manager/cashier（冇＝普通同工）
+let ROLES = {};   // settings roles：email → admin/manager/cashier/sw/tutor（冇＝按職級推導：社工/專責個案社工→sw，其餘→tutor）
 function myStaffName(){
   const e = (sessionEmail() || '').toLowerCase();
   const c = CLOUD_STAFF_DIR[e];
@@ -314,17 +315,6 @@ function staffNameOf(em){
   const c = CLOUD_STAFF_DIR[(em || '').toLowerCase()];
   if (c && !c.deleted && c.name) return c.name;
   return EMAIL_STAFF_MAP[(em || '').toLowerCase()] || em || '';
-}
-const EMAIL_TITLE_MAP = {
-  'tan.kl@sbccyc.org.hk': '社工', 'pun.yf@sbccyc.org.hk': '社工', 'yung.ck@sbccyc.org.hk': '社工',
-  'ho.ml@sbccyc.org.hk': '社工', 'ho.lh@sbccyc.org.hk': '社工',
-  'wong.tw@sbccyc.org.hk': '導師', 'man.yc@sbccyc.org.hk': '導師'
-};
-function myTitle(){
-  const e = (sessionEmail() || '').toLowerCase();
-  const c = CLOUD_STAFF_DIR[e];
-  if (c && !c.deleted && c.title) return c.title;
-  return EMAIL_TITLE_MAP[e] || '';
 }
 (async () => {
   try {
@@ -386,7 +376,7 @@ let tableOk = true;
 let staffRows = [];
 let staffTableOk = true;   // 表未開通時退回舊行為（唔阻列印），並喺職員簽署區顯示 SQL
 const STAFF_SLOTS = [
-  { slot: 'social',   label: '社工簽署', hint: '須由「社工」職級同事簽署' },
+  { slot: 'social',   label: '社工簽署', hint: '須由「社工」級同事簽署' },
   { slot: 'officer',  label: '負責職員', hint: '須由該社「管理夾萬同工」簽署' },
   { slot: 'reviewer', label: '審核職員', hint: '須由「管理級」同事簽署' }
 ];
@@ -402,7 +392,7 @@ function expectedOfficers(){
 }
 function canSignSlot(slot){
   if (ROLE_NOW === 'admin') return true;   // Admin 可以簽晒三個位
-  if (slot === 'social') return ['社工', '專責個案社工'].includes(myTitle());
+  if (slot === 'social') return ROLE_NOW === 'sw';
   if (slot === 'officer') return ROLE_NOW === 'cashier';
   if (slot === 'reviewer') return ROLE_NOW === 'manager';
   return false;
@@ -884,7 +874,7 @@ try {
   if (q.get('house')) $('s_house').value = q.get('house') === 'xiao' ? '孝社' : '忠社';
   if (q.get('month')) $('s_month').value = q.get('month');
 } catch {}
-if (ROLE_NOW !== 'normal') loadSignRows();
+if (ROLE_NOW !== 'tutor') loadSignRows();
 </script>
 </body>
 </html>

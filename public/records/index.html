@@ -269,17 +269,18 @@ const SUPABASE_ANON_KEY = 'sb_publishable_beq8adbuLrISIgnpbAaLEw_Da1Fva-r';
 const ARCHIVE_BUCKET = 'apply-archive';
 
 // ---- 角色（同其他頁一致：模擬檢視只對真 admin 生效） ----
+const VALID_ROLES = ['admin', 'manager', 'cashier', 'sw', 'tutor'];
 function realRole(){
   try {
     const a = JSON.parse(sessionStorage.getItem('cyc-portal-auth') || 'null');
-    return (a && (a.role === 'admin' || a.role === 'manager' || a.role === 'cashier')) ? a.role : 'normal';
-  } catch { return 'normal'; }
+    return (a && VALID_ROLES.includes(a.role)) ? a.role : 'tutor';
+  } catch { return 'tutor'; }
 }
 function simInfo(){
   if (realRole() !== 'admin') return null;
   try {
     const s = JSON.parse(sessionStorage.getItem('cyc-sim') || 'null');
-    return (s && (s.role === 'admin' || s.role === 'manager' || s.role === 'cashier' || s.role === 'normal')) ? s : null;
+    return (s && VALID_ROLES.includes(s.role)) ? s : null;
   } catch { return null; }
 }
 function sessionRole(){ const s = simInfo(); return s ? s.role : realRole(); }
@@ -292,11 +293,12 @@ function sessionEmail(){
   } catch { return ''; }
 }
 const ROLE_NOW = sessionRole();
-const CAN_MANAGE_FILES = ROLE_NOW !== 'normal';
+const CAN_MANAGE_FILES = !['tutor', 'sw'].includes(ROLE_NOW);
 const CAN_BATCH = ['admin', 'manager', 'cashier'].includes(ROLE_NOW);   // 批量列印／ZIP／CSV
 const CAN_SETTLE = ['admin', 'cashier'].includes(ROLE_NOW);             // 結算：admin＋管理夾萬同工（管理級唔可以結算）
 if (ROLE_NOW !== 'admin') $('t_admin').classList.add('hidden');
-if (ROLE_NOW === 'normal') { $('t_report').classList.add('hidden'); $('t_sign').classList.add('hidden'); }
+if (ROLE_NOW === 'tutor' || ROLE_NOW === 'sw') $('t_report').classList.add('hidden');
+if (ROLE_NOW === 'tutor') $('t_sign').classList.add('hidden');   // 社工入得月結簽署
 if (CAN_BATCH) $('batchBar').classList.remove('hidden');
 if (!CAN_SETTLE) $('settle_btn').classList.add('hidden');
 {
@@ -304,9 +306,10 @@ if (!CAN_SETTLE) $('settle_btn').classList.add('hidden');
     admin: '全部紀錄：批量列印／ZIP／CSV／結算（刪除請去後台管理）',
     manager: '全部紀錄：批量列印／ZIP／CSV（結算由管理夾萬同工或 admin 處理）',
     cashier: '全部紀錄：批量列印／ZIP／CSV／結算',
-    normal: '查返自己嘅支錢紀錄，隨時列印'
+    sw: '查返自己嘅支錢紀錄，隨時列印',
+    tutor: '查返自己嘅支錢紀錄，隨時列印'
   };
-  $('roleHint').textContent = hint[ROLE_NOW] || hint.normal;
+  $('roleHint').textContent = hint[ROLE_NOW] || hint.tutor;
 }
 
 const EMAIL_STAFF_MAP = {
@@ -322,7 +325,7 @@ const EMAIL_STAFF_MAP = {
 // 模擬檢視提示橫額
 const SIM_NOW = simInfo();
 if (SIM_NOW) {
-  const RL = { admin: 'admin', manager: '管理級', cashier: '管理夾萬同工', normal: '普通同工' };
+  const RL = { admin: 'admin', manager: '管理級', cashier: '管理夾萬同工', sw: '社工', tutor: '導師' };
   const simWho = SIM_NOW.name || SIM_NOW.email || '';
   $('simBanner').classList.remove('hidden');
   $('simBanner').innerHTML = '🔭 模擬檢視中：以「' + RL[SIM_NOW.role] + '」' + (simWho ? '（' + simWho + '）' : '') + ' 視角瀏覽 · <button id="simStopBtn" class="underline font-bold">取消模擬</button>';

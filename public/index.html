@@ -223,8 +223,9 @@ const GOOGLE_CLIENT_ID = '141456186458-t5ihfut5sir6fl0l3kqbi72hehekerlr.apps.goo
 const ALLOWED_DOMAIN = 'sbccyc.org.hk';
 const ADMIN_EMAILS = ['ho.ml@sbccyc.org.hk', 'ho.lh@sbccyc.org.hk']; // 永久 admin，唔可以被後台移除
 
-// ── 三級角色：admin（所有權限）／cashier（支錢負責：支錢、存入、製作及下載文件）／normal（普通：支錢、檢視文件）──
-// 其餘 @sbccyc.org.hk 職員預設 normal；admin 可以喺後台「權限管理」將個別電郵升做 cashier
+// ── 五層權限：admin ＞ manager 管理級 ＞ cashier 管理夾萬同工 ＞ sw 社工 ／ tutor 導師（基本級）──
+// roles map 有明確記錄（admin/manager/cashier/sw/tutor）就用記錄；冇就按職級推導：
+// 職級係「社工／專責個案社工」→ sw 社工（可入月結簽署），其餘 → tutor 導師
 async function getRolesMap() {
   try {
     const res = await fetch(SUPABASE_URL + '/rest/v1/settings?key=eq.roles&select=value', {
@@ -237,13 +238,23 @@ async function getRolesMap() {
     return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
   } catch (e) { return {}; }
 }
-function roleFor(email, rolesMap) {
+const VALID_ROLES = ['admin', 'manager', 'cashier', 'sw', 'tutor'];
+// 職級推導：cloud staff_dir 優先，hardcode 對照做後備；社工／專責個案社工 → sw，其餘 → tutor
+function titleFor(email, dir){
+  const e = (email || '').toLowerCase();
+  const c = dir && dir[e];
+  if (c && !c.deleted && c.title) return c.title;
+  const n = EMAIL_STAFF_MAP[e];
+  return (n && STAFF_TITLE[n]) || '';
+}
+function roleFor(email, rolesMap, staffDir) {
   if (ADMIN_EMAILS.includes(email)) return 'admin';
   const r = rolesMap && rolesMap[email];
-  return (r === 'admin' || r === 'manager' || r === 'cashier') ? r : 'normal';
+  if (VALID_ROLES.includes(r)) return r;
+  return ['社工', '專責個案社工'].includes(titleFor(email, staffDir)) ? 'sw' : 'tutor';
 }
-// 四層權限：admin（最高）＞ manager 管理級（夾萬過錢＋支錢負責所有功能）＞ cashier 管理夾萬同工（支錢、存入、製作及下載文件）＞ normal 普通同工（支錢、檢視文件）
-const ROLE_LABEL = { admin: 'admin', manager: '管理級', cashier: '管理夾萬同工', normal: '普通同工' };
+// 五層權限：admin（最高）＞ manager 管理級（夾萬過錢＋支錢負責所有功能）＞ cashier 管理夾萬同工（支錢、存入、製作及下載文件）＞ sw 社工（基本權限＋月結簽署）＝ tutor 導師（基本權限）
+const ROLE_LABEL = { admin: 'admin', manager: '管理級', cashier: '管理夾萬同工', sw: '社工', tutor: '導師' };
 
 // ── 電郵 → 姓名＋職銜對照（顯示用；支錢鎖定用人名部分）──
 const EMAIL_STAFF_MAP = {
@@ -271,12 +282,15 @@ function displayName(email, fallback){
   return n ? n + ' ' + (STAFF_TITLE[n] || '') : (fallback || email || '');
 }
 // 載入雲端名冊（完成後重繪登入列，等姓名職級即時更新）
-async function loadStaffDir(){
+async function getStaffDirMap(){
   try {
     const res = await fetch(SUPABASE_URL + '/rest/v1/settings?key=eq.staff_dir&select=value', { headers: { apikey: SUPABASE_ANON_KEY } });
     const rows = await res.json();
-    STAFF_DIR = (rows && rows[0] && rows[0].value && typeof rows[0].value === 'object') ? rows[0].value : {};
-  } catch { STAFF_DIR = {}; }
+    return (rows && rows[0] && rows[0].value && typeof rows[0].value === 'object') ? rows[0].value : {};
+  } catch { return {}; }
+}
+async function loadStaffDir(){
+  STAFF_DIR = await getStaffDirMap();
   refreshAuthUI();
 }
 // 記錄登入過嘅網域電郵（admin 後台「未登記同事」用佢補資料）
@@ -298,13 +312,13 @@ loadStaffDir();
 // ── 模擬檢視：真 admin 可以用其他角色視角預覽（cyc-sim 只影響呢個分頁） ──
 function realRole() {
   const a = portalAuth();
-  return (a && (a.role === 'admin' || a.role === 'manager' || a.role === 'cashier')) ? a.role : 'normal';
+  return (a && VALID_ROLES.includes(a.role)) ? a.role : 'tutor';
 }
 function simInfo() {
   if (realRole() !== 'admin') return null;
   try {
     const s = JSON.parse(sessionStorage.getItem('cyc-sim') || 'null');
-    return (s && (s.role === 'admin' || s.role === 'manager' || s.role === 'cashier' || s.role === 'normal')) ? s : null;
+    return (s && VALID_ROLES.includes(s.role)) ? s : null;
   } catch (e) { return null; }
 }
 function effectiveRole() { const s = simInfo(); return s ? s.role : realRole(); }
@@ -354,7 +368,8 @@ async function handleGoogleCred(res) {
     $('lockMsg').textContent = `只限 @${ALLOWED_DOMAIN} 帳戶登入（你用緊 ${email || '未知帳戶'}）。`;
     return;
   }
-  const role = roleFor(email, await getRolesMap());
+  const [rolesMap, staffDir] = await Promise.all([getRolesMap(), getStaffDirMap()]);
+  const role = roleFor(email, rolesMap, staffDir);
   portalLogin('google:' + email, { email, name: payload.name || email, admin: role === 'admin', role });
   recordSeen(email, payload.name || '');
   showMain();
@@ -379,11 +394,11 @@ function showLock(msg) {
 function showMain() {
   $('lockView').hidden = true;
   $('mainView').hidden = false;
-  // 按角色收放功能卡：普通只可以用零用金申請同支錢紀錄；支錢負責冇後台管理（模擬檢視時用模擬角色）
+  // 按角色收放功能卡：導師／社工可以用零用金申請、支錢紀錄同夾萬（唯讀）；社工另外入得月結簽署；後台管理只限 admin（模擬檢視時用模擬角色）
   const role = effectiveRole();
-  $('cardVaultLink').style.display = '';                    // 普通級都入得（唯讀睇數）
-  $('cardReportLink').style.display = role === 'normal' ? 'none' : '';
-  $('cardSignLink').style.display = role === 'normal' ? 'none' : '';
+  $('cardVaultLink').style.display = '';                    // 導師／社工都入得（唯讀睇數）
+  $('cardReportLink').style.display = (role === 'tutor' || role === 'sw') ? 'none' : '';
+  $('cardSignLink').style.display = role === 'tutor' ? 'none' : '';
   $('cardAdminLink').style.display = role === 'admin' ? '' : 'none';
   // 模擬檢視提示橫額
   const s = simInfo();
@@ -403,7 +418,7 @@ function tickSession() {
   const s = simInfo();
   const who = s
     ? `${displayName(s.email, s.name || a.name || a.email)}（${ROLE_LABEL[s.role]}·模擬中）`
-    : (a.email ? `${displayName(a.email, a.name)}（${ROLE_LABEL[a.role] || '普通'}）` : '已登入');
+    : (a.email ? `${displayName(a.email, a.name)}（${ROLE_LABEL[a.role] || '導師'}）` : '已登入');
   $('sessionPill').textContent = `已登入 · ${who}`;
 }
 setInterval(tickSession, 15000);

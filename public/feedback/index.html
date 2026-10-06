@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="/icons/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png">
+<link rel="apple-touch-icon" href="/icons/icon-180.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<title>則仁中心 — 問題回報</title>
+<meta name="description" content="則仁中心零用金支錢系統（測試版）問題回報：回報程式錯誤或提出功能建議。">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root { --ink:#141414; --pow:#fdf6ec; }
+  body { font-family: "Huninn", "Noto Sans TC", sans-serif; background-color: var(--pow);
+    background-image: radial-gradient(rgba(20,20,20,.14) 1.6px, transparent 1.7px); background-size: 15px 15px; }
+  .card { border: 3px solid var(--ink) !important; box-shadow: 5px 5px 0 var(--ink) !important; border-radius: 16px !important; }
+</style>
+</head>
+<body class="text-slate-800">
+
+<script>
+// ====================== 統一登入檢查（同其他頁一致） ======================
+(function(){
+  function ok(){
+    try {
+      var a = JSON.parse(localStorage.getItem('cyc-portal-auth') || 'null');
+      if (!(a && typeof a.p === 'string' && a.p && Number.isFinite(a.exp) && Date.now() < a.exp)) return false;
+      a.exp = Date.now() + 30 * 24 * 60 * 60 * 1000;
+      localStorage.setItem('cyc-portal-auth', JSON.stringify(a));
+      return true;
+    } catch (e) { return false; }
+  }
+  if (!ok()) { location.replace('/'); return; }
+})();
+</script>
+
+<header class="sticky top-0 z-20 bg-white border-b border-slate-200 shadow-sm">
+  <div class="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+    <div class="min-w-0">
+      <h1 class="text-base sm:text-lg font-bold text-slate-900 leading-tight">💬 問題回報 <span class="text-xs font-bold text-white bg-orange-500 rounded-full px-2 py-0.5 align-middle">測試版 Beta</span></h1>
+      <p class="text-xs text-slate-500">香港扶幼會 則仁中心 · 零用金支錢系統</p>
+    </div>
+    <button onclick="location.href='/'" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition shrink-0">← 入口頁</button>
+  </div>
+</header>
+
+<main class="max-w-2xl mx-auto px-4 py-6 space-y-5">
+
+  <div class="card bg-white p-5 space-y-4" id="formCard">
+    <p class="text-xs text-slate-500">測試期間遇到任何問題（畫面錯誤、數唔啱、功能唔見咗）或者有功能建議，都可以喺度回報。回報會記低你嘅姓名同埋而家嘅系統版本，admin 喺後台會見到並跟進。</p>
+
+    <div class="flex items-center gap-2 text-sm rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
+      <span class="text-slate-500 text-xs">回報人</span>
+      <span id="fb_who" class="font-bold text-slate-700">—</span>
+    </div>
+
+    <div class="flex gap-3 flex-wrap">
+      <label class="block flex-1 min-w-40">
+        <span class="text-xs font-medium text-slate-500">類別</span>
+        <select id="fb_cat" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white outline-none">
+          <option value="bug">🐛 程式錯誤（功能唔正常／報錯）</option>
+          <option value="suggest">💡 功能建議</option>
+          <option value="question">❓ 使用問題</option>
+          <option value="other">📝 其他</option>
+        </select>
+      </label>
+      <label class="block flex-1 min-w-40">
+        <span class="text-xs font-medium text-slate-500">相關頁面</span>
+        <select id="fb_page" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white outline-none">
+          <option value="">（一般／唔係特定頁面）</option>
+          <option value="/apply/">💰 零用金申請</option>
+          <option value="/vault/">🏦 夾萬・現存</option>
+          <option value="/records/">🧾 支錢紀錄</option>
+          <option value="/sign/">✍️ 月結簽署・報告</option>
+          <option value="/admin/">📊 後台管理</option>
+          <option value="/">🏠 入口頁</option>
+        </select>
+      </label>
+    </div>
+
+    <label class="block">
+      <span class="text-xs font-medium text-slate-500">詳情（請盡量講清楚：做咗咩 → 預期見到咩 → 實際見到咩）</span>
+      <textarea id="fb_msg" rows="6" maxlength="2000" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="例如：喺支錢頁揀咗 B14 吳培燊，撳確認支錢之後彈出「上傳失敗」，試咗三次都係咁。"></textarea>
+    </label>
+
+    <button id="fb_send" class="w-full py-3 rounded-lg text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 transition">📨 提交回報</button>
+    <p id="fb_hint" class="text-xs text-slate-400 text-center">提交後 admin 會喺後台見到；如需跟進會直接搵你。</p>
+  </div>
+
+  <div id="doneCard" class="hidden card bg-emerald-50 p-6 text-center space-y-3">
+    <div class="text-3xl">✅</div>
+    <p class="font-bold text-emerald-700">已收到你嘅回報，多謝！</p>
+    <p class="text-xs text-slate-500">admin 會喺後台「💬 問題回報」區跟進。</p>
+    <div class="flex gap-2 justify-center">
+      <button id="fb_again" class="px-4 py-2 rounded-lg text-sm font-bold text-emerald-700 bg-white border border-emerald-300 hover:bg-emerald-100 transition">再回報一單</button>
+      <button onclick="location.href='/'" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition">返回入口頁</button>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const SUPABASE_URL = 'https://abtsyfbbtpvozywqaofs.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_beq8adbuLrISIgnpbAaLEw_Da1Fva-r';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const ROLE_LABEL = { admin: 'admin', manager: '管理級', cashier: '管理夾萬同工', sw: '社工', tutor: '導師' };
+
+function authInfo(){
+  try { return JSON.parse(localStorage.getItem('cyc-portal-auth') || 'null'); } catch { return null; }
+}
+const a = authInfo();
+$('fb_who').textContent = (a && (a.name || a.email)) ? `${a.name || a.email}（${ROLE_LABEL[a && a.role] || '同事'}）` : '未知';
+
+// 由邊頁過嚟就預填邊頁
+try {
+  const ref = document.referrer ? new URL(document.referrer).pathname : '';
+  if (ref && [...$('fb_page').options].some(o => o.value === ref)) $('fb_page').value = ref;
+} catch {}
+
+$('fb_send').addEventListener('click', async () => {
+  const msg = $('fb_msg').value.trim();
+  if (!msg) { alert('請填寫回報內容。'); $('fb_msg').focus(); return; }
+  $('fb_send').disabled = true;
+  $('fb_send').textContent = '📨 提交中…';
+  try {
+    const { error } = await sb.from('feedback').insert({
+      email: (a && a.email) || '',
+      name: (a && a.name) || '',
+      role: (a && a.role) || '',
+      category: $('fb_cat').value,
+      page: $('fb_page').value,
+      message: msg,
+      ua: navigator.userAgent.slice(0, 200)
+    });
+    if (error) throw new Error(error.message);
+    $('formCard').classList.add('hidden');
+    $('doneCard').classList.remove('hidden');
+  } catch (e) {
+    alert('提交失敗：' + e.message + (/feedback|schema cache|404/i.test(e.message) ? '\n\n（feedback 表未開通：請 admin 去 Supabase → SQL Editor 跑建立表格嘅 SQL）' : ''));
+  }
+  $('fb_send').disabled = false;
+  $('fb_send').textContent = '📨 提交回報';
+});
+$('fb_again').addEventListener('click', () => {
+  $('fb_msg').value = '';
+  $('doneCard').classList.add('hidden');
+  $('formCard').classList.remove('hidden');
+});
+</script>
+</body>
+</html>

@@ -68,7 +68,8 @@
           <button data-nav="/records/" onclick="location.href='/records/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-teal-700 hover:bg-teal-50 transition">🧾 支錢紀錄</button>
           <button data-nav="/vault/" onclick="location.href='/vault/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-amber-700 hover:bg-amber-50 transition">🏦 夾萬・現存</button>
           <button data-nav="/sign/" onclick="location.href='/sign/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-violet-700 hover:bg-violet-50 transition">✍️ 月結簽署・報告</button>
-          <button data-nav="/" onclick="location.href='/'" class="block w-full text-left px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 transition border-t border-slate-200">🏠 入口頁</button>
+          <button data-nav="/feedback/" onclick="location.href='/feedback/'" class="block w-full text-left px-4 py-2.5 text-sm font-medium text-orange-600 hover:bg-orange-50 transition border-t border-slate-200">💬 問題回報</button>
+          <button data-nav="/" onclick="location.href='/'" class="block w-full text-left px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 transition">🏠 入口頁</button>
         </div>
       </div>
       <button id="adminLogout" class="hidden px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">← 入口頁</button>
@@ -189,6 +190,23 @@
       <div id="rec_list" class="space-y-2"></div>
     </div>
 
+    <!-- 問題回報（admin 專用）：同事喺 /feedback/ 提交嘅內容 -->
+    <div id="cardFeedback" class="card bg-white p-5 space-y-3">
+      <div class="flex items-center justify-between flex-wrap gap-2">
+        <h3 class="text-sm font-bold text-orange-600 uppercase tracking-wide">💬 問題回報</h3>
+        <div class="flex items-center gap-2">
+          <select id="fb_filter" class="rounded-lg border border-slate-300 px-2 py-1.5 text-xs bg-white outline-none">
+            <option value="open">未處理</option>
+            <option value="done">已處理</option>
+            <option value="">全部</option>
+          </select>
+          <button id="fb_reload" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">🔄 重新載入</button>
+        </div>
+      </div>
+      <p class="text-xs text-slate-500">同事喺各頁「功能選單 → 💬 問題回報」提交嘅程式錯誤／建議會喺度列出（最新喺最上）。處理完撳「標記已處理」；刪除只限 admin。</p>
+      <div id="fb_list" class="space-y-2 text-sm"></div>
+    </div>
+
     <!-- 帳號及權限管理（admin 專用） -->
     <div id="cardRoles" class="card bg-white p-5 space-y-3">
       <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wide">👥 帳號及權限管理</h3>
@@ -262,6 +280,26 @@
       <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wide">🗂️ 電子存檔（Supabase Storage）</h3>
       <p class="text-xs text-slate-500">「電子存檔」會將 PDF 上傳到 Supabase Storage 嘅 <strong>apply-archive</strong> bucket，按 <strong>zhong／xiao（社別）→ 舍友編號 → 檔案</strong> 分類（Supabase 唔支援中文路徑，所以用英文編碼）；本機同時會下載一份做後備，本機檔名維持「舍友編號_日期」。免費計劃（1 GB）大約可儲存 2,500–5,000 張 PDF。</p>
       <p class="text-xs text-slate-400">Bucket 未開通時，存檔仍會儲存雲端記錄同本機下載 PDF，只係冇雲端檔案；記錄頁嘅「下載 PDF」掣會喺該記錄有雲端檔案時先出現。</p>
+    </div>
+
+    <!-- 回復原廠設定（測試版限定，admin 專用；轉正式版本後自動消失） -->
+    <div id="cardReset" class="card bg-white p-5 space-y-3">
+      <h3 class="text-sm font-bold text-orange-600 uppercase tracking-wide">🧪 回復原廠設定（測試版限定）</h3>
+      <p class="text-xs text-slate-500">測試期間用：按勾選清空測試數據，還原到初始狀態，<b>可以重複使用</b>，方便反覆測試唔同情景。<b class="text-red-600">此操作唔可以還原。</b>舍友名單（包括已退出標記）、職員名冊／權限、簽名檔同簽名密碼會保留。<b>轉正式版本後呢個功能會自動消失。</b></p>
+      <div class="space-y-2 text-sm">
+        <label class="flex items-center gap-2"><input type="checkbox" id="rs_apps" class="accent-orange-500" checked> 清除所有支錢記錄 ＋ 雲端 PDF 檔案</label>
+        <label class="flex items-center gap-2"><input type="checkbox" id="rs_ledger" class="accent-orange-500" checked> 清除流水賬（ledger）</label>
+        <label class="flex items-center gap-2"><input type="checkbox" id="rs_sign" class="accent-orange-500" checked> 清除月結簽署資料（舍友簽名＋職員簽署）</label>
+        <label class="flex items-center gap-2"><input type="checkbox" id="rs_bal" class="accent-orange-500" checked> 舍友結存全部歸 0</label>
+        <label class="flex items-center gap-2"><input type="checkbox" id="rs_vault" class="accent-orange-500" checked> 重設四個夾萬現存（之後去「🏦 夾萬・現存」重新設定起點）</label>
+        <label class="flex items-center gap-2 flex-wrap"><input type="checkbox" id="rs_receipt" class="accent-orange-500"> 收款編號重新由 CYC <input id="rs_receipt_n" type="number" min="1" step="1" value="101335" class="w-24 rounded-lg border border-slate-300 px-2 py-1 text-sm outline-none"> 開始（唔勾＝保持接續現有編號）</label>
+        <label class="flex items-center gap-2"><input type="checkbox" id="rs_feedback" class="accent-orange-500"> 清除所有問題回報</label>
+      </div>
+      <div class="flex items-center gap-2 flex-wrap border-t border-slate-100 pt-3">
+        <input id="rs_confirm" autocomplete="off" class="flex-1 min-w-40 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="輸入「回復原廠」先可以執行">
+        <button id="rs_go" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 transition" disabled>執行回復原廠設定</button>
+      </div>
+      <p id="rs_status" class="text-xs text-slate-500"></p>
     </div>
 
     <!-- 轉正式版本（清除測試數據，admin 專用） -->
@@ -382,13 +420,15 @@ function showMain(){
   $('mainScreen').classList.remove('hidden');
   $('adminLogout').classList.remove('hidden');
   if (ADMIN_VIEW !== 'admin') {
-    // 管理級：收埋 admin 專用區（帳號權限／模擬檢視／簽名密碼／電子存檔／轉正式），唔可以刪除或結算
-    ['cardRoles', 'cardSim', 'cardSigPw', 'cardArchive', 'cardGoLive'].forEach(id => { const el = $(id); if (el) el.classList.add('hidden'); });
+    // 管理級：收埋 admin 專用區（帳號權限／模擬檢視／簽名密碼／電子存檔／轉正式／問題回報／回復原廠），唔可以刪除或結算
+    ['cardRoles', 'cardSim', 'cardSigPw', 'cardArchive', 'cardGoLive', 'cardFeedback', 'cardReset'].forEach(id => { const el = $(id); if (el) el.classList.add('hidden'); });
     $('del_sel_btn').classList.add('hidden');
     $('settle_btn').classList.add('hidden');
   } else {
     loadRoles();
     loadSigPw();
+    loadFeedback();
+    checkGoLive();
   }
   loadData();
   mgLoad();
@@ -1364,6 +1404,177 @@ $('gl_go').addEventListener('click', async () => {
     alert('執行失敗：' + e.message);
   }
   $('gl_go').disabled = $('gl_confirm').value.trim() !== '轉正式';
+});
+
+// ---- 問題回報（feedback 表；admin 專用；表格未開通會顯示建立 SQL）----
+const FB_SQL = `create table if not exists feedback (
+  id bigint generated always as identity primary key,
+  created_at timestamptz not null default now(),
+  email text, name text, role text,
+  category text, page text, message text, ua text,
+  status text not null default 'open',
+  handled_by text, handled_at timestamptz
+);
+alter table feedback enable row level security;
+drop policy if exists "anon select feedback" on feedback;
+drop policy if exists "anon insert feedback" on feedback;
+drop policy if exists "anon update feedback" on feedback;
+drop policy if exists "anon delete feedback" on feedback;
+create policy "anon select feedback" on feedback for select to anon using (true);
+create policy "anon insert feedback" on feedback for insert to anon with check (true);
+create policy "anon update feedback" on feedback for update to anon using (true);
+create policy "anon delete feedback" on feedback for delete to anon using (true);`;
+const FB_CAT = { bug: '🐛 程式錯誤', suggest: '💡 功能建議', question: '❓ 使用問題', other: '📝 其他' };
+const FB_PAGE = { '/apply/': '零用金申請', '/vault/': '夾萬・現存', '/records/': '支錢紀錄', '/sign/': '月結簽署・報告', '/admin/': '後台管理', '/': '入口頁' };
+let fbRows = [];
+function fmtDateTime(iso){
+  if (!iso) return '';
+  const d = new Date(iso), p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+async function loadFeedback(){
+  const box = $('fb_list');
+  box.innerHTML = '<p class="text-xs text-slate-400">載入中…</p>';
+  try {
+    let q = sb.from('feedback').select('*').order('created_at', { ascending: false }).limit(200);
+    const f = $('fb_filter').value;
+    if (f) q = q.eq('status', f);
+    const { data, error } = await q;
+    if (error) throw new Error(error.message);
+    fbRows = data || [];
+    box.innerHTML = fbRows.length ? fbRows.map(r => `
+      <div class="border border-slate-200 rounded-xl p-3 ${r.status === 'done' ? 'bg-slate-50 opacity-70' : 'bg-white'}">
+        <div class="flex items-start justify-between gap-2 flex-wrap">
+          <span class="min-w-0">
+            <span class="font-bold">${FB_CAT[r.category] || escapeHtml(r.category || '其他')}</span>
+            ${r.page ? `<span class="text-xs text-slate-400">· ${FB_PAGE[r.page] || escapeHtml(r.page)}</span>` : ''}
+            <span class="block text-xs text-slate-500 mt-0.5">${escapeHtml(r.name || '')}（${escapeHtml(r.email || '')}${r.role ? ' · ' + ({ admin: 'admin', manager: '管理級', cashier: '管理夾萬同工', sw: '社工', tutor: '導師' })[r.role] || escapeHtml(r.role) : ''}）· ${fmtDateTime(r.created_at)}</span>
+          </span>
+          <span class="flex gap-1.5 shrink-0">
+            ${r.status === 'done'
+              ? `<span class="px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-bold">✅ 已處理</span><button class="fb_reopen px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 text-xs font-bold hover:bg-slate-200 transition" data-id="${r.id}">重新開放</button>`
+              : `<button class="fb_done px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition" data-id="${r.id}">標記已處理</button>`}
+            <button class="fb_del px-2.5 py-1 rounded-lg bg-red-50 text-red-600 text-xs font-bold hover:bg-red-100 transition" data-id="${r.id}">刪除</button>
+          </span>
+        </div>
+        <p class="text-sm mt-1.5 whitespace-pre-wrap">${escapeHtml(r.message || '')}</p>
+        ${r.status === 'done' ? `<p class="text-xs text-emerald-600 mt-1">由 ${escapeHtml(r.handled_by || '')} 於 ${fmtDateTime(r.handled_at)} 標記處理</p>` : ''}
+      </div>`).join('') : '<p class="text-sm text-slate-400 text-center py-4">冇符合條件嘅回報。</p>';
+  } catch (e) {
+    fbRows = [];
+    box.innerHTML = /feedback|schema cache|404|42P01/i.test(e.message)
+      ? `<div class="rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs px-3 py-2">⚠️ feedback 表未開通。請去 Supabase → SQL Editor 跑：<code class="select-all whitespace-pre-wrap">${escapeHtml(FB_SQL)}</code></div>`
+      : `<p class="text-sm text-red-500">讀取失敗：${escapeHtml(e.message)}</p>`;
+  }
+}
+$('fb_reload').addEventListener('click', loadFeedback);
+$('fb_filter').addEventListener('change', loadFeedback);
+$('fb_list').addEventListener('click', async e => {
+  const doneBtn = e.target.closest('.fb_done'), reBtn = e.target.closest('.fb_reopen'), delBtn = e.target.closest('.fb_del');
+  const btn = doneBtn || reBtn || delBtn;
+  if (!btn) return;
+  const r = fbRows.find(x => String(x.id) === btn.dataset.id);
+  if (!r) return;
+  try {
+    if (doneBtn) {
+      const { error } = await sb.from('feedback').update({ status: 'done', handled_by: mgStaffName(), handled_at: new Date().toISOString() }).eq('id', r.id);
+      if (error) throw new Error(error.message);
+      toast('已標記處理。');
+    } else if (reBtn) {
+      const { error } = await sb.from('feedback').update({ status: 'open', handled_by: null, handled_at: null }).eq('id', r.id);
+      if (error) throw new Error(error.message);
+      toast('已重新開放。');
+    } else {
+      if (!confirm(`確定刪除呢單回報？\n\n「${(r.message || '').slice(0, 60)}${(r.message || '').length > 60 ? '…' : ''}」\n刪除後唔可以還原。`)) return;
+      const { error } = await sb.from('feedback').delete().eq('id', r.id);
+      if (error) throw new Error(error.message);
+      toast('已刪除回報。');
+    }
+    loadFeedback();
+  } catch (err) { alert('操作失敗：' + err.message); }
+});
+
+// ---- go_live 檢查：轉正式後收埋「回復原廠設定」（入口頁 Beta 標記亦會收埋）----
+async function checkGoLive(){
+  try {
+    const v = await getSettingValue('go_live');
+    if (v && v.at) {
+      const el = $('cardReset');
+      if (el) el.classList.add('hidden');
+    }
+  } catch { /* 讀唔到就照顯示 */ }
+}
+
+// ---- 回復原廠設定（測試版限定，admin 專用；名單／名冊／權限／簽名檔保留）----
+$('rs_confirm').addEventListener('input', () => { $('rs_go').disabled = $('rs_confirm').value.trim() !== '回復原廠'; });
+$('rs_go').addEventListener('click', async () => {
+  const opt = {
+    apps: $('rs_apps').checked, ledger: $('rs_ledger').checked, sign: $('rs_sign').checked,
+    bal: $('rs_bal').checked, vault: $('rs_vault').checked, receipt: $('rs_receipt').checked,
+    feedback: $('rs_feedback').checked
+  };
+  if (!Object.values(opt).some(Boolean)) { alert('冇勾選任何項目。'); return; }
+  const rn = Math.floor(Number($('rs_receipt_n').value));
+  if (opt.receipt && (!Number.isFinite(rn) || rn < 1)) { alert('收款編號唔有效。'); return; }
+  if (!confirm('⚠️ 最後確認\n\n回復原廠設定會按勾選項目清除測試數據，唔可以還原。\n舍友名單、職員名冊／權限、簽名檔同簽名密碼會保留。\n\n確定執行？')) return;
+  $('rs_go').disabled = true;
+  const st = [];
+  try {
+    if (opt.apps) {
+      const { data: apps, error } = await sb.from('applications').select('id,pdf_path').limit(10000);
+      if (error) throw new Error(error.message);
+      const paths = (apps || []).map(r => r.pdf_path).filter(Boolean);
+      if (paths.length) {
+        const { error: se } = await sb.storage.from('apply-archive').remove(paths);
+        if (se) throw new Error(se.message);
+      }
+      const { error: de } = await sb.from('applications').delete().not('id', 'is', null);
+      if (de) throw new Error(de.message);
+      st.push(`支錢記錄 ${apps ? apps.length : 0} 張＋雲端 PDF ${paths.length} 份已清除`);
+    }
+    if (opt.ledger) {
+      const { error } = await sb.from('ledger').delete().not('id', 'is', null);
+      if (error) throw new Error(error.message);
+      st.push('流水賬已清除');
+    }
+    if (opt.sign) {
+      const { error: e1 } = await sb.from('report_sign').delete().not('id', 'is', null);
+      if (e1 && !/report_sign|42P01|schema cache/i.test(e1.message)) throw new Error(e1.message);
+      const { error: e2 } = await sb.from('report_staff_sign').delete().not('id', 'is', null);
+      if (e2 && !/report_staff_sign|42P01|schema cache/i.test(e2.message)) throw new Error(e2.message);
+      st.push('月結簽署資料已清除');
+    }
+    if (opt.bal) {
+      const zero = {};
+      ['忠社', '孝社'].forEach(h => (mgMembers[h] || []).forEach(m => { zero[m.id] = 0; }));
+      const { error } = await sb.from('settings').upsert({ key: 'member_bal', value: zero });
+      if (error) throw new Error(error.message);
+      st.push('舍友結存已全部歸 0');
+    }
+    if (opt.vault) {
+      const { error } = await sb.from('settings').delete().eq('key', 'safe_vault');
+      if (error) throw new Error(error.message);
+      st.push('四個夾萬現存已重設（未設定狀態）');
+    }
+    if (opt.receipt) {
+      const { error } = await sb.from('settings').upsert({ key: 'receipt_counter', value: rn });
+      if (error) throw new Error(error.message);
+      st.push(`收款編號由 CYC ${rn} 重新開始`);
+    }
+    if (opt.feedback) {
+      const { error } = await sb.from('feedback').delete().not('id', 'is', null);
+      if (error && !/feedback|42P01|schema cache/i.test(error.message)) throw new Error(error.message);
+      st.push('問題回報已清除');
+    }
+    $('rs_status').textContent = '✅ ' + st.join('；');
+    alert('✅ 回復原廠設定完成\n\n' + st.join('\n'));
+    $('rs_confirm').value = '';
+    loadData(); mgLoad(); loadFeedback();
+  } catch (e) {
+    $('rs_status').textContent = '❌ 失敗：' + e.message;
+    alert('執行失敗：' + e.message);
+  }
+  $('rs_go').disabled = $('rs_confirm').value.trim() !== '回復原廠';
 });
 
 // ---- 初始化 ----

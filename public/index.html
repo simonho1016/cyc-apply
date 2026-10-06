@@ -38,6 +38,12 @@
     transform:rotate(-1.2deg);font-size:32px;font-weight:400;letter-spacing:.12em;
   }
   .sub{color:var(--sub);font-size:17px;margin:22px 0 26px}
+  .beta-badge{
+    display:inline-block;margin-left:12px;padding:4px 12px;vertical-align:middle;
+    font-size:14px;font-weight:700;letter-spacing:.08em;color:#fff;background:#f97316;
+    border:3px solid var(--ink);border-radius:999px;box-shadow:3px 3px 0 var(--ink);
+    transform:rotate(3deg);
+  }
 
   /* ── 登入閘 ───────────────────────────── */
   .lock{
@@ -146,7 +152,7 @@
   <div id="simBanner" hidden style="background:#fef3c7;border-bottom:1px solid #f59e0b;color:#92400e;font-size:12px;padding:8px 16px;text-align:center"></div>
   <main class="box">
     <p class="org">香港扶幼會則仁中心</p>
-    <h1 class="title">零用金支錢系統</h1>
+    <h1 class="title">零用金支錢系統</h1><span class="beta-badge" id="betaBadge">測試版 Beta</span>
 
     <!-- 登入閘：只限 Google 網域認證（@sbccyc.org.hk） -->
     <section class="lock" id="lockView" hidden>
@@ -204,7 +210,7 @@
       <p class="note">支錢系統獨立運作，資料均儲存於雲端。</p>
     </section>
 
-    <p class="foot"><a href="/version/" style="color:inherit">📋 版本記錄</a></p>
+    <p class="foot"><a href="/version/" style="color:inherit">📋 版本記錄</a>　·　<a href="/feedback/" style="color:inherit">💬 問題回報</a></p>
   </main>
 
 <script>
@@ -447,6 +453,18 @@ document.querySelectorAll('.card[data-url]').forEach(card => {
 
 // 開啟時：已有有效登入就直接顯示功能頁
 if (portalAuth()) showMain(); else showLock('');
+
+// 測試版標記：轉正式版本（settings.go_live）之後自動收埋
+(async () => {
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/settings?key=eq.go_live&select=value', {
+      cache: 'no-store',
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY },
+    });
+    const rows = await res.json();
+    if (rows && rows[0] && rows[0].value && rows[0].value.at) $('betaBadge').hidden = true;
+  } catch (e) { /* 讀唔到就照顯示 Beta */ }
+})();
 </script>
 </body>
 </html>

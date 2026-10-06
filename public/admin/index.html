@@ -67,8 +67,7 @@
           <button data-nav="/apply/" onclick="location.href='/apply/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-emerald-700 hover:bg-emerald-50 transition">💰 零用金申請</button>
           <button data-nav="/records/" onclick="location.href='/records/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-teal-700 hover:bg-teal-50 transition">🧾 支錢紀錄</button>
           <button data-nav="/vault/" onclick="location.href='/vault/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-amber-700 hover:bg-amber-50 transition">🏦 夾萬・現存</button>
-          <button data-nav="/sign/" onclick="location.href='/sign/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-violet-700 hover:bg-violet-50 transition">✍️ 月結簽署</button>
-          <button data-nav="/report/" onclick="location.href='/report/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-sky-700 hover:bg-sky-50 transition">📈 月結報告</button>
+          <button data-nav="/sign/" onclick="location.href='/sign/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-violet-700 hover:bg-violet-50 transition">✍️ 月結簽署・報告</button>
           <button data-nav="/" onclick="location.href='/'" class="block w-full text-left px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 transition border-t border-slate-200">🏠 入口頁</button>
         </div>
       </div>
@@ -93,8 +92,8 @@
   <!-- ====================== 權限不足（只限 Google admin 登入） ====================== -->
   <section id="gateScreen" class="hidden max-w-sm mx-auto mt-10">
     <div class="card bg-white p-6 space-y-4 text-center">
-      <h2 class="text-sm font-bold text-indigo-600 uppercase tracking-wide">需要 admin 權限</h2>
-      <p class="text-xs text-slate-500">後台只限 admin 使用。請返回入口頁，用已獲授權嘅 @sbccyc.org.hk Google 帳戶登入。</p>
+      <h2 class="text-sm font-bold text-indigo-600 uppercase tracking-wide">需要 admin／管理級權限</h2>
+      <p class="text-xs text-slate-500">後台只限 admin 同「管理級」使用（管理級唔可以改帳號權限、模擬檢視、簽名密碼、電子存檔設定同轉正式版本，亦唔可以刪除記錄）。請返回入口頁，用已獲授權嘅 @sbccyc.org.hk Google 帳戶登入。</p>
       <button onclick="location.href='/'" class="w-full py-2.5 rounded-lg bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition">返回入口頁</button>
     </div>
   </section>
@@ -137,13 +136,11 @@
       <button id="csv_btn" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-slate-700 hover:bg-slate-800 transition">⬇ 匯出 CSV</button>
     </div>
 
-    <!-- 總覽卡 -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="card bg-white p-4"><div class="text-xs text-slate-500">總支出（已篩選）</div><div id="sum_total" class="text-2xl font-black text-slate-900 mt-1">$0.00</div><div id="sum_count" class="text-xs text-slate-400 mt-0.5">0 張單</div></div>
-      <div class="card bg-white p-4"><div class="text-xs text-slate-500">忠社</div><div id="sum_zhong" class="text-2xl font-black text-rose-600 mt-1">$0.00</div><div id="sum_zhong_n" class="text-xs text-slate-400 mt-0.5">0 張單</div></div>
-      <div class="card bg-white p-4"><div class="text-xs text-slate-500">孝社</div><div id="sum_xiao" class="text-2xl font-black text-blue-600 mt-1">$0.00</div><div id="sum_xiao_n" class="text-xs text-slate-400 mt-0.5">0 張單</div></div>
-      <div class="card bg-white p-4"><div class="text-xs text-slate-500">未結算金額</div><div id="sum_unsettled" class="text-2xl font-black text-amber-600 mt-1">$0.00</div><div id="sum_unsettled_n" class="text-xs text-slate-400 mt-0.5">0 張單</div></div>
-    </div>
+    <!-- 支出統計（已搬去「🧾 支錢紀錄」頁，全體同事可見） -->
+    <a href="/records/" class="card bg-teal-50 p-4 flex items-center justify-between gap-3 hover:bg-teal-100 transition">
+      <span class="text-sm"><span class="font-bold text-teal-700">📊 支出統計</span><span class="block text-xs text-slate-500 mt-0.5">總支出／忠社孝社／未結算金額、按舍友（分社別）・按同事（墊支）・按類別統計——已搬去「🧾 支錢紀錄」頁，跟篩選即時更新</span></span>
+      <span class="shrink-0 px-4 py-2 rounded-lg text-sm font-bold text-white bg-teal-600">前往 →</span>
+    </a>
 
     <!-- 夾萬・舍友現存入口（已搬去獨立頁面，避免同結算混雜） -->
     <a href="/vault/" class="card bg-amber-50 p-4 flex items-center justify-between gap-3 hover:bg-amber-100 transition">
@@ -151,10 +148,10 @@
       <span class="shrink-0 px-4 py-2 rounded-lg text-sm font-bold text-white bg-amber-600">進入 →</span>
     </a>
 
-    <!-- 月結報告（已搬去獨立頁面，支錢負責都可以用） -->
-    <a href="/report/" class="card bg-emerald-50 p-4 flex items-center justify-between gap-3 hover:bg-emerald-100 transition">
-      <span class="text-sm"><span class="font-bold text-emerald-700">📑 月結報告</span><span class="block text-xs text-slate-500 mt-0.5">零用月結紀錄（社別）＋舍友零用金收支紀錄表（每人每月一版）——已搬去獨立頁面，管理夾萬同工同管理級都可以列印</span></span>
-      <span class="shrink-0 px-4 py-2 rounded-lg text-sm font-bold text-white bg-emerald-600">進入 →</span>
+    <!-- 月結簽署・報告（已搬去獨立頁面） -->
+    <a href="/sign/" class="card bg-violet-50 p-4 flex items-center justify-between gap-3 hover:bg-violet-100 transition">
+      <span class="text-sm"><span class="font-bold text-violet-700">✍️ 月結簽署・報告</span><span class="block text-xs text-slate-500 mt-0.5">舍友電子簽署 → 簽齊後列印社別月結同舍友收支紀錄表——管理夾萬同工同管理級一站式處理</span></span>
+      <span class="shrink-0 px-4 py-2 rounded-lg text-sm font-bold text-white bg-violet-600">進入 →</span>
     </a>
 
     <!-- 舍友戶口管理（admin 專用） -->
@@ -177,28 +174,10 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-      <!-- 按舍友統計 -->
-      <div class="card bg-white p-5">
-        <h3 class="text-sm font-bold text-indigo-600 uppercase tracking-wide mb-3">按舍友統計（按社別分類）</h3>
-        <div id="by_payee" class="text-sm space-y-2.5"></div>
-      </div>
-      <!-- 按同事統計（墊支） -->
-      <div class="card bg-white p-5">
-        <h3 class="text-sm font-bold text-indigo-600 uppercase tracking-wide mb-3">按同事統計（墊支）</h3>
-        <div id="by_staff" class="text-sm space-y-2.5"></div>
-      </div>
-      <!-- 按類別統計 -->
-      <div class="card bg-white p-5">
-        <h3 class="text-sm font-bold text-indigo-600 uppercase tracking-wide mb-3">按支出類別統計</h3>
-        <div id="by_cat" class="text-sm space-y-1.5"></div>
-      </div>
-    </div>
-
     <!-- 記錄列表 + 結算 -->
     <div class="card bg-white p-5 space-y-3">
       <div class="flex items-center justify-between flex-wrap gap-2">
-        <h3 class="text-sm font-bold text-indigo-600 uppercase tracking-wide">支錢記錄 <span class="normal-case font-normal text-slate-400">（所有紀錄封存保留；只有 admin 可以刪除；列印／ZIP／CSV／結算亦開放喺「🧾 支錢紀錄」頁——結算限 admin＋管理夾萬同工，管理級只可以列印）</span></h3>
+        <h3 class="text-sm font-bold text-indigo-600 uppercase tracking-wide">支錢記錄 <span class="normal-case font-normal text-slate-400">（所有紀錄封存保留；只有 admin 可以刪除；列印／ZIP／CSV／結算亦開放喺「🧾 支錢紀錄」頁——結算限 admin＋管理夾萬同工；支出統計已搬去「🧾 支錢紀錄」頁）</span></h3>
         <div class="flex items-center gap-2 flex-wrap">
           <label class="text-xs text-slate-500 flex items-center gap-1"><input type="checkbox" id="sel_all" class="accent-indigo-600"> 全選</label>
           <button id="print_btn" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-violet-600 hover:bg-violet-700 transition" disabled>🖨 列印所選</button>
@@ -211,7 +190,7 @@
     </div>
 
     <!-- 帳號及權限管理（admin 專用） -->
-    <div class="card bg-white p-5 space-y-3">
+    <div id="cardRoles" class="card bg-white p-5 space-y-3">
       <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wide">👥 帳號及權限管理</h3>
       <p class="text-xs text-slate-500">五層權限：<b>admin</b>（所有權限）＞ <b>管理級</b>（管理夾萬同工所有功能 ＋ 夾萬「現存→代管」過錢）＞ <b>管理夾萬同工</b>（支錢、舍友存入、製作及下載文件；要指派管理邊個社嘅夾萬）＞ <b>社工</b>（基本權限 ＋ 月結簽署，負責「社工簽署」位）＝ <b>導師</b>（基本權限：支錢、檢視文件、夾萬唯讀）。所有 <b>@sbccyc.org.hk</b> 網域登入嘅同事，冇明確指派時會按職級自動分流：職級係「社工／專責個案社工」→ 社工，其餘 → 導師。新同事第一次登入後會出現喺「未登記同事」區，由 admin 補返姓名同職級。admin 可以新增、修改、刪除任何帳號，<b>包括新增其他 admin</b>；ho.ml／ho.lh 係永久 admin，唔可以改。設定喺同事下次登入時生效。</p>
       <div id="role_list" class="space-y-2 text-sm"></div>
@@ -242,7 +221,7 @@
     </div>
 
     <!-- 模擬檢視（admin 專用）：用其他角色視角預覽系統 -->
-    <div class="card bg-white p-5 space-y-3">
+    <div id="cardSim" class="card bg-white p-5 space-y-3">
       <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wide">🔭 模擬檢視</h3>
       <p class="text-xs text-slate-500">用其他角色嘅視角睇系統實際畫面，方便檢查權限設定。模擬只影響你呢個瀏覽器分頁；期間畫面頂部會有黃色提示橫額，撳「取消模擬」即還原。<b>注意：模擬期間嘅操作（支錢、存入等）會真實生效</b>；簽名檔喺模擬時唔會自動解鎖。</p>
       <div class="flex gap-2 flex-wrap items-center">
@@ -268,7 +247,7 @@
     </div>
 
     <!-- 簽名密碼（admin 專用；由支錢頁系統設定搬入） -->
-    <div class="card bg-white p-5 space-y-3">
+    <div id="cardSigPw" class="card bg-white p-5 space-y-3">
       <h3 class="text-sm font-bold text-emerald-600 uppercase tracking-wide">🔏 簽名密碼</h3>
       <p class="text-xs text-slate-500">只有<b>何文諾、何樂軒</b>有電子簽名圖。同事喺支錢頁揀佢哋做「支款人」時，要輸入呢度嘅密碼先用到對應簽名檔（本人用 Google 登入揀自己就唔使）。其他同事冇簽名檔，支錢時即場簽署，唔使密碼。同事姓名同職級喺上面「👥 帳號及權限管理」度改。</p>
       <div class="space-y-2 text-sm">
@@ -278,15 +257,15 @@
       <button id="sigpw_save" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition">儲存簽名密碼</button>
     </div>
 
-    <!-- 電子存檔說明（由支錢頁系統設定搬入） -->
-    <div class="card bg-white p-5 space-y-2">
+    <!-- 電子存檔說明（admin 專用；由支錢頁系統設定搬入） -->
+    <div id="cardArchive" class="card bg-white p-5 space-y-2">
       <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wide">🗂️ 電子存檔（Supabase Storage）</h3>
       <p class="text-xs text-slate-500">「電子存檔」會將 PDF 上傳到 Supabase Storage 嘅 <strong>apply-archive</strong> bucket，按 <strong>zhong／xiao（社別）→ 舍友編號 → 檔案</strong> 分類（Supabase 唔支援中文路徑，所以用英文編碼）；本機同時會下載一份做後備，本機檔名維持「舍友編號_日期」。免費計劃（1 GB）大約可儲存 2,500–5,000 張 PDF。</p>
       <p class="text-xs text-slate-400">Bucket 未開通時，存檔仍會儲存雲端記錄同本機下載 PDF，只係冇雲端檔案；記錄頁嘅「下載 PDF」掣會喺該記錄有雲端檔案時先出現。</p>
     </div>
 
     <!-- 轉正式版本（清除測試數據，admin 專用） -->
-    <div class="card bg-white p-5 space-y-3">
+    <div id="cardGoLive" class="card bg-white p-5 space-y-3">
       <h3 class="text-sm font-bold text-red-600 uppercase tracking-wide">🚀 轉正式版本</h3>
       <p class="text-xs text-slate-500">而家係<b>測試版</b>，所有數據只供測試。正式上線時喺度清除測試數據重新開始。<b class="text-red-600">此操作唔可以還原。</b>舍友名單（包括已退出標記）、職員權限設定同簽名檔會保留；執行後會記低「轉正式」時間同經手人。</p>
       <div class="space-y-2 text-sm">
@@ -389,10 +368,10 @@ function fmtTime(iso){
   return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
 }
 
-// ---- 後台只限 Google admin（密碼閘已取消） ----
+// ---- 後台限 Google admin／管理級（密碼閘已取消；管理級唔可以改帳號權限／模擬／簽名密碼／電子存檔／轉正式，亦唔可以刪除） ----
 $('adminLogout').addEventListener('click', () => { location.href = '/'; });
 setInterval(() => {
-  if (!$('mainScreen').classList.contains('hidden') && !isGoogleAdmin()) {
+  if (!$('mainScreen').classList.contains('hidden') && !realAdminRole()) {
     alert('後台登入狀態已清除，請重新登入。');
     location.reload();
   }
@@ -402,9 +381,16 @@ function showMain(){
   $('gateScreen').classList.add('hidden');
   $('mainScreen').classList.remove('hidden');
   $('adminLogout').classList.remove('hidden');
+  if (ADMIN_VIEW !== 'admin') {
+    // 管理級：收埋 admin 專用區（帳號權限／模擬檢視／簽名密碼／電子存檔／轉正式），唔可以刪除或結算
+    ['cardRoles', 'cardSim', 'cardSigPw', 'cardArchive', 'cardGoLive'].forEach(id => { const el = $(id); if (el) el.classList.add('hidden'); });
+    $('del_sel_btn').classList.add('hidden');
+    $('settle_btn').classList.add('hidden');
+  } else {
+    loadRoles();
+    loadSigPw();
+  }
   loadData();
-  loadRoles();
-  loadSigPw();
   mgLoad();
 }
 
@@ -455,90 +441,7 @@ function renderAll(){
   const names = [...new Set(rows.map(r => r.payee).filter(Boolean))].sort();
   $('q_payee').innerHTML = '<option value="">全部</option>' + names.map(n => `<option${n === cur ? ' selected' : ''}>${escapeHtml(n)}</option>`).join('');
 
-  // 總覽
-  const sum = arr => arr.reduce((a, r) => a + Number(r.amount || 0), 0);
-  const zhong = rows.filter(r => r.house === '忠社');
-  const xiao = rows.filter(r => r.house === '孝社');
-  const unsettled = rows.filter(r => !r.settled_at);
-  $('sum_total').textContent = money(sum(rows));
-  $('sum_count').textContent = rows.length + ' 張單';
-  $('sum_zhong').textContent = money(sum(zhong));
-  $('sum_zhong_n').textContent = zhong.length + ' 張單';
-  $('sum_xiao').textContent = money(sum(xiao));
-  $('sum_xiao_n').textContent = xiao.length + ' 張單';
-  $('sum_unsettled').textContent = money(sum(unsettled));
-  $('sum_unsettled_n').textContent = unsettled.length + ' 張單';
-
-  // 按舍友
-  const byP = {};
-  rows.forEach(r => {
-    const k = r.payee || '（未填）';
-    byP[k] = byP[k] || { total: 0, n: 0, house: r.house || '', unsettled: 0 };
-    byP[k].total += Number(r.amount || 0); byP[k].n++;
-    if (!r.settled_at) byP[k].unsettled += Number(r.amount || 0);
-  });
-  const pList = Object.entries(byP).sort((a, b) => b[1].total - a[1].total);
-  const pMax = pList.length ? pList[0][1].total : 0;
-  const payeeRow = ([name, v]) => {
-    const pct = pMax ? Math.max(4, Math.round(v.total / pMax * 100)) : 0;
-    const barCls = v.house === '孝社' ? 'bg-blue-400' : 'bg-rose-400';
-    return `
-    <div class="border-b border-slate-100 pb-1.5">
-      <div class="flex items-center justify-between gap-2">
-        <span class="min-w-0 truncate">${escapeHtml(name)} <span class="text-xs text-slate-400">${v.n} 張</span></span>
-        <span class="shrink-0 font-bold">${money(v.total)}${v.unsettled ? ` <span class="text-xs font-normal text-amber-600">（未結 ${money(v.unsettled)}）</span>` : ''}</span>
-      </div>
-      <div class="mt-1 h-2 rounded-full bg-slate-100 overflow-hidden"><div class="h-full rounded-full ${barCls}" style="width:${pct}%"></div></div>
-    </div>`;
-  };
-  // 按社別分組：忠社 → 孝社 → 其他
-  const houseGroups = [['忠社', 'text-rose-600'], ['孝社', 'text-blue-600']];
-  let payeeHtml = '';
-  houseGroups.forEach(([h, cls]) => {
-    const items = pList.filter(([, v]) => v.house === h);
-    if (!items.length) return;
-    const hTotal = items.reduce((a, [, v]) => a + v.total, 0);
-    payeeHtml += `<div class="flex justify-between items-baseline mt-1 mb-1"><span class="text-xs font-bold ${cls}">■ ${h}</span><span class="text-xs font-bold ${cls}">${money(hTotal)}</span></div>` + items.map(payeeRow).join('');
-  });
-  const otherItems = pList.filter(([, v]) => v.house !== '忠社' && v.house !== '孝社');
-  if (otherItems.length) payeeHtml += '<div class="text-xs font-bold text-slate-500 mt-1 mb-1">■ 其他</div>' + otherItems.map(payeeRow).join('');
-  $('by_payee').innerHTML = payeeHtml || '<p class="text-slate-400">冇數據。</p>';
-
-  // 按同事（墊支人）：通常係同事先俾錢，用呢度睇邊個墊咗幾多
-  const byS = {};
-  rows.forEach(r => {
-    const k = r.staff || '（未填）';
-    byS[k] = byS[k] || { total: 0, n: 0, unsettled: 0 };
-    byS[k].total += Number(r.amount || 0); byS[k].n++;
-    if (!r.settled_at) byS[k].unsettled += Number(r.amount || 0);
-  });
-  const sList = Object.entries(byS).sort((a, b) => b[1].total - a[1].total);
-  const sMax = sList.length ? sList[0][1].total : 0;
-  $('by_staff').innerHTML = sList.length ? sList.map(([name, v]) => {
-    const pct = sMax ? Math.max(4, Math.round(v.total / sMax * 100)) : 0;
-    return `
-    <div class="border-b border-slate-100 pb-1.5">
-      <div class="flex items-center justify-between gap-2">
-        <span class="min-w-0 truncate">${escapeHtml(name)} <span class="text-xs text-slate-400">${v.n} 張</span></span>
-        <span class="shrink-0 font-bold">${money(v.total)}${v.unsettled ? ` <span class="text-xs font-normal text-amber-600">（未結 ${money(v.unsettled)}）</span>` : ''}</span>
-      </div>
-      <div class="mt-1 h-2 rounded-full bg-slate-100 overflow-hidden"><div class="h-full rounded-full bg-emerald-400" style="width:${pct}%"></div></div>
-    </div>`;
-  }).join('') : '<p class="text-slate-400">冇數據。</p>';
-
-  // 按類別
-  const byC = {};
-  rows.forEach(r => (r.cats || []).forEach(c => {
-    const k = c === '其他' && r.cat_other ? `其他（${r.cat_other}）` : c;
-    byC[k] = (byC[k] || 0) + Number(r.amount || 0);
-  }));
-  const cList = Object.entries(byC).sort((a, b) => b[1] - a[1]);
-  $('by_cat').innerHTML = cList.length ? cList.map(([c, v]) => `
-    <div class="flex items-center justify-between gap-2 border-b border-slate-100 pb-1.5">
-      <span>${escapeHtml(c)}</span><span class="font-bold">${money(v)}</span>
-    </div>`).join('') : '<p class="text-slate-400">冇數據。</p>';
-
-  // 記錄列表
+  // 記錄列表（支出統計已搬去「🧾 支錢紀錄」頁）
   const warn = settleColsOk ? '' : `<div class="rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs px-3 py-2 mb-2">⚠️ 結算欄位未開通，而家全部記錄當「未結算」顯示，結算功能暫時用唔到。請去 Supabase → SQL Editor 跑：<code class="select-all">${SETTLE_SQL}</code></div>`;
   $('rec_list').innerHTML = warn + (rows.length ? rows.map(r => `
     <div class="flex items-start gap-3 border border-slate-200 rounded-xl p-3 text-sm ${r.settled_at ? 'bg-slate-50 opacity-70' : 'bg-white'}">
@@ -551,7 +454,7 @@ function renderAll(){
         <span class="block text-xs text-slate-400 mt-0.5">${fmtTime(r.decided_at || r.created_at)} · ${escapeHtml(r.staff || '')}${r.serial ? ' · 序號 ' + escapeHtml(r.serial) : ''}${r.doc_no ? ' · 編號 ' + escapeHtml(r.doc_no) : ''}${r.pdf_path ? ' · 📎 有雲端 PDF' : ''}${r.safe_pay ? ' · 🏦 夾萬支付' : ''}</span>
         ${r.settled_at ? `<span class="block text-xs text-emerald-600 mt-0.5">✅ 已結算：${fmtTime(r.settled_at)}${r.settled_by ? ' · 經手 ' + escapeHtml(r.settled_by) : ''}</span>` : ''}
       </span>
-      <button class="del_rec shrink-0 px-3 py-1.5 rounded-lg bg-red-50 text-red-600 text-xs font-bold hover:bg-red-100 transition" data-id="${r.id}">刪除</button>
+      ${ADMIN_VIEW === 'admin' ? `<button class="del_rec shrink-0 px-3 py-1.5 rounded-lg bg-red-50 text-red-600 text-xs font-bold hover:bg-red-100 transition" data-id="${r.id}">刪除</button>` : ''}
     </div>`).join('') : '<p class="text-sm text-slate-400 text-center py-6">冇符合條件嘅記錄。</p>');
   $('sel_all').checked = false;
   refreshSettleBtn();
@@ -1464,17 +1367,27 @@ $('gl_go').addEventListener('click', async () => {
 });
 
 // ---- 初始化 ----
-// 角色：永久 admin 電郵、後台指派嘅 admin 直入；其餘要入後台密碼
+// 角色：永久 admin 電郵、後台指派嘅 admin／管理級直入；管理級可以睇同用舍友戶口管理同記錄功能，但 admin 專用區會收埋
 const ADMIN_EMAILS = ['ho.ml@sbccyc.org.hk', 'ho.lh@sbccyc.org.hk'];
-function isGoogleAdmin(){
+function realAdminRole(){
   try {
     const a = JSON.parse(localStorage.getItem('cyc-portal-auth') || 'null');
-    if (!a || !Number.isFinite(a.exp) || Date.now() >= a.exp) return false;
-    if (a.email && ADMIN_EMAILS.includes(a.email)) return true;
-    return a.role === 'admin' && typeof a.p === 'string' && a.p.startsWith('google:');
-  } catch { return false; }
+    if (!a || !Number.isFinite(a.exp) || Date.now() >= a.exp) return null;
+    if (a.email && ADMIN_EMAILS.includes(a.email)) return 'admin';
+    if (typeof a.p === 'string' && a.p.startsWith('google:') && (a.role === 'admin' || a.role === 'manager')) return a.role;
+    return null;
+  } catch { return null; }
 }
-if (isGoogleAdmin()) showMain();
+// admin 用「模擬檢視」揀咗其他角色時，後台用模擬角色渲染（模擬管理級＝睇管理級畫面；模擬其他級別＝入唔到後台）
+const REAL_ADMIN_ROLE = realAdminRole();
+let ADMIN_VIEW = REAL_ADMIN_ROLE;
+if (REAL_ADMIN_ROLE === 'admin') {
+  try {
+    const s = JSON.parse(sessionStorage.getItem('cyc-sim') || 'null');
+    if (s && VALID_ROLES.includes(s.role)) ADMIN_VIEW = s.role;
+  } catch {}
+}
+if (ADMIN_VIEW === 'admin' || ADMIN_VIEW === 'manager') showMain();
 else $('gateScreen').classList.remove('hidden');
 </script>
 </body>

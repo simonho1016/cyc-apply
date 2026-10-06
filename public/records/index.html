@@ -120,8 +120,7 @@
           <button data-nav="/apply/" onclick="location.href='/apply/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-emerald-700 hover:bg-emerald-50 transition">💰 零用金申請</button>
           <button data-nav="/records/" onclick="location.href='/records/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-teal-700 hover:bg-teal-50 transition">🧾 支錢紀錄</button>
           <button data-nav="/vault/" id="t_vault" onclick="location.href='/vault/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-amber-700 hover:bg-amber-50 transition">🏦 夾萬・現存</button>
-          <button data-nav="/sign/" id="t_sign" onclick="location.href='/sign/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-violet-700 hover:bg-violet-50 transition">✍️ 月結簽署</button>
-          <button data-nav="/report/" id="t_report" onclick="location.href='/report/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-sky-700 hover:bg-sky-50 transition">📈 月結報告</button>
+          <button data-nav="/sign/" id="t_sign" onclick="location.href='/sign/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-violet-700 hover:bg-violet-50 transition">✍️ 月結簽署・報告</button>
           <button data-nav="/admin/" id="t_admin" onclick="location.href='/admin/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-indigo-600 hover:bg-indigo-50 transition">📊 後台管理</button>
           <button data-nav="/" onclick="location.href='/'" class="block w-full text-left px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 transition border-t border-slate-200">🏠 入口頁</button>
         </div>
@@ -176,6 +175,25 @@
 
   <div id="noMapWarn" class="hidden bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl px-4 py-3">
     ⚠️ 你嘅帳戶未連結職員姓名，暫時睇唔到紀錄。請聯絡 admin 設定電郵對照。
+  </div>
+
+  <!-- 支出統計（由後台搬入；按社別／日期／狀態篩選統計，職員篩選唔影響，全體同事可見） -->
+  <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3">
+    <div class="flex items-center justify-between flex-wrap gap-2">
+      <h3 class="text-sm font-bold text-teal-700 uppercase tracking-wide">📊 支出統計</h3>
+      <span class="text-xs text-slate-400">跟而家嘅「社別／日期／全部・未結算・已結算」篩選走（職員篩選唔影響統計）</span>
+    </div>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="rounded-xl bg-slate-50 p-3" style="border:2px solid #141414;"><div class="text-xs text-slate-500">總支出</div><div id="sum_total" class="text-xl font-black text-slate-900 mt-0.5">$0.00</div><div id="sum_count" class="text-xs text-slate-400 mt-0.5">0 張單</div></div>
+      <div class="rounded-xl bg-rose-50 p-3" style="border:2px solid #141414;"><div class="text-xs text-slate-500">忠社</div><div id="sum_zhong" class="text-xl font-black text-rose-600 mt-0.5">$0.00</div><div id="sum_zhong_n" class="text-xs text-slate-400 mt-0.5">0 張單</div></div>
+      <div class="rounded-xl bg-blue-50 p-3" style="border:2px solid #141414;"><div class="text-xs text-slate-500">孝社</div><div id="sum_xiao" class="text-xl font-black text-blue-600 mt-0.5">$0.00</div><div id="sum_xiao_n" class="text-xs text-slate-400 mt-0.5">0 張單</div></div>
+      <div class="rounded-xl bg-amber-50 p-3" style="border:2px solid #141414;"><div class="text-xs text-slate-500">未結算金額</div><div id="sum_unsettled" class="text-xl font-black text-amber-600 mt-0.5">$0.00</div><div id="sum_unsettled_n" class="text-xs text-slate-400 mt-0.5">0 張單</div></div>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+      <div><h4 class="text-xs font-bold text-slate-500 mb-2">按舍友統計（按社別分類）</h4><div id="by_payee" class="text-sm space-y-2.5"></div></div>
+      <div><h4 class="text-xs font-bold text-slate-500 mb-2">按同事統計（墊支）</h4><div id="by_staff" class="text-sm space-y-2.5"></div></div>
+      <div><h4 class="text-xs font-bold text-slate-500 mb-2">按支出類別統計</h4><div id="by_cat" class="text-sm space-y-1.5"></div></div>
+    </div>
   </div>
 
   <div id="r_list" class="space-y-3"></div>
@@ -305,9 +323,8 @@ const ROLE_NOW = sessionRole();
 const CAN_MANAGE_FILES = !['tutor', 'sw'].includes(ROLE_NOW);
 const CAN_BATCH = ['admin', 'manager', 'cashier'].includes(ROLE_NOW);   // 批量列印／ZIP／CSV
 const CAN_SETTLE = ['admin', 'cashier'].includes(ROLE_NOW);             // 結算：admin＋管理夾萬同工（管理級唔可以結算）
-if (ROLE_NOW !== 'admin') $('t_admin').classList.add('hidden');
-if (ROLE_NOW === 'tutor' || ROLE_NOW === 'sw') $('t_report').classList.add('hidden');
-if (ROLE_NOW === 'tutor') $('t_sign').classList.add('hidden');   // 社工入得月結簽署
+if (ROLE_NOW !== 'admin' && ROLE_NOW !== 'manager') $('t_admin').classList.add('hidden');
+if (ROLE_NOW === 'tutor') $('t_sign').classList.add('hidden');   // 社工起入得月結簽署・報告
 if (CAN_BATCH) $('batchBar').classList.remove('hidden');
 if (!CAN_SETTLE) $('settle_btn').classList.add('hidden');
 {
@@ -418,8 +435,105 @@ function settleBadge(r){
   return `<span class="rounded-full px-2.5 py-0.5 text-xs font-bold bg-amber-100 text-amber-700">⏳ 未結算</span>`;
 }
 
+// ---- 支出統計（由後台搬入）：按社別／日期／狀態篩選，職員篩選唔影響 ----
+function statRows(){
+  let rows = allRows;
+  const h = $('f_house').value;
+  if (h) rows = rows.filter(r => (r.house || '') === h);
+  const from = $('f_from').value, to = $('f_to').value;
+  if (from) rows = rows.filter(r => (r.decided_at || r.created_at || '') >= from);
+  if (to) rows = rows.filter(r => (r.decided_at || r.created_at || '') <= to + 'T23:59:59');
+  if (tabNow === 'settled') rows = rows.filter(r => !!r.settled_at);
+  else if (tabNow === 'unsettled') rows = rows.filter(r => !r.settled_at);
+  return rows;
+}
+function renderStats(){
+  const rows = statRows();
+  const sum = arr => arr.reduce((a, r) => a + Number(r.amount || 0), 0);
+  const zhong = rows.filter(r => r.house === '忠社');
+  const xiao = rows.filter(r => r.house === '孝社');
+  const unsettled = rows.filter(r => !r.settled_at);
+  $('sum_total').textContent = money(sum(rows));
+  $('sum_count').textContent = rows.length + ' 張單';
+  $('sum_zhong').textContent = money(sum(zhong));
+  $('sum_zhong_n').textContent = zhong.length + ' 張單';
+  $('sum_xiao').textContent = money(sum(xiao));
+  $('sum_xiao_n').textContent = xiao.length + ' 張單';
+  $('sum_unsettled').textContent = money(sum(unsettled));
+  $('sum_unsettled_n').textContent = unsettled.length + ' 張單';
+
+  // 按舍友（按社別分組：忠社 → 孝社 → 其他）
+  const byP = {};
+  rows.forEach(r => {
+    const k = r.payee || '（未填）';
+    byP[k] = byP[k] || { total: 0, n: 0, house: r.house || '', unsettled: 0 };
+    byP[k].total += Number(r.amount || 0); byP[k].n++;
+    if (!r.settled_at) byP[k].unsettled += Number(r.amount || 0);
+  });
+  const pList = Object.entries(byP).sort((a, b) => b[1].total - a[1].total);
+  const pMax = pList.length ? pList[0][1].total : 0;
+  const payeeRow = ([name, v]) => {
+    const pct = pMax ? Math.max(4, Math.round(v.total / pMax * 100)) : 0;
+    const barCls = v.house === '孝社' ? 'bg-blue-400' : 'bg-rose-400';
+    return `
+    <div class="border-b border-slate-100 pb-1.5">
+      <div class="flex items-center justify-between gap-2">
+        <span class="min-w-0 truncate">${escapeHtml(name)} <span class="text-xs text-slate-400">${v.n} 張</span></span>
+        <span class="shrink-0 font-bold">${money(v.total)}${v.unsettled ? ` <span class="text-xs font-normal text-amber-600">（未結 ${money(v.unsettled)}）</span>` : ''}</span>
+      </div>
+      <div class="mt-1 h-2 rounded-full bg-slate-100 overflow-hidden"><div class="h-full rounded-full ${barCls}" style="width:${pct}%"></div></div>
+    </div>`;
+  };
+  const houseGroups = [['忠社', 'text-rose-600'], ['孝社', 'text-blue-600']];
+  let payeeHtml = '';
+  houseGroups.forEach(([h, cls]) => {
+    const items = pList.filter(([, v]) => v.house === h);
+    if (!items.length) return;
+    const hTotal = items.reduce((a, [, v]) => a + v.total, 0);
+    payeeHtml += `<div class="flex justify-between items-baseline mt-1 mb-1"><span class="text-xs font-bold ${cls}">■ ${h}</span><span class="text-xs font-bold ${cls}">${money(hTotal)}</span></div>` + items.map(payeeRow).join('');
+  });
+  const otherItems = pList.filter(([, v]) => v.house !== '忠社' && v.house !== '孝社');
+  if (otherItems.length) payeeHtml += '<div class="text-xs font-bold text-slate-500 mt-1 mb-1">■ 其他</div>' + otherItems.map(payeeRow).join('');
+  $('by_payee').innerHTML = payeeHtml || '<p class="text-slate-400">冇數據。</p>';
+
+  // 按同事（墊支人）
+  const byS = {};
+  rows.forEach(r => {
+    const k = r.staff || '（未填）';
+    byS[k] = byS[k] || { total: 0, n: 0, unsettled: 0 };
+    byS[k].total += Number(r.amount || 0); byS[k].n++;
+    if (!r.settled_at) byS[k].unsettled += Number(r.amount || 0);
+  });
+  const sList = Object.entries(byS).sort((a, b) => b[1].total - a[1].total);
+  const sMax = sList.length ? sList[0][1].total : 0;
+  $('by_staff').innerHTML = sList.length ? sList.map(([name, v]) => {
+    const pct = sMax ? Math.max(4, Math.round(v.total / sMax * 100)) : 0;
+    return `
+    <div class="border-b border-slate-100 pb-1.5">
+      <div class="flex items-center justify-between gap-2">
+        <span class="min-w-0 truncate">${escapeHtml(name)} <span class="text-xs text-slate-400">${v.n} 張</span></span>
+        <span class="shrink-0 font-bold">${money(v.total)}${v.unsettled ? ` <span class="text-xs font-normal text-amber-600">（未結 ${money(v.unsettled)}）</span>` : ''}</span>
+      </div>
+      <div class="mt-1 h-2 rounded-full bg-slate-100 overflow-hidden"><div class="h-full rounded-full bg-emerald-400" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('') : '<p class="text-slate-400">冇數據。</p>';
+
+  // 按類別
+  const byC = {};
+  rows.forEach(r => (r.cats || []).forEach(c => {
+    const k = c === '其他' && r.cat_other ? `其他（${r.cat_other}）` : c;
+    byC[k] = (byC[k] || 0) + Number(r.amount || 0);
+  }));
+  const cList = Object.entries(byC).sort((a, b) => b[1] - a[1]);
+  $('by_cat').innerHTML = cList.length ? cList.map(([c, v]) => `
+    <div class="flex items-center justify-between gap-2 border-b border-slate-100 pb-1.5">
+      <span>${escapeHtml(c)}</span><span class="font-bold">${money(v)}</span>
+    </div>`).join('') : '<p class="text-slate-400">冇數據。</p>';
+}
+
 function renderList(){
   const box = $('r_list');
+  renderStats();
   const rows = visibleRows();
   if (!rows.length) { box.innerHTML = '<p class="text-sm text-slate-500 text-center mt-8">冇符合嘅紀錄。</p>'; box._rows = rows; refreshBatchBtns(); return; }
   box.innerHTML = rows.map(r => `

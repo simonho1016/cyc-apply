@@ -198,8 +198,7 @@
           <button data-nav="/apply/" onclick="location.href='/apply/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-emerald-700 hover:bg-emerald-50 transition">💰 零用金申請</button>
           <button data-nav="/records/" id="t_records" onclick="location.href='/records/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-teal-700 hover:bg-teal-50 transition">🧾 支錢紀錄</button>
           <button data-nav="/vault/" id="t_vault" onclick="location.href='/vault/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-amber-700 hover:bg-amber-50 transition">🏦 夾萬・現存</button>
-          <button data-nav="/sign/" id="t_sign" onclick="location.href='/sign/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-violet-700 hover:bg-violet-50 transition">✍️ 月結簽署</button>
-          <button data-nav="/report/" id="t_report" onclick="location.href='/report/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-sky-700 hover:bg-sky-50 transition">📈 月結報告</button>
+          <button data-nav="/sign/" id="t_sign" onclick="location.href='/sign/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-violet-700 hover:bg-violet-50 transition">✍️ 月結簽署・報告</button>
           <button data-nav="/admin/" id="t_admin" onclick="location.href='/admin/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-indigo-600 hover:bg-indigo-50 transition">📊 後台管理</button>
           <button data-nav="/" onclick="location.href='/'" class="block w-full text-left px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 transition border-t border-slate-200">🏠 入口頁</button>
         </div>
@@ -569,15 +568,14 @@ function sessionEmail(){
 }
 const CAN_MANAGE_FILES = !['tutor', 'sw'].includes(sessionRole());   // 製作／存檔／下載文件權限
 
-// 按角色收放工具列：導師／社工只見申請、紀錄同夾萬；社工另外見月結簽署；後台管理只限 admin
+// 按角色收放工具列：導師／社工只見申請、紀錄同夾萬；社工另外見月結簽署・報告；後台管理限 admin 同管理級
 const ROLE_NOW = sessionRole();
 if (ROLE_NOW === 'tutor' || ROLE_NOW === 'sw') {
   $('roleHint').textContent = '填單 → 簽名 → 電子存檔';
   $('t_admin').classList.add('hidden');
-  $('t_report').classList.add('hidden');
-  if (ROLE_NOW === 'tutor') $('t_sign').classList.add('hidden');   // 社工入得月結簽署
+  if (ROLE_NOW === 'tutor') $('t_sign').classList.add('hidden');   // 社工起入得月結簽署・報告
   // t_vault 導師／社工都入得（唯讀睇數），唔收埋
-} else if (ROLE_NOW === 'cashier' || ROLE_NOW === 'manager') {
+} else if (ROLE_NOW === 'cashier') {
   $('t_admin').classList.add('hidden');
 }
 

@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>則仁中心 — 月結簽署</title>
-<meta name="apple-mobile-web-app-title" content="月結簽署">
+<title>則仁中心 — 月結簽署・報告</title>
+<meta name="apple-mobile-web-app-title" content="月結簽署・報告">
 <meta name="theme-color" content="#7c3aed">
 <link rel="icon" href="/icons/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png">
@@ -12,7 +12,7 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@400;700&family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -56,6 +56,61 @@
   }
   header h1 { text-shadow: 2px 2px 0 rgba(20,20,20,.12); }
   .sig-row { border: 2.5px solid var(--ink) !important; box-shadow: 3px 3px 0 rgba(20,20,20,.25) !important; }
+
+  /* ── 月結單（社別，舊系統格式，A4 直向列印） ── */
+  .ms-sheet { max-width: 820px; margin: 0 auto 24px; padding: 32px 28px; background: #fff; color: #000;
+    font-family: "Noto Serif TC", "Songti TC", "PMingLiU", serif; }
+  .ms-sheet h1 { text-align: center; font-size: 20px; font-weight: 700; margin: 0 0 2px; }
+  .ms-sheet h2 { text-align: center; font-size: 17px; font-weight: 700; margin: 0 0 14px; }
+  .ms-meta { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px; }
+  .ms-sec { font-weight: 700; font-size: 15px; margin: 10px 0 4px; }
+  .ms-acct { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 2px; }
+  .ms-acct small { font-size: 12px; }
+  .ms-warn { font-size: 12.5px; color: #b45309; margin: 4px 0; }
+  .ms-sheet table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+  .ms-sheet th, .ms-sheet td { border: 1.5px solid #000; padding: 3px 8px; font-size: 13.5px; }
+  .ms-sheet th { background: #fff; text-align: left; }
+  .ms-num { text-align: right; font-variant-numeric: tabular-nums; }
+  .ms-sig { display: flex; justify-content: space-between; margin-top: 26px; font-size: 14.5px; }
+  .ms-sig .col div { margin-bottom: 20px; }
+  .ms-line { display: inline-block; width: 190px; border-bottom: 1.5px solid #000; position: relative; vertical-align: bottom; }
+  .ms-line .sig-img { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); height: 32px; max-width: 150px; object-fit: contain; }
+  .ms-sig .col div:has(.sig-img) { padding-top: 20px; }   /* 有簽名嗰行預留空間，唔會壓住上一行 */
+
+  /* ── 舍友收支紀錄表（每人每月一版，report2 格式） ── */
+  .mr-sheet { page-break-after: always; width: 186mm; max-width: 186mm; }   /* 固定 A4 列印寬度，螢幕預覽同列印一致 */
+  .mr-head { display: flex; justify-content: space-between; font-size: 14.5px; font-weight: 700; margin-bottom: 4px; }
+  .mr-sheet table.tx { table-layout: fixed; }
+  .mr-sheet table.tx th, .mr-sheet table.tx td { padding: 2px 6px; font-size: 12.5px; height: 26px; vertical-align: middle; }
+  .mr-sheet table.tx td.desc { font-size: 11.5px; line-height: 1.35; }
+  .mr-sum { display: flex; justify-content: space-between; gap: 24px; margin-top: 14px; align-items: flex-start; }
+  .mr-sum table { width: 52%; }
+  .mr-sum th, .mr-sum td { text-align: center; font-size: 12.5px; }
+  .mr-sig { font-size: 14.5px; width: 47%; }
+  .mr-sig .row { display: flex; align-items: flex-end; justify-content: flex-end; gap: 4px; margin-bottom: 8px; }
+  .mr-sig .row.gap { margin-top: 18px; }
+  .mr-sig .row.full { justify-content: flex-start; }
+  .mr-sig .lbl { min-width: 5.2em; text-align: right; white-space: nowrap; }
+  .mr-sig .row.full .lbl { min-width: 0; text-align: left; }
+  .mr-sig small { font-size: 10px; white-space: nowrap; }
+  .mr-sig .line { display: inline-block; width: 140px; height: 1.25em; border-bottom: 1.5px solid #000; position: relative; vertical-align: bottom; flex-shrink: 0; }
+  .mr-sig .row.full .line { flex: 1; }
+  .mr-sig .brack { position: absolute; right: 0; bottom: 0; line-height: 1; font-size: 13px; }
+  .mr-sig .sig-img { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); height: 30px; max-width: 120px; object-fit: contain; }
+  .mr-sig .sig-img.staff { left: 0; transform: none; max-width: 88px; }   /* 職員簽名靠左，右邊留位畀（姓名） */
+  .mr-sig .line.wide { width: 178px; }   /* 職員已簽嗰行加長底線，簽名同（姓名）唔會互撞 */
+  .mr-sig .row:has(.sig-img) { padding-top: 26px; }   /* 有簽名嗰行預留空間，簽名唔會壓住上一行文字 */
+  .mr-sig .exempt-note { position: absolute; bottom: 2px; left: 2px; font-size: 10px; color: #555; white-space: nowrap; }
+
+  @media print {
+    @page { size: A4; margin: 12mm 12mm; }
+    body { background: #fff !important; background-image: none !important; }
+    body.print-statement > *:not(#sheetLayer) { display: none !important; }
+    body.print-statement #sheetLayer { position: static !important; overflow: visible !important; border: none !important; box-shadow: none !important; border-radius: 0 !important; }
+    body.print-statement #sheetLayer .no-print { display: none !important; }
+    .ms-sheet { max-width: none; padding: 0; margin: 0; box-shadow: none !important; border: none !important; }
+    .mr-sheet:last-child { page-break-after: auto; }
+  }
 </style>
 </head>
 <body class="text-slate-800">
@@ -86,8 +141,8 @@
 <header class="sticky top-0 z-20">
   <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
     <div class="min-w-0">
-      <h1 class="text-base sm:text-lg font-bold text-slate-900 leading-tight">香港扶幼會 則仁中心 · 月結簽署</h1>
-      <p id="roleHint" class="text-xs text-slate-500">舍友逐個喺電話簽署收支紀錄表，全部簽晒（或豁免）先列印月結</p>
+      <h1 class="text-base sm:text-lg font-bold text-slate-900 leading-tight">香港扶幼會 則仁中心 · 月結簽署・報告</h1>
+      <p id="roleHint" class="text-xs text-slate-500">舍友逐個喺電話簽署收支紀錄表，全部簽晒（或豁免）後喺本頁列印月結文件</p>
     </div>
     <div class="flex items-center gap-2 flex-wrap justify-end">
       <div class="relative shrink-0">
@@ -96,8 +151,7 @@
           <button data-nav="/apply/" onclick="location.href='/apply/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-emerald-700 hover:bg-emerald-50 transition">💰 零用金申請</button>
           <button data-nav="/records/" onclick="location.href='/records/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-teal-700 hover:bg-teal-50 transition">🧾 支錢紀錄</button>
           <button data-nav="/vault/" onclick="location.href='/vault/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-amber-700 hover:bg-amber-50 transition">🏦 夾萬・現存</button>
-          <button data-nav="/sign/" onclick="location.href='/sign/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-violet-700 hover:bg-violet-50 transition">✍️ 月結簽署</button>
-          <button data-nav="/report/" onclick="location.href='/report/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-sky-700 hover:bg-sky-50 transition">📈 月結報告</button>
+          <button data-nav="/sign/" onclick="location.href='/sign/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-violet-700 hover:bg-violet-50 transition">✍️ 月結簽署・報告</button>
           <button data-nav="/admin/" id="t_admin" onclick="location.href='/admin/'" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-indigo-600 hover:bg-indigo-50 transition">📊 後台管理</button>
           <button data-nav="/" onclick="location.href='/'" class="block w-full text-left px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 transition border-t border-slate-200">🏠 入口頁</button>
         </div>
@@ -123,7 +177,7 @@
 <main class="max-w-5xl mx-auto px-4 py-6 space-y-4">
 
   <div id="noPerm" class="hidden bg-white rounded-2xl p-6 text-center text-sm text-slate-500">
-    ⛔ 月結簽署只供「社工」、「管理夾萬同工」、「管理級」及 admin 使用。
+    ⛔ 月結簽署・報告只供「社工」、「管理夾萬同工」、「管理級」及 admin 使用。
   </div>
 
   <div id="signMain" class="hidden space-y-4">
@@ -140,14 +194,14 @@
         <button id="s_load" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-violet-600 hover:bg-violet-700 transition">載入名單</button>
         <button id="s_build" class="px-4 py-2 rounded-lg text-sm font-bold text-violet-700 bg-violet-50 hover:bg-violet-100 transition" title="將該社現有舍友加入簽署名單；已簽／已豁免嘅唔會被覆蓋">➕ 建立／補入名單</button>
       </div>
-      <p class="text-xs text-slate-500">流程：揀社別月份 → 建立名單 → 攞電話俾每位舍友<b>先睇當月收支紀錄，確認無誤後簽名</b>（未能簽嘅撳「豁免」）→ 下方三個職員簽署 → 全部完成後去「📈 月結報告」列印，簽名會自動印落相應欄位。</p>
+      <p class="text-xs text-slate-500">流程：揀社別月份 → 建立名單 → 攞電話俾每位舍友<b>先睇當月收支紀錄，確認無誤後簽名</b>（未能簽嘅撳「豁免」）→ 下方三個職員簽署 → 全部完成後喺本頁底部「月結報告」區列印，簽名會自動印落相應欄位。</p>
     </div>
 
     <!-- 進度 -->
     <div id="progCard" class="hidden bg-white rounded-2xl p-4 space-y-2">
       <div class="flex items-center justify-between flex-wrap gap-2">
         <span id="progText" class="text-sm font-bold text-slate-800"></span>
-        <button id="goReport" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 transition" disabled>🖨 去月結報告列印</button>
+        <button id="goReport" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 transition" disabled>🖨 到下方列印月結文件</button>
       </div>
       <div class="h-3 rounded-full bg-slate-100 overflow-hidden border border-slate-300">
         <div id="progBar" class="h-full bg-emerald-500 transition-all" style="width:0%"></div>
@@ -166,8 +220,63 @@
       </div>
       <div id="staffList" class="space-y-3"></div>
     </div>
+
+    <!-- ====================== 月結報告（管理夾萬同工／管理級／admin；社工唔見） ====================== -->
+    <div id="reportZone" class="space-y-6 border-t-4 border-dashed border-slate-300 pt-6">
+
+      <!-- 社別月結 -->
+      <div class="bg-white rounded-2xl p-5 space-y-3">
+        <h3 class="text-sm font-bold text-emerald-700 uppercase tracking-wide">🧾 零用月結紀錄（社別）</h3>
+        <p class="text-xs text-slate-500">輸出同舊系統一樣格式嘅社別月結單（戶口資料、戶口轉賬紀錄、舍友戶口紀錄、三級簽署欄）。<b>承前結存</b>由「結存起點」同過往流水計出。</p>
+        <div class="flex items-end gap-2 flex-wrap">
+          <label class="block"><span class="text-xs font-medium text-slate-500">社別</span>
+            <select id="ms_house" class="mt-1 rounded-lg px-3 py-2 text-sm outline-none">
+              <option>忠社</option><option>孝社</option>
+            </select></label>
+          <label class="block"><span class="text-xs font-medium text-slate-500">月份</span>
+            <input id="ms_month" type="month" class="mt-1 rounded-lg px-3 py-2 text-sm outline-none"></label>
+          <button id="ms_go" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition">預覽月結</button>
+        </div>
+      </div>
+
+      <!-- 舍友收支紀錄表 -->
+      <div class="bg-white rounded-2xl p-5 space-y-3">
+        <h3 class="text-sm font-bold text-teal-700 uppercase tracking-wide">📄 舍友零用金收支紀錄表</h3>
+        <p class="text-xs text-slate-500">每人每月一版 A4：承前結餘、逐筆存入／支出、結餘、分類小計同簽署欄，同舊系統「舍友零用金收支紀錄表」格式一樣。可以勾選個別舍友列印；內容多過一版會自動收窄，保證每人啱啱一頁。</p>
+        <div class="flex items-end gap-2 flex-wrap">
+          <label class="block"><span class="text-xs font-medium text-slate-500">社別</span>
+            <select id="mr_house" class="mt-1 rounded-lg px-3 py-2 text-sm outline-none">
+              <option>忠社</option><option>孝社</option>
+            </select></label>
+          <label class="block"><span class="text-xs font-medium text-slate-500">月份</span>
+            <input id="mr_month" type="month" class="mt-1 rounded-lg px-3 py-2 text-sm outline-none"></label>
+          <button id="mr_go" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 transition">預覽收支紀錄表</button>
+        </div>
+        <div>
+          <div class="flex items-center gap-2 mb-1.5">
+            <span class="text-xs font-medium text-slate-500">揀舍友（預設全選）：</span>
+            <button id="mr_all" class="px-2 py-0.5 rounded text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">全選</button>
+            <button id="mr_none" class="px-2 py-0.5 rounded text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">全唔選</button>
+          </div>
+          <div id="mr_members" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 text-sm border-2 border-slate-900 rounded-xl overflow-hidden"></div>
+        </div>
+      </div>
+
+    </div>
   </div>
 </main>
+
+<!-- 預覽／列印層 -->
+<div id="sheetLayer" class="hidden fixed inset-0 z-50 bg-white overflow-y-auto">
+  <div class="no-print sticky top-0 bg-white/95 backdrop-blur border-b border-slate-200 px-4 py-2 flex items-center justify-between z-10">
+    <span class="text-sm text-slate-500">預覽 — 撳「列印」會輸出晒入面所有頁</span>
+    <div class="flex gap-2">
+      <button id="sheet_print" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 transition">🖨️ 列印</button>
+      <button id="sheet_close" class="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">關閉</button>
+    </div>
+  </div>
+  <div id="sheetBody"></div>
+</div>
 
 <!-- ====================== 簽名板（全螢幕橫向，同支錢頁一致） ====================== -->
 <div id="signModal" class="fixed inset-0 z-50 hidden">
@@ -290,12 +399,17 @@ function sessionEmail(){
   } catch { return ''; }
 }
 const ROLE_NOW = sessionRole();
+const CAN_REPORT = ['admin', 'manager', 'cashier'].includes(ROLE_NOW);   // 社工只簽「社工簽署」，唔見月結報告區
 if (ROLE_NOW === 'tutor') {
   $('noPerm').classList.remove('hidden');
   $('t_admin').classList.add('hidden');
 } else {
   $('signMain').classList.remove('hidden');
-  if (ROLE_NOW !== 'admin') $('t_admin').classList.add('hidden');
+  if (ROLE_NOW !== 'admin' && ROLE_NOW !== 'manager') $('t_admin').classList.add('hidden');
+  if (!CAN_REPORT) {
+    $('reportZone').classList.add('hidden');
+    $('goReport').classList.add('hidden');
+  }
 }
 const SIM_NOW = simInfo();
 if (SIM_NOW) {
@@ -390,15 +504,16 @@ const STAFF_SLOTS = [
   { slot: 'reviewer', label: '審核職員', hint: '須由「管理級」同事簽署' }
 ];
 function houseKeyNow(){ return $('s_house').value === '孝社' ? 'xiao' : 'zhong'; }
-// 該社被指派嘅管理夾萬同工（負責職員括號預期姓名）
-function expectedOfficers(){
-  const hk = houseKeyNow();
+function houseKey(h){ return h === '孝社' ? 'xiao' : 'zhong'; }
+// 指定社別被指派嘅管理夾萬同工（負責職員括號預期姓名；收支紀錄表「經手人」都係佢哋）
+function officersOf(hk){
   return Object.keys(ROLES).filter(em => {
     if (ROLES[em] !== 'cashier') return false;
-    const c = CLOUD_STAFF_DIR[em.toLowerCase()];
+    const c = CLOUD_STAFF_DIR[(em || '').toLowerCase()];
     return c && !c.deleted && c.house === hk;
   }).map(staffNameOf);
 }
+function expectedOfficers(){ return officersOf(houseKeyNow()); }
 function canSignSlot(slot){
   if (ROLE_NOW === 'admin') return true;   // Admin 可以簽晒三個位
   if (slot === 'social') return ROLE_NOW === 'sw';
@@ -547,8 +662,12 @@ $('s_load').addEventListener('click', loadSignRows);
 $('s_house').addEventListener('change', loadSignRows);
 $('s_month').addEventListener('change', loadSignRows);
 $('goReport').addEventListener('click', () => {
-  const hk = $('s_house').value === '孝社' ? 'xiao' : 'zhong';
-  location.href = `/report/?house=${hk}&month=${encodeURIComponent($('s_month').value)}`;
+  // 同頁底部就係月結報告區：同步社別月份再捲落去
+  const house = $('s_house').value, month = $('s_month').value;
+  $('ms_house').value = house; $('mr_house').value = house;
+  if (month) { $('ms_month').value = month; $('mr_month').value = month; }
+  loadMemberPicker();
+  $('reportZone').scrollIntoView({ behavior: 'smooth' });
 });
 
 // ---- 名單操作 ----
@@ -875,15 +994,412 @@ $('signOk').addEventListener('click', () => {
 });
 $('signCancel').addEventListener('click', () => closeSignPad(null));
 
+// ====================== 月結報告產生器（由原 /report/ 頁搬入；管理夾萬同工／管理級／admin 用） ======================
+async function getSettingValue(key){
+  const { data, error } = await sb.from('settings').select('value').eq('key', key).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ? data.value : null;
+}
+async function getSafeVault(){
+  const v = await getSettingValue('safe_vault');
+  if (v && typeof v === 'object') return { init: true, zhong_big: +v.zhong_big || 0, zhong_small: +v.zhong_small || 0, xiao_big: +v.xiao_big || 0, xiao_small: +v.xiao_small || 0 };
+  return { init: false, zhong_big: 0, zhong_small: 0, xiao_big: 0, xiao_small: 0 };
+}
+const fmtD = d => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+const fmtDT = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+
+async function fetchLedger(hk, end){
+  const { data, error } = await sb.from('ledger').select('*').eq('house', hk)
+    .lt('created_at', end.toISOString()).order('created_at', { ascending: true }).limit(10000);
+  if (error) throw new Error(error.message + (/relation|schema cache|does not exist/i.test(error.message) ? '（ledger 表未開，請去 Supabase SQL Editor 開表）' : ''));
+  return data || [];
+}
+async function memberList(houseName, all){
+  let base = null;
+  try {
+    const membersDb = await getSettingValue('members');
+    if (membersDb && Array.isArray(membersDb[houseName]) && membersDb[houseName].length) base = membersDb[houseName];
+  } catch { /* 用預設名單 */ }
+  if (!base) base = DEFAULT_MEMBERS[houseName] || [];
+  const list = base.map(mm => ({ id: mm.id || mm.name, name: mm.name, exited: !!mm.exited }));
+  const known = new Set(list.map(mm => mm.id));
+  all.forEach(r => {
+    if (r.member_id && !known.has(r.member_id)) { known.add(r.member_id); list.push({ id: r.member_id, name: r.member_name || r.member_id, exited: false }); }
+  });
+  return list;
+}
+
+// ====================== 社別月結（舊系統格式） ======================
+async function buildStatement(houseName, ym){
+  const hk = houseKey(houseName);
+  const [y, m] = ym.split('-').map(Number);
+  const start = new Date(y, m - 1, 1), end = new Date(y, m, 1);
+  const all = await fetchLedger(hk, end);
+  const before = [], during = [];
+  all.forEach(r => (new Date(r.created_at) < start ? before : during).push(r));
+  const list = await memberList(houseName, all);
+  const mRows = list.map(mm => {
+    const myB = before.filter(r => r.member_id === mm.id && r.member_bal_after !== null && r.member_bal_after !== undefined);
+    const opening = myB.length ? Number(myB[myB.length - 1].member_bal_after) : 0;
+    let dep = 0, exp = 0; const receipts = [];
+    during.filter(r => r.member_id === mm.id).forEach(r => {
+      if (r.kind === 'deposit') { dep = r2(dep + Number(r.member_delta || 0)); if (r.receipt_no) receipts.push(r.receipt_no); }
+      else if (r.kind === 'expense') exp = r2(exp - Number(r.member_delta || 0));
+      else if (r.kind === 'rollback') exp = r2(exp - Number(r.member_delta || 0));
+      else if (r.kind === 'transfer_in') dep = r2(dep + Number(r.member_delta || 0));    // 轉社轉入當存入
+      else if (r.kind === 'transfer_out') exp = r2(exp - Number(r.member_delta || 0));   // 轉社轉出當支出
+    });
+    return { ...mm, opening, dep, exp, closing: r2(opening + dep - exp), receipts };
+  }).filter(r => !(r.exited && r.opening === 0 && r.dep === 0 && r.exp === 0));   // 已退出＋冇結存冇活動唔列出
+  const acctFallback = !(all.some(r => r.account === 'big') && all.some(r => r.account === 'small'));
+  function accBal(a){
+    const ar = all.filter(r => r.account === a && r.account_bal_after !== null && r.account_bal_after !== undefined);
+    return ar.length ? Number(ar[ar.length - 1].account_bal_after) : null;
+  }
+  let bigBal = accBal('big'), smallBal = accBal('small');
+  if (bigBal === null || smallBal === null) {
+    const v = await getSafeVault();
+    if (v.init) { if (bigBal === null) bigBal = v[hk + '_big']; if (smallBal === null) smallBal = v[hk + '_small']; }
+  }
+  const xfers = during.filter(r => r.kind === 'transfer' && r.account === 'big');
+  return {
+    houseName, hk, y, m, start, end, mRows, xfers, bigBal, smallBal, acctFallback,
+    totOpen: r2(mRows.reduce((a, r) => a + r.opening, 0)),
+    totIn:   r2(mRows.reduce((a, r) => a + r.dep, 0)),
+    totOut:  r2(mRows.reduce((a, r) => a + r.exp, 0)),
+    totClose: r2(mRows.reduce((a, r) => a + r.closing, 0))
+  };
+}
+
+function statementHtml(st){
+  const accPre = st.hk === 'xiao' ? '孝' : '忠';
+  const totalAcct = (st.bigBal !== null && st.smallBal !== null) ? fmtMoney(r2(st.bigBal + st.smallBal)) : '—';
+  const xferRows = st.xfers.map(x => `
+    <tr><td>${fmtDT(new Date(x.created_at))}</td><td>${accPre}_現存現金</td><td>${accPre}_代管現金</td>
+      <td class="ms-num">${fmtMoney(x.amount)}</td><td>${escapeHtml(x.note || '')}</td><td>${escapeHtml(x.staff || '')}</td><td>${escapeHtml(x.staff2 || '')}</td></tr>`).join('');
+  const blankN = Math.max(0, 27 - st.mRows.length);
+  const memRows = st.mRows.map(r => `
+    <tr><td>${escapeHtml(r.id)}</td><td>${escapeHtml(r.name)}</td>
+      <td class="ms-num">${fmtMoney(r.opening)}</td><td class="ms-num">${fmtMoney(r.dep)}</td>
+      <td class="ms-num">${fmtMoney(r.exp)}</td><td class="ms-num">${fmtMoney(r.closing)}</td>
+      <td>${r.receipts.map(escapeHtml).join(', ')}</td></tr>`).join('')
+    + Array.from({ length: blankN }, () => '<tr>' + '<td>&nbsp;</td>'.repeat(7) + '</tr>').join('');
+  return `<div class="ms-sheet">
+    <h1>香港扶幼會 香港扶幼會則仁中心</h1>
+    <h2>零用月結紀錄(社別)</h2>
+    <div class="ms-meta"><span>社別︰${st.houseName}　${st.y} 年 ${st.m} 月份</span><span>時段︰${fmtD(st.start)}–${fmtD(new Date(st.end.getTime() - 86400000))}</span></div>
+    <div class="ms-sec">戶口資料</div>
+    <div class="ms-acct"><span>${accPre}_現存現金<small>結餘：</small><b>$${st.bigBal !== null ? fmtMoney(st.bigBal) : '—'}</b></span>
+      <span>${accPre}_代管現金<small>結餘：</small><b>$${st.smallBal !== null ? fmtMoney(st.smallBal) : '—'}</b></span>
+      <span>總金額︰<b>$${totalAcct}</b></span></div>
+    <div class="ms-acct"><span>時段內支出︰<b>$${fmtMoney(st.totOut)}</b></span><span>時段內存入︰<b>$${fmtMoney(st.totIn)}</b></span></div>
+    ${st.acctFallback ? '<div class="ms-warn">⚠️ 戶口結餘未見流水記錄，以上顯示現時夾萬數作參考；請先去「🏦 夾萬・現存」設定結存起點。</div>' : ''}
+    <div class="ms-sec">戶口轉賬紀錄</div>
+    <table><thead><tr><th>日期/時間</th><th>轉出戶口</th><th>轉入戶口</th><th class="ms-num">金額</th><th>備註</th><th>轉賬人</th><th>收款人</th></tr></thead>
+      <tbody>${xferRows}</tbody></table>
+    <div class="ms-sec">舍友戶口紀錄</div>
+    <table><thead><tr><th>舍友編號</th><th>姓名</th><th class="ms-num">承前結存</th><th class="ms-num">時段內存入</th><th class="ms-num">時段內支出</th><th class="ms-num">結存</th><th>備註/收款編號</th></tr></thead>
+      <tbody>${memRows}
+      <tr><td colspan="2"></td><td class="ms-num"><b>${fmtMoney(st.totOpen)}</b></td><td class="ms-num"><b>${fmtMoney(st.totIn)}</b></td><td class="ms-num"><b>${fmtMoney(st.totOut)}</b></td><td class="ms-num"><b>${fmtMoney(st.totClose)}</b></td><td></td></tr></tbody></table>
+    <div class="ms-sig">
+      <div class="col">
+        <div>負責人姓名及簽署 : （${STAFF_SIG.officer ? escapeHtml(STAFF_SIG.officer.staff_name || '') : '　　　　'}）<span class="ms-line">${STAFF_SIG.officer ? `<img class="sig-img" src="${STAFF_SIG.officer.signature}" alt="">` : ''}</span></div>
+        <div>審核人姓名及簽署 : （${STAFF_SIG.reviewer ? escapeHtml(STAFF_SIG.reviewer.staff_name || '') : '　　　　'}）<span class="ms-line">${STAFF_SIG.reviewer ? `<img class="sig-img" src="${STAFF_SIG.reviewer.signature}" alt="">` : ''}</span></div>
+        <div>院長姓名及簽署 : （　　　　）<span class="ms-line"></span></div>
+      </div>
+      <div class="col">
+        <div>簽署日期 : <span class="ms-line"></span></div>
+        <div>簽署日期 : <span class="ms-line"></span></div>
+        <div>簽署日期 : <span class="ms-line"></span></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ====================== 舍友零用金收支紀錄表（每人每月一版） ======================
+const SUM_CATS = ['車費', '零用金', '活動費用', '其他'];
+
+async function buildMemberStatements(houseName, ym){
+  const hk = houseKey(houseName);
+  const [y, m] = ym.split('-').map(Number);
+  const start = new Date(y, m - 1, 1), end = new Date(y, m, 1);
+  const all = await fetchLedger(hk, end);
+  const before = [], during = [];
+  all.forEach(r => (new Date(r.created_at) < start ? before : during).push(r));
+  const list = await memberList(houseName, all);
+
+  // 月內支錢記錄：serial → 類別／備註（支出嗰行嘅「類別/備註」欄用）
+  const { data: apps, error: aerr } = await sb.from('applications').select('serial,cats,cat_other,remark,payee_id')
+    .eq('house', houseName).gte('created_at', start.toISOString()).lt('created_at', end.toISOString()).limit(5000);
+  if (aerr) throw new Error(aerr.message);
+  const appBySerial = {};
+  (apps || []).forEach(a => { if (a.serial) appBySerial[a.serial] = a; });
+
+  return list.map(mm => {
+    const myB = before.filter(r => r.member_id === mm.id && r.member_bal_after !== null && r.member_bal_after !== undefined);
+    const opening = myB.length ? Number(myB[myB.length - 1].member_bal_after) : 0;
+    let bal = opening, totIn = 0, totOut = 0;
+    const catSum = { '車費': 0, '零用金': 0, '活動費用': 0, '其他': 0 };
+    const txns = [];
+    during.filter(r => r.member_id === mm.id).forEach(r => {
+      const d = new Date(r.created_at);
+      const delta = Number(r.member_delta || 0);
+      if (r.kind === 'deposit') {
+        bal = r2(bal + delta); totIn = r2(totIn + delta);
+        txns.push({ d, desc: escapeHtml(r.note || '存入') + (r.receipt_no ? `<br>${escapeHtml(r.receipt_no)}` : ''),
+          in: delta, out: null, bal, staff: r.staff || '', payer: '' });
+      } else if (r.kind === 'expense') {
+        const amt = -delta || Number(r.amount || 0);
+        bal = r2(bal - amt); totOut = r2(totOut + amt);
+        const app = appBySerial[r.serial || ''];
+        const cats = app && app.cats && app.cats.length ? app.cats : ['其他'];
+        const cat = cats[0];
+        catSum[cat] = r2((catSum[cat] || 0) + amt);
+        const bits = [escapeHtml(cats.join('、'))];
+        if (app && app.cat_other) bits.push(escapeHtml(app.cat_other));
+        if (app && app.remark) bits.push(escapeHtml(app.remark));
+        if (r.serial) bits.push('#' + escapeHtml(r.serial));
+        txns.push({ d, desc: bits.join('　'), in: null, out: amt, bal, staff: r.staff || '', payer: mm.name });
+      } else if (r.kind === 'rollback') {
+        const amt = delta || Number(r.amount || 0);
+        bal = r2(bal + amt); totOut = r2(totOut - amt);
+        txns.push({ d, desc: '刪單回補' + (r.serial ? '　#' + escapeHtml(r.serial) : ''), in: amt, out: null, bal, staff: r.staff || '', payer: '' });
+      } else if (r.kind === 'transfer_in') {
+        bal = r2(bal + delta); totIn = r2(totIn + delta);
+        txns.push({ d, desc: escapeHtml(r.note || '轉社轉入'), in: delta, out: null, bal, staff: r.staff || '', payer: '' });
+      } else if (r.kind === 'transfer_out') {
+        const amt = -delta || Number(r.amount || 0);
+        bal = r2(bal - amt); totOut = r2(totOut + amt);
+        txns.push({ d, desc: escapeHtml(r.note || '轉社轉出'), in: null, out: amt, bal, staff: r.staff || '', payer: '' });
+      }
+      // settle 行唔影響舍友結存（支錢嗰陣已扣），唔列入舍友收支表；轉社行唔入分類小計
+    });
+    return { ...mm, houseName, y, m, start, end, opening, txns, totIn, totOut, closing: r2(opening + totIn - totOut), catSum };
+  }).filter(r => !(r.exited && r.opening === 0 && !r.txns.length));   // 已退出＋冇結存冇活動唔列出
+}
+
+function memberSheetHtml(st){
+  const ROWS = 21;   // 交易行連承前結餘填到咁多行，夠晒一版 A4
+  // 經手人必然係該社夾萬負責同事（管理夾萬同工），冇例外；未指派就先顯示實際經手同事兜底
+  const officerTxt = officersOf(houseKey(st.houseName)).join('、');
+  // 舍友電子簽署（report_sign）：已簽 → 簽名圖；豁免 → 標註原因；冇記錄 → 留空橫線
+  const sg = SIG_MAP[st.id];
+  const sigLine = sg && sg.status === 'signed' && sg.signature
+    ? `<span class="line"><img class="sig-img" src="${sg.signature}" alt=""></span>`
+    : sg && sg.status === 'exempt'
+      ? `<span class="line"><span class="exempt-note">豁免電子簽署${sg.exempt_note ? '（' + escapeHtml(sg.exempt_note) + '）' : ''}</span></span>`
+      : '<span class="line"></span>';
+  const txRows = st.txns.map(t => `
+    <tr><td>${fmtDHM(t.d)}</td><td class="desc">${t.desc}</td>
+      <td class="ms-num">${t.in !== null ? fmtMoney(t.in) : ''}</td>
+      <td class="ms-num">${t.out !== null ? fmtMoney(t.out) : ''}</td>
+      <td class="ms-num">${fmtMoney(t.bal)}</td>
+      <td>${escapeHtml(officerTxt || t.staff)}</td><td>${escapeHtml(t.payer)}</td></tr>`).join('');
+  const blankN = Math.max(0, ROWS - 1 - st.txns.length);
+  const blanks = Array.from({ length: blankN }, () => '<tr>' + '<td>&nbsp;</td>'.repeat(7) + '</tr>').join('');
+  const sumRows = [['存入', fmtMoney(st.totIn), '']]
+    .concat(SUM_CATS.map(c => [c, '', fmtMoney(st.catSum[c] || 0)]))
+    .map((row, i) => `<tr><td>${i + 1}</td><td>${row[0]}</td><td class="ms-num">${row[1]}</td><td class="ms-num">${row[2]}</td>${i === 0 ? `<td rowspan="${SUM_CATS.length + 1}" class="ms-num" style="vertical-align:bottom;"><b>$${fmtMoney(st.closing)}</b></td>` : ''}</tr>`).join('');
+  return `<div class="ms-sheet mr-sheet">
+    <h1>香港扶幼會 香港扶幼會則仁中心</h1>
+    <h2>舍友零用金收支紀錄表</h2>
+    <div class="mr-head"><span>姓名：${escapeHtml(st.id)} ${escapeHtml(st.name)}（${st.houseName}）</span><span>時段：${fmtD(st.start)} – ${fmtD(new Date(st.end.getTime() - 86400000))}</span></div>
+    <table class="tx"><thead><tr>
+      <th style="width:17%;">日期 時間</th><th>類別 / 備註</th>
+      <th style="width:9%;" class="ms-num">存入</th><th style="width:9%;" class="ms-num">支出</th>
+      <th style="width:11%;" class="ms-num">結餘</th><th style="width:10%;">經手人</th><th style="width:10%;">支取人</th>
+    </tr></thead><tbody>
+      <tr><td>${fmtD(st.start)}</td><td class="desc">承前結餘</td><td></td><td></td><td class="ms-num">${fmtMoney(st.opening)}</td><td></td><td></td></tr>
+      ${txRows}${blanks}
+    </tbody></table>
+    <div class="mr-sum">
+      <table><thead><tr><th style="width:12%;"></th><th>項目</th><th>存入小計</th><th>支出小計</th><th>戶口結餘</th></tr></thead>
+      <tbody>${sumRows}
+        <tr><td colspan="2"><b>總計</b></td><td class="ms-num"><b>$${fmtMoney(st.totIn)}</b></td><td class="ms-num"><b>$${fmtMoney(st.totOut)}</b></td><td class="ms-num"><b>$${fmtMoney(st.closing)}</b></td></tr>
+      </tbody></table>
+      <div class="mr-sig">
+        <div class="row full"><span class="lbl">舍友簽署：</span>${sigLine}</div>
+        ${staffRow('負責職員：', 'officer')}
+        ${staffRow('審核職員：', 'reviewer')}
+        ${staffRow('社工：', 'social', true)}
+      </div>
+    </div>
+  </div>`;
+}
+
+// ====================== 月結報告操作 ======================
+let SIG_MAP = {};   // 舍友電子簽署（report_sign：member_id → row），memberSheetHtml 嵌入用
+let STAFF_SIG = {}; // 職員簽署（report_staff_sign：slot → row；social 社工／officer 負責職員／reviewer 審核職員）
+let staffSignOn = true;   // report_staff_sign 表未開通時 false：退回舊行為（唔閘列印、唔嵌入）
+const SLOT_LABEL = { social: '社工簽署', officer: '負責職員', reviewer: '審核職員' };
+// 職員簽名行：已簽→簽名圖（靠左）＋括號姓名；未簽→空線
+function staffLine(slot){
+  const r = STAFF_SIG[slot];
+  return r && r.signature
+    ? `<span class="line wide"><img class="sig-img staff" src="${r.signature}" alt=""><span class="brack">（${escapeHtml(r.staff_name || '')}）</span></span>`
+    : '<span class="line"><span class="brack">（　　）</span></span>';
+}
+// 職員行（已簽就唔使再顯示「（姓名及簽署）」提示字，騰位畀簽名）
+function staffRow(lbl, slot, gap){
+  const signed = !!(STAFF_SIG[slot] && STAFF_SIG[slot].signature);
+  return `<div class="row${gap ? ' gap' : ''}"><span class="lbl">${lbl}</span>${signed ? '' : '<small>（姓名及簽署）</small>'}${staffLine(slot)}</div>`;
+}
+async function loadStaffSigns(house, ym){
+  STAFF_SIG = {};
+  try {
+    const { data, error } = await sb.from('report_staff_sign').select('slot,staff_name,signature').eq('house', house).eq('month', ym).limit(10);
+    if (error) { staffSignOn = false; return false; }
+    staffSignOn = true;
+    (data || []).forEach(r => { if (r.signature) STAFF_SIG[r.slot] = r; });
+    return true;
+  } catch { staffSignOn = false; return false; }
+}
+function missingStaffSlots(){ return staffSignOn ? Object.keys(SLOT_LABEL).filter(sl => !STAFF_SIG[sl]) : []; }
+
+// ---- 舍友選擇器 ----
+async function loadMemberPicker(){
+  const house = $('mr_house').value;
+  const box = $('mr_members');
+  box.innerHTML = '<span class="text-xs text-slate-400">載入名單中…</span>';
+  let base = null;
+  try {
+    const m = await getSettingValue('members');
+    if (m && Array.isArray(m[house]) && m[house].length) base = m[house];
+  } catch { /* 用預設名單 */ }
+  if (!base) base = DEFAULT_MEMBERS[house] || [];
+  box.innerHTML = base.map(mm => `
+    <label class="flex items-center gap-2 px-3 py-2 border border-slate-300 cursor-pointer select-none transition hover:bg-teal-50 ${mm.exited ? 'opacity-50 bg-slate-50' : ''}">
+      <input type="checkbox" class="mr_pick accent-teal-600 w-4 h-4 shrink-0" value="${escapeHtml(mm.id || mm.name)}" checked>
+      <span class="min-w-0 truncate"><b class="font-mono text-xs text-slate-500">${escapeHtml(mm.id || '')}</b> ${escapeHtml(mm.name)}${mm.exited ? ' <span class="text-xs text-slate-400">（已退出）</span>' : ''}</span>
+    </label>`).join('');
+}
+$('mr_house').addEventListener('change', loadMemberPicker);
+$('mr_all').addEventListener('click', () => document.querySelectorAll('.mr_pick').forEach(c => c.checked = true));
+$('mr_none').addEventListener('click', () => document.querySelectorAll('.mr_pick').forEach(c => c.checked = false));
+
+// ---- A4 自動收窄：內容高過一版就按比例縮細，保證每人一頁 ----
+const A4_PRINT_H = Math.round(273 * 96 / 25.4);   // A4 297mm 減上下邊距 24mm ≈ 1032px
+function fitSheets(){
+  document.querySelectorAll('#sheetBody .mr-sheet').forEach(el => {
+    el.style.transform = ''; el.style.height = '';
+    el.style.width = '186mm'; el.style.maxWidth = '186mm';
+    const hFull = el.scrollHeight;
+    const contentH = hFull - 64;   // 扣返螢幕 padding（列印時 padding=0）
+    if (contentH > A4_PRINT_H) {
+      const sc = A4_PRINT_H / contentH;
+      el.style.width = (186 / sc) + 'mm';       // 補返寬度，縮放後仍然用滿 A4 寬
+      el.style.maxWidth = (186 / sc) + 'mm';
+      el.style.transform = `scale(${sc})`;
+      el.style.transformOrigin = 'top left';
+      el.style.height = Math.ceil(hFull * sc) + 'px';
+    }
+  });
+}
+window.addEventListener('beforeprint', fitSheets);
+
+$('ms_go').addEventListener('click', async () => {
+  const ym = $('ms_month').value;
+  if (!ym) { alert('請揀月份。'); return; }
+  $('ms_go').disabled = true;
+  try {
+    const house = $('ms_house').value;
+    await loadStaffSigns(house, ym);
+    // 有電子簽署名單但職員簽署未齊 → 提示可選「先簽後印」
+    let hasRoster = false;
+    try {
+      const { data, error } = await sb.from('report_sign').select('member_id').eq('house', house).eq('month', ym).limit(1);
+      if (!error && data && data.length) hasRoster = true;
+    } catch { /* 表未開就當冇名單 */ }
+    const miss = missingStaffSlots();
+    if (hasRoster && miss.length) {
+      if (!confirm(`⚠️ 職員簽署未完成（仲缺：${miss.map(s => SLOT_LABEL[s]).join('、')}）。\n\n按「確定」照印（相應欄位留空）；\n按「取消」返回上方完成簽署。`)) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        $('ms_go').disabled = false;
+        return;
+      }
+    }
+    const st = await buildStatement(house, ym);
+    $('sheetBody').innerHTML = statementHtml(st);
+    $('sheetLayer').classList.remove('hidden');
+    document.body.classList.add('print-statement');
+  } catch (e) { alert('未能生成月結：' + e.message); }
+  $('ms_go').disabled = false;
+});
+
+$('mr_go').addEventListener('click', async () => {
+  const ym = $('mr_month').value;
+  if (!ym) { alert('請揀月份。'); return; }
+  const picked = new Set([...document.querySelectorAll('.mr_pick:checked')].map(c => c.value));
+  if (!picked.size) { alert('請至少揀一位舍友。'); return; }
+  const house = $('mr_house').value;
+  // ---- 電子簽署檢查：有簽署名單就一定要全部簽晒／豁免先印得；未建名單就提示可以「先簽後印」 ----
+  let signRows = null;
+  try {
+    const { data, error } = await sb.from('report_sign').select('member_id,member_name,status,signature,exempt_note,signed_at,staff').eq('house', house).eq('month', ym).limit(500);
+    if (!error) signRows = data || [];
+  } catch { /* 表未開就當冇名單 */ }
+  SIG_MAP = {};
+  await loadStaffSigns(house, ym);
+  if (signRows && signRows.length) {
+    signRows.forEach(s => { SIG_MAP[s.member_id] = s; });
+    const notDone = [...picked].filter(id => !SIG_MAP[id] || SIG_MAP[id].status === 'pending');
+    if (notDone.length) {
+      const names = notDone.map(id => {
+        const s = SIG_MAP[id];
+        const lb = [...document.querySelectorAll('.mr_pick')].find(c => c.value === id);
+        return (s && s.member_name) || (lb ? lb.closest('label').textContent.trim() : id);
+      });
+      alert(`✋ 仲有 ${notDone.length} 位舍友未簽署或豁免，未完成前唔可以列印：\n\n${names.join('、')}\n\n請喺上方簽署區完成簽署（未能電子簽署嘅可以豁免）。`);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    const miss = missingStaffSlots();
+    if (miss.length) {
+      alert(`✋ 職員簽署未完成（仲缺：${miss.map(s => SLOT_LABEL[s]).join('、')}），未完成前唔可以列印。\n\n請喺上方「職員簽署」區完成——每個職位簽一次就適用於所有表格。`);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    toast('全部舍友及職員已簽署，簽名會自動印落相應欄位。');
+  } else if (signRows && !signRows.length) {
+    if (!confirm('呢個月份未建立電子簽署名單。\n\n按「確定」直接列印（舍友簽署欄留空）；\n按「取消」返回上方建立名單先簽後印。')) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+  }
+  $('mr_go').disabled = true;
+  try {
+    const list = (await buildMemberStatements($('mr_house').value, ym)).filter(st => picked.has(st.id));
+    if (!list.length) { alert('揀咗嘅舍友冇資料。'); $('mr_go').disabled = false; return; }
+    $('sheetBody').innerHTML = list.map(memberSheetHtml).join('');
+    fitSheets();
+    $('sheetLayer').classList.remove('hidden');
+    document.body.classList.add('print-statement');
+    toast(`已生成 ${list.length} 位舍友嘅收支紀錄表，撳「列印」一次過印晒。`);
+  } catch (e) { alert('未能生成紀錄表：' + e.message); }
+  $('mr_go').disabled = false;
+});
+
+$('sheet_close').addEventListener('click', () => {
+  $('sheetLayer').classList.add('hidden');
+  document.body.classList.remove('print-statement');
+});
+$('sheet_print').addEventListener('click', () => window.print());
+
 // ---- 初始化 ----
 $('s_month').value = new Date().toLocaleDateString('sv').slice(0, 7);
+$('ms_month').value = new Date().toLocaleDateString('sv').slice(0, 7);
+$('mr_month').value = new Date().toLocaleDateString('sv').slice(0, 7);
 // URL 參數：?house=zhong|xiao&month=YYYY-MM
 try {
   const q = new URLSearchParams(location.search);
-  if (q.get('house')) $('s_house').value = q.get('house') === 'xiao' ? '孝社' : '忠社';
-  if (q.get('month')) $('s_month').value = q.get('month');
+  if (q.get('house')) {
+    $('s_house').value = q.get('house') === 'xiao' ? '孝社' : '忠社';
+    $('mr_house').value = $('s_house').value; $('ms_house').value = $('s_house').value;
+  }
+  if (q.get('month')) { $('s_month').value = q.get('month'); $('mr_month').value = q.get('month'); $('ms_month').value = q.get('month'); }
 } catch {}
 if (ROLE_NOW !== 'tutor') loadSignRows();
+if (CAN_REPORT) loadMemberPicker();
 </script>
 </body>
 </html>

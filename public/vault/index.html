@@ -130,21 +130,30 @@
           <div id="st_unsettled_n" class="text-xs text-amber-500 mt-0.5"></div>
         </div>
       </div>
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div class="rounded-xl border-2 border-emerald-200 bg-emerald-50/50 p-3">
-          <div class="text-xs text-emerald-600">本月結算 <span id="st_set_m_ym" class="text-emerald-400"></span></div>
-          <div id="st_set_m" class="text-xl font-black text-emerald-700 mt-0.5">—</div>
-          <div id="st_set_m_n" class="text-xs text-emerald-500 mt-0.5"></div>
+      <div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <button type="button" data-settle="m" class="settle-tab text-left rounded-xl border-2 border-emerald-200 bg-emerald-50/50 p-3 transition hover:bg-emerald-100/60">
+            <div class="text-xs text-emerald-600">本月結算 <span id="st_set_m_ym" class="text-emerald-400"></span></div>
+            <div id="st_set_m" class="text-xl font-black text-emerald-700 mt-0.5">—</div>
+            <div class="text-xs text-emerald-400 mt-0.5">撳一下睇明細 ▾</div>
+          </button>
+          <button type="button" data-settle="p" class="settle-tab text-left rounded-xl border-2 border-teal-200 bg-teal-50/50 p-3 transition hover:bg-teal-100/60">
+            <div class="text-xs text-teal-600">上月結算 <span id="st_set_p_ym" class="text-teal-400"></span></div>
+            <div id="st_set_p" class="text-xl font-black text-teal-700 mt-0.5">—</div>
+            <div class="text-xs text-teal-400 mt-0.5">撳一下睇明細 ▾</div>
+          </button>
+          <button type="button" data-settle="all" class="settle-tab text-left rounded-xl border-2 border-slate-300 bg-slate-50/50 p-3 transition hover:bg-slate-100/60">
+            <div class="text-xs text-slate-500">總結算（累計）</div>
+            <div id="st_set_all" class="text-xl font-black text-slate-800 mt-0.5">—</div>
+            <div class="text-xs text-slate-400 mt-0.5">撳一下睇明細 ▾</div>
+          </button>
         </div>
-        <div class="rounded-xl border-2 border-teal-200 bg-teal-50/50 p-3">
-          <div class="text-xs text-teal-600">上月結算 <span id="st_set_p_ym" class="text-teal-400"></span></div>
-          <div id="st_set_p" class="text-xl font-black text-teal-700 mt-0.5">—</div>
-          <div id="st_set_p_n" class="text-xs text-teal-500 mt-0.5"></div>
-        </div>
-        <div class="rounded-xl border-2 border-slate-300 bg-slate-50/50 p-3">
-          <div class="text-xs text-slate-500">總結算（累計）</div>
-          <div id="st_set_all" class="text-xl font-black text-slate-800 mt-0.5">—</div>
-          <div id="st_set_all_n" class="text-xs text-slate-400 mt-0.5"></div>
+        <div id="settleDetail" class="hidden mt-3 rounded-xl border-2 border-slate-200 bg-white p-4 space-y-2">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <span id="sd_title" class="text-sm font-bold text-slate-700"></span>
+            <span id="sd_sub" class="text-xs text-slate-400"></span>
+          </div>
+          <div id="sd_list" class="space-y-1.5 text-sm max-h-72 overflow-y-auto"></div>
         </div>
       </div>
       <p class="text-xs text-slate-400">未結算金額＝同事墊支咗、未由夾萬攞返嘅錢（「夾萬支付」嘅單會即時自動結算，唔計入）；結算由管理夾萬同工或 admin 喺「🧾 支錢紀錄」頁處理。結算分項按結算時間計：本月／上月／累計已結算金額。</p>
@@ -550,31 +559,55 @@ async function renderVault(){
       $('st_unsettled').textContent = '—';
       $('st_unsettled_n').textContent = '（結算欄位未開通）';
     }
-    // 結算分項：本月／上月／累計（按 settled_at 結算時間計）
+    // 結算分項：本月／上月／累計（按 settled_at 結算時間計）；按鈕式，撳開先顯示明細
     try {
-      const { data: setApps, error: setErr } = await sb.from('applications').select('amount,house,settled_at').not('settled_at', 'is', null).limit(5000);
+      const { data: setApps, error: setErr } = await sb.from('applications').select('amount,house,settled_at,settled_by,payee,payee_id,serial,safe_pay').not('settled_at', 'is', null).order('settled_at', { ascending: false }).limit(5000);
       if (setErr) throw new Error(setErr.message);
       const now = new Date(), p2 = n => String(n).padStart(2, '0');
       const curYm = `${now.getFullYear()}-${p2(now.getMonth() + 1)}`;
       const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       const prevYm = `${prev.getFullYear()}-${p2(prev.getMonth() + 1)}`;
-      const buck = { m: { t: 0, n: 0, zh: 0, xi: 0 }, p: { t: 0, n: 0, zh: 0, xi: 0 }, all: { t: 0, n: 0, zh: 0, xi: 0 } };
-      (setApps || []).forEach(r => {
-        const a = Number(r.amount || 0);
-        const ym = String(r.settled_at || '').slice(0, 7);
-        const add = b => { b.t = r2(b.t + a); b.n++; if (r.house === '忠社') b.zh = r2(b.zh + a); else if (r.house === '孝社') b.xi = r2(b.xi + a); };
-        add(buck.all);
-        if (ym === curYm) add(buck.m);
-        else if (ym === prevYm) add(buck.p);
-      });
-      const sub = b => `${b.n} 張單｜忠 ${money(b.zh)}｜孝 ${money(b.xi)}`;
+      const rows = setApps || [];
+      const SET_BUCKETS = {
+        m:   { label: `本月結算（${curYm}）`,  rows: rows.filter(r => String(r.settled_at || '').slice(0, 7) === curYm) },
+        p:   { label: `上月結算（${prevYm}）`, rows: rows.filter(r => String(r.settled_at || '').slice(0, 7) === prevYm) },
+        all: { label: '總結算（累計）',        rows }
+      };
+      const bucketSum = b => b.rows.reduce((a, r) => a + Number(r.amount || 0), 0);
       $('st_set_m_ym').textContent = `（${curYm}）`;
       $('st_set_p_ym').textContent = `（${prevYm}）`;
-      $('st_set_m').textContent = money(buck.m.t);  $('st_set_m_n').textContent = sub(buck.m);
-      $('st_set_p').textContent = money(buck.p.t);  $('st_set_p_n').textContent = sub(buck.p);
-      $('st_set_all').textContent = money(buck.all.t); $('st_set_all_n').textContent = sub(buck.all);
+      $('st_set_m').textContent = money(bucketSum(SET_BUCKETS.m));
+      $('st_set_p').textContent = money(bucketSum(SET_BUCKETS.p));
+      $('st_set_all').textContent = money(bucketSum(SET_BUCKETS.all));
+      window._settleBuckets = SET_BUCKETS;   // 按鈕事件只綁一次，數據永遠讀最新
+      // 按鈕切換：再撳同一個收埋；同一時間只開一個
+      let settleOpen = null;
+      const fmtSD = iso => { const d = new Date(iso), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; };
+      document.querySelectorAll('.settle-tab').forEach(btn => {
+        if (btn.dataset.bound) return;   // 呢段會隨重新載入跑多次，事件只綁一次（數據用最新 window._settleBuckets）
+        btn.dataset.bound = '1';
+        btn.addEventListener('click', () => {
+          const SET_BUCKETS = window._settleBuckets;
+          if (!SET_BUCKETS) return;
+          const k = btn.dataset.settle;
+          const det = $('settleDetail');
+          if (settleOpen === k) { settleOpen = null; det.classList.add('hidden'); return; }
+          settleOpen = k;
+          const b = SET_BUCKETS[k];
+          const zh = b.rows.filter(r => r.house === '忠社'), xi = b.rows.filter(r => r.house === '孝社');
+          const sumA = arr => arr.reduce((a, r) => a + Number(r.amount || 0), 0);
+          $('sd_title').textContent = `${b.label}：${money(bucketSum(b))}（${b.rows.length} 張單）`;
+          $('sd_sub').textContent = `忠社 ${money(sumA(zh))}（${zh.length} 張）｜孝社 ${money(sumA(xi))}（${xi.length} 張）`;
+          $('sd_list').innerHTML = b.rows.length ? b.rows.map(r => `
+            <div class="flex items-center justify-between gap-2 border-b border-slate-100 pb-1">
+              <span class="min-w-0 truncate">${escapeHtml(r.payee || '')} <span class="text-xs text-slate-400">${escapeHtml(r.payee_id || '')} · ${escapeHtml(r.house || '')}${r.serial ? ' · 序號 ' + escapeHtml(r.serial) : ''}${r.safe_pay ? ' · 🏦 夾萬支付' : ''}</span></span>
+              <span class="shrink-0 text-right"><b>${money(r.amount)}</b><span class="block text-xs text-slate-400">${fmtSD(r.settled_at)}${r.settled_by ? ' · 經手 ' + escapeHtml(r.settled_by) : ''}</span></span>
+            </div>`).join('') : '<p class="text-slate-400 text-center py-3">呢個時段冇結算記錄。</p>';
+          det.classList.remove('hidden');
+        });
+      });
     } catch {
-      $('st_set_m_n').textContent = '未能載入';
+      $('st_set_m').textContent = '—';
     }
   } catch {
     $('st_total_n').textContent = '未能載入';

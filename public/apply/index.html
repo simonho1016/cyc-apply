@@ -892,6 +892,19 @@ document.querySelectorAll('#f_cats input').forEach(cb => {
   $(id).addEventListener('input', renderForm);
 });
 
+// 支錢日期唔可以揀上個月或之前（避免影響已月結嘅月份）；違規即彈警告並重設返今日
+function dateInCurrentMonth(v){
+  return !!v && v.slice(0, 7) >= todayStr().slice(0, 7);
+}
+$('f_date').addEventListener('change', () => {
+  const v = $('f_date').value;
+  if (v && !dateInCurrentMonth(v)) {
+    alert('⚠️ 唔可以揀上個月或之前嘅日期\n\n支錢日期只可以係今個月（' + todayStr().slice(0, 7) + '）嘅日子，以免影響上個月嘅結算同月結。\n\n日期已重設為今日。');
+    $('f_date').value = todayStr();
+    renderForm();
+  }
+});
+
 function formData(){
   return {
     no: $('f_no').value.trim(), notion: $('f_notion').value.trim(),
@@ -1034,6 +1047,10 @@ function validateForm(){
   if (!d.amount || isNaN(d.amount) || parseFloat(d.amount) <= 0) { alert('請填寫有效金額。'); $('f_amount').focus(); return null; }
   if (!d.cats.length) { alert('請至少揀一個支錢類別。'); return null; }
   if (d.cats.includes('其他') && !d.catOther) { alert('已揀「其他」類別，請填寫原因說明。'); $('f_cat_other').focus(); return null; }
+  if (!dateInCurrentMonth(d.date)) {   // 再擋一次：上個月或之前嘅日期唔可以支錢
+    alert('⚠️ 唔可以揀上個月或之前嘅日期\n\n支錢日期只可以係今個月（' + todayStr().slice(0, 7) + '）嘅日子，以免影響上個月嘅結算同月結。');
+    $('f_date').value = todayStr(); renderForm(); $('f_date').focus(); return null;
+  }
   return d;
 }
 

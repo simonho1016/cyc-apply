@@ -130,7 +130,24 @@
           <div id="st_unsettled_n" class="text-xs text-amber-500 mt-0.5"></div>
         </div>
       </div>
-      <p class="text-xs text-slate-400">未結算金額＝同事墊支咗、未由夾萬攞返嘅錢（「夾萬支付」嘅單會即時自動結算，唔計入）；結算由管理夾萬同工或 admin 喺「🧾 支錢紀錄」頁處理。</p>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div class="rounded-xl border-2 border-emerald-200 bg-emerald-50/50 p-3">
+          <div class="text-xs text-emerald-600">本月結算 <span id="st_set_m_ym" class="text-emerald-400"></span></div>
+          <div id="st_set_m" class="text-xl font-black text-emerald-700 mt-0.5">—</div>
+          <div id="st_set_m_n" class="text-xs text-emerald-500 mt-0.5"></div>
+        </div>
+        <div class="rounded-xl border-2 border-teal-200 bg-teal-50/50 p-3">
+          <div class="text-xs text-teal-600">上月結算 <span id="st_set_p_ym" class="text-teal-400"></span></div>
+          <div id="st_set_p" class="text-xl font-black text-teal-700 mt-0.5">—</div>
+          <div id="st_set_p_n" class="text-xs text-teal-500 mt-0.5"></div>
+        </div>
+        <div class="rounded-xl border-2 border-slate-300 bg-slate-50/50 p-3">
+          <div class="text-xs text-slate-500">總結算（累計）</div>
+          <div id="st_set_all" class="text-xl font-black text-slate-800 mt-0.5">—</div>
+          <div id="st_set_all_n" class="text-xs text-slate-400 mt-0.5"></div>
+        </div>
+      </div>
+      <p class="text-xs text-slate-400">未結算金額＝同事墊支咗、未由夾萬攞返嘅錢（「夾萬支付」嘅單會即時自動結算，唔計入）；結算由管理夾萬同工或 admin 喺「🧾 支錢紀錄」頁處理。結算分項按結算時間計：本月／上月／累計已結算金額。</p>
     </div>
 
     <!-- 夾萬現存（admin 改數；管理級可過錢；管理夾萬同工／導師／社工唯讀） -->
@@ -532,6 +549,32 @@ async function renderVault(){
     } else {
       $('st_unsettled').textContent = '—';
       $('st_unsettled_n').textContent = '（結算欄位未開通）';
+    }
+    // 結算分項：本月／上月／累計（按 settled_at 結算時間計）
+    try {
+      const { data: setApps, error: setErr } = await sb.from('applications').select('amount,house,settled_at').not('settled_at', 'is', null).limit(5000);
+      if (setErr) throw new Error(setErr.message);
+      const now = new Date(), p2 = n => String(n).padStart(2, '0');
+      const curYm = `${now.getFullYear()}-${p2(now.getMonth() + 1)}`;
+      const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const prevYm = `${prev.getFullYear()}-${p2(prev.getMonth() + 1)}`;
+      const buck = { m: { t: 0, n: 0, zh: 0, xi: 0 }, p: { t: 0, n: 0, zh: 0, xi: 0 }, all: { t: 0, n: 0, zh: 0, xi: 0 } };
+      (setApps || []).forEach(r => {
+        const a = Number(r.amount || 0);
+        const ym = String(r.settled_at || '').slice(0, 7);
+        const add = b => { b.t = r2(b.t + a); b.n++; if (r.house === '忠社') b.zh = r2(b.zh + a); else if (r.house === '孝社') b.xi = r2(b.xi + a); };
+        add(buck.all);
+        if (ym === curYm) add(buck.m);
+        else if (ym === prevYm) add(buck.p);
+      });
+      const sub = b => `${b.n} 張單｜忠 ${money(b.zh)}｜孝 ${money(b.xi)}`;
+      $('st_set_m_ym').textContent = `（${curYm}）`;
+      $('st_set_p_ym').textContent = `（${prevYm}）`;
+      $('st_set_m').textContent = money(buck.m.t);  $('st_set_m_n').textContent = sub(buck.m);
+      $('st_set_p').textContent = money(buck.p.t);  $('st_set_p_n').textContent = sub(buck.p);
+      $('st_set_all').textContent = money(buck.all.t); $('st_set_all_n').textContent = sub(buck.all);
+    } catch {
+      $('st_set_m_n').textContent = '未能載入';
     }
   } catch {
     $('st_total_n').textContent = '未能載入';

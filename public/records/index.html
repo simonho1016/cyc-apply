@@ -148,9 +148,8 @@
 
   <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex items-center gap-3 flex-wrap">
     <div class="flex gap-2" id="tabs">
-      <button data-tab="all" class="tab-btn px-4 py-2 rounded-lg text-sm font-bold bg-teal-600 text-white transition">全部</button>
-      <button data-tab="unsettled" class="tab-btn px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">未結算</button>
-      <button data-tab="settled" class="tab-btn px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">已結算</button>
+      <button data-tab="unsettled" class="tab-btn px-4 py-2 rounded-lg text-sm font-bold bg-teal-600 text-white transition">⏳ 未結算</button>
+      <button data-tab="settled" class="tab-btn px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">✅ 已結算</button>
     </div>
     <select id="staffFilter" class="hidden px-3 py-2 rounded-lg text-sm text-slate-700"></select>
     <select id="f_house" class="px-3 py-2 rounded-lg text-sm text-slate-700">
@@ -178,22 +177,22 @@
     ⚠️ 你嘅帳戶未連結職員姓名，暫時睇唔到紀錄。請聯絡 admin 設定電郵對照。
   </div>
 
-  <!-- 支出統計（由後台搬入；按社別／日期／狀態篩選統計，職員篩選唔影響，全體同事可見） -->
+  <!-- 支出統計（由後台搬入；只統計未結算嘅單，方便管理夾萬同事知悉邊個支咗錢、邊個未攞返錢；職員篩選唔影響，全體同事可見） -->
   <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3">
     <div class="flex items-center justify-between flex-wrap gap-2">
-      <h3 class="text-sm font-bold text-teal-700 uppercase tracking-wide">📊 支出統計</h3>
-      <span class="text-xs text-slate-400">跟而家嘅「社別／日期／全部・未結算・已結算」篩選走（職員篩選唔影響統計）</span>
+      <h3 class="text-sm font-bold text-teal-700 uppercase tracking-wide">📊 支出統計（只計未結算）</h3>
+      <span class="text-xs text-slate-400">已結算嘅單唔計入統計；跟「社別／日期」篩選走（職員篩選唔影響統計）</span>
     </div>
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-      <div class="rounded-xl bg-slate-50 p-3" style="border:2px solid #141414;"><div class="text-xs text-slate-500">總支出</div><div id="sum_total" class="text-xl font-black text-slate-900 mt-0.5">$0.00</div><div id="sum_count" class="text-xs text-slate-400 mt-0.5">0 張單</div></div>
-      <div class="rounded-xl bg-rose-50 p-3" style="border:2px solid #141414;"><div class="text-xs text-slate-500">忠社</div><div id="sum_zhong" class="text-xl font-black text-rose-600 mt-0.5">$0.00</div><div id="sum_zhong_n" class="text-xs text-slate-400 mt-0.5">0 張單</div></div>
-      <div class="rounded-xl bg-blue-50 p-3" style="border:2px solid #141414;"><div class="text-xs text-slate-500">孝社</div><div id="sum_xiao" class="text-xl font-black text-blue-600 mt-0.5">$0.00</div><div id="sum_xiao_n" class="text-xs text-slate-400 mt-0.5">0 張單</div></div>
-      <div class="rounded-xl bg-amber-50 p-3" style="border:2px solid #141414;"><div class="text-xs text-slate-500">未結算金額</div><div id="sum_unsettled" class="text-xl font-black text-amber-600 mt-0.5">$0.00</div><div id="sum_unsettled_n" class="text-xs text-slate-400 mt-0.5">0 張單</div></div>
+      <div class="rounded-xl bg-amber-50 p-3" style="border:2px solid #141414;"><div class="text-xs text-slate-500">未結算總支出</div><div id="sum_total" class="text-xl font-black text-amber-600 mt-0.5">$0.00</div><div id="sum_count" class="text-xs text-slate-400 mt-0.5">0 張單</div></div>
+      <div class="rounded-xl bg-rose-50 p-3" style="border:2px solid #141414;"><div class="text-xs text-slate-500">忠社未結算</div><div id="sum_zhong" class="text-xl font-black text-rose-600 mt-0.5">$0.00</div><div id="sum_zhong_n" class="text-xs text-slate-400 mt-0.5">0 張單</div></div>
+      <div class="rounded-xl bg-blue-50 p-3" style="border:2px solid #141414;"><div class="text-xs text-slate-500">孝社未結算</div><div id="sum_xiao" class="text-xl font-black text-blue-600 mt-0.5">$0.00</div><div id="sum_xiao_n" class="text-xs text-slate-400 mt-0.5">0 張單</div></div>
+      <div class="rounded-xl bg-emerald-50 p-3" style="border:2px solid #141414;"><div class="text-xs text-slate-500">待結算同事（墊支未取返）</div><div id="sum_unsettled" class="text-xl font-black text-emerald-700 mt-0.5">0 人</div><div id="sum_unsettled_n" class="text-xs text-slate-400 mt-0.5">—</div></div>
     </div>
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
-      <div><h4 class="text-xs font-bold text-slate-500 mb-2">按舍友統計（按社別分類）</h4><div id="by_payee" class="text-sm space-y-2.5"></div></div>
-      <div><h4 class="text-xs font-bold text-slate-500 mb-2">按同事統計（墊支）</h4><div id="by_staff" class="text-sm space-y-2.5"></div></div>
-      <div><h4 class="text-xs font-bold text-slate-500 mb-2">按支出類別統計</h4><div id="by_cat" class="text-sm space-y-1.5"></div></div>
+      <div><h4 class="text-xs font-bold text-slate-500 mb-2">按舍友統計・未結算（按社別分類）</h4><div id="by_payee" class="text-sm space-y-2.5"></div></div>
+      <div><h4 class="text-xs font-bold text-slate-500 mb-2">按同事統計・墊支未取返</h4><div id="by_staff" class="text-sm space-y-2.5"></div></div>
+      <div><h4 class="text-xs font-bold text-slate-500 mb-2">按支出類別統計・未結算</h4><div id="by_cat" class="text-sm space-y-1.5"></div></div>
     </div>
   </div>
 
@@ -405,7 +404,7 @@ function fmtTime(iso){
 
 // ---- 紀錄列表 ----
 let allRows = [];
-let tabNow = 'all';
+let tabNow = 'unsettled';   // 預設未結算；「未結算」同「已結算」分頁顯示，唔會混埋
 
 function myStaffName(){ return EMAIL_STAFF_MAP[sessionEmail()] || ''; }
 
@@ -436,16 +435,14 @@ function settleBadge(r){
   return `<span class="rounded-full px-2.5 py-0.5 text-xs font-bold bg-amber-100 text-amber-700">⏳ 未結算</span>`;
 }
 
-// ---- 支出統計（由後台搬入）：按社別／日期／狀態篩選，職員篩選唔影響 ----
+// ---- 支出統計：只計未結算嘅單（已結算唔顯示），按社別／日期篩選，職員篩選唔影響 ----
 function statRows(){
-  let rows = allRows;
+  let rows = allRows.filter(r => !r.settled_at);   // 統計永遠只計未結算，唔跟分頁
   const h = $('f_house').value;
   if (h) rows = rows.filter(r => (r.house || '') === h);
   const from = $('f_from').value, to = $('f_to').value;
   if (from) rows = rows.filter(r => (r.decided_at || r.created_at || '') >= from);
   if (to) rows = rows.filter(r => (r.decided_at || r.created_at || '') <= to + 'T23:59:59');
-  if (tabNow === 'settled') rows = rows.filter(r => !!r.settled_at);
-  else if (tabNow === 'unsettled') rows = rows.filter(r => !r.settled_at);
   return rows;
 }
 function renderStats(){
@@ -453,23 +450,22 @@ function renderStats(){
   const sum = arr => arr.reduce((a, r) => a + Number(r.amount || 0), 0);
   const zhong = rows.filter(r => r.house === '忠社');
   const xiao = rows.filter(r => r.house === '孝社');
-  const unsettled = rows.filter(r => !r.settled_at);
+  const pendingStaff = [...new Set(rows.map(r => r.staff || '（未填）'))].sort();
   $('sum_total').textContent = money(sum(rows));
   $('sum_count').textContent = rows.length + ' 張單';
   $('sum_zhong').textContent = money(sum(zhong));
   $('sum_zhong_n').textContent = zhong.length + ' 張單';
   $('sum_xiao').textContent = money(sum(xiao));
   $('sum_xiao_n').textContent = xiao.length + ' 張單';
-  $('sum_unsettled').textContent = money(sum(unsettled));
-  $('sum_unsettled_n').textContent = unsettled.length + ' 張單';
+  $('sum_unsettled').textContent = pendingStaff.length + ' 人';
+  $('sum_unsettled_n').textContent = pendingStaff.length ? pendingStaff.join('、') : '全部已結算';
 
   // 按舍友（按社別分組：忠社 → 孝社 → 其他）
   const byP = {};
   rows.forEach(r => {
     const k = r.payee || '（未填）';
-    byP[k] = byP[k] || { total: 0, n: 0, house: r.house || '', unsettled: 0 };
+    byP[k] = byP[k] || { total: 0, n: 0, house: r.house || '' };
     byP[k].total += Number(r.amount || 0); byP[k].n++;
-    if (!r.settled_at) byP[k].unsettled += Number(r.amount || 0);
   });
   const pList = Object.entries(byP).sort((a, b) => b[1].total - a[1].total);
   const pMax = pList.length ? pList[0][1].total : 0;
@@ -480,7 +476,7 @@ function renderStats(){
     <div class="border-b border-slate-100 pb-1.5">
       <div class="flex items-center justify-between gap-2">
         <span class="min-w-0 truncate">${escapeHtml(name)} <span class="text-xs text-slate-400">${v.n} 張</span></span>
-        <span class="shrink-0 font-bold">${money(v.total)}${v.unsettled ? ` <span class="text-xs font-normal text-amber-600">（未結 ${money(v.unsettled)}）</span>` : ''}</span>
+        <span class="shrink-0 font-bold">${money(v.total)}</span>
       </div>
       <div class="mt-1 h-2 rounded-full bg-slate-100 overflow-hidden"><div class="h-full rounded-full ${barCls}" style="width:${pct}%"></div></div>
     </div>`;
@@ -495,15 +491,14 @@ function renderStats(){
   });
   const otherItems = pList.filter(([, v]) => v.house !== '忠社' && v.house !== '孝社');
   if (otherItems.length) payeeHtml += '<div class="text-xs font-bold text-slate-500 mt-1 mb-1">■ 其他</div>' + otherItems.map(payeeRow).join('');
-  $('by_payee').innerHTML = payeeHtml || '<p class="text-slate-400">冇數據。</p>';
+  $('by_payee').innerHTML = payeeHtml || '<p class="text-slate-400">冇未結算數據。</p>';
 
-  // 按同事（墊支人）
+  // 按同事（墊支人）：邊個墊咗錢未攞返
   const byS = {};
   rows.forEach(r => {
     const k = r.staff || '（未填）';
-    byS[k] = byS[k] || { total: 0, n: 0, unsettled: 0 };
+    byS[k] = byS[k] || { total: 0, n: 0 };
     byS[k].total += Number(r.amount || 0); byS[k].n++;
-    if (!r.settled_at) byS[k].unsettled += Number(r.amount || 0);
   });
   const sList = Object.entries(byS).sort((a, b) => b[1].total - a[1].total);
   const sMax = sList.length ? sList[0][1].total : 0;
@@ -513,11 +508,11 @@ function renderStats(){
     <div class="border-b border-slate-100 pb-1.5">
       <div class="flex items-center justify-between gap-2">
         <span class="min-w-0 truncate">${escapeHtml(name)} <span class="text-xs text-slate-400">${v.n} 張</span></span>
-        <span class="shrink-0 font-bold">${money(v.total)}${v.unsettled ? ` <span class="text-xs font-normal text-amber-600">（未結 ${money(v.unsettled)}）</span>` : ''}</span>
+        <span class="shrink-0 font-bold">${money(v.total)}</span>
       </div>
       <div class="mt-1 h-2 rounded-full bg-slate-100 overflow-hidden"><div class="h-full rounded-full bg-emerald-400" style="width:${pct}%"></div></div>
     </div>`;
-  }).join('') : '<p class="text-slate-400">冇數據。</p>';
+  }).join('') : '<p class="text-slate-400">冇未結算數據。</p>';
 
   // 按類別
   const byC = {};
@@ -529,7 +524,7 @@ function renderStats(){
   $('by_cat').innerHTML = cList.length ? cList.map(([c, v]) => `
     <div class="flex items-center justify-between gap-2 border-b border-slate-100 pb-1.5">
       <span>${escapeHtml(c)}</span><span class="font-bold">${money(v)}</span>
-    </div>`).join('') : '<p class="text-slate-400">冇數據。</p>';
+    </div>`).join('') : '<p class="text-slate-400">冇未結算數據。</p>';
 }
 
 function renderList(){

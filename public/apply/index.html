@@ -250,6 +250,14 @@
   <!-- ====================== 職員：填單 + 列印 ====================== -->
   <section id="sFormScreen" class="hidden">
     <div class="grid grid-cols-1 gap-6 items-start max-w-2xl mx-auto">
+      <!-- 暫存單（舍友未能即時簽署時先儲存，之後開返完成） -->
+      <div id="draftPanel" class="no-print hidden bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+        <button id="draftToggle" class="w-full flex items-center justify-between gap-2 text-sm font-bold text-amber-700">
+          <span>📝 暫存單（<span id="draftCount">0</span>）· 舍友簽得切嗰陣撳「開返」繼續</span>
+          <span id="draftArrow" class="shrink-0">▾ 展開</span>
+        </button>
+        <div id="draftList" class="hidden mt-3 space-y-2"></div>
+      </div>
       <div class="no-print bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-5">
         <div class="flex items-center justify-between flex-wrap gap-2">
           <h2 class="text-sm font-bold text-emerald-600 uppercase tracking-wide">填寫單據</h2>
@@ -325,9 +333,10 @@
 
         <div class="flex gap-2">
           <button id="f_clear" class="flex-1 py-2.5 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition">清空</button>
-          <button id="f_archive" class="flex-[3] py-2.5 rounded-lg text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow transition">🗂️ 確認支錢＋電子存檔</button>
+          <button id="f_draft" class="flex-1 py-2.5 rounded-lg text-sm font-bold text-amber-700 bg-amber-100 hover:bg-amber-200 transition">💾 暫存</button>
+          <button id="f_archive" class="flex-[2] py-2.5 rounded-lg text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow transition">🗂️ 確認支錢＋電子存檔</button>
         </div>
-        <p class="text-xs text-slate-400">確認前會彈出簽名板：先舍友即場簽名，職員冇簽名檔嘅話跟住要職員即場簽署。存檔後 PDF 會自動上傳雲端檔案庫（按社別及舍友分類），完成後會彈出通知。需要列印請去「🧾 支錢紀錄」頁。</p>
+        <p class="text-xs text-slate-400">確認前會彈出簽名板：先舍友即場簽名，職員冇簽名檔嘅話跟住要職員即場簽署。存檔後 PDF 會自動上傳雲端檔案庫（按社別及舍友分類），完成後會彈出通知。需要列印請去「🧾 支錢紀錄」頁。舍友未能即時簽署？撳「💾 暫存」儲起張單，之後喺上方「暫存單」開返繼續簽。</p>
       </div>
 
       <!-- 單據 DOM（唔再顯示預覽；存檔時喺螢幕外用佢生成 PDF） -->
@@ -819,6 +828,7 @@ function enterForm(){
   if (!$('f_date').value) $('f_date').value = todayStr();
   show('sFormScreen');
   renderForm();
+  renderDraftPanel();   // 刷新暫存單列表
 }
 
 // 社別 → 收款人名單
@@ -945,7 +955,96 @@ function resetForm(){
   $('f_date').value = todayStr();
   renderForm();
 }
-$('f_clear').addEventListener('click', () => { if (confirm('確定要清空目前表單嗎？')) resetForm(); });
+$('f_clear').addEventListener('click', () => { if (confirm('確定要清空目前表單嗎？')) { currentDraftId = null; resetForm(); } });
+
+// ====================== 暫存單 ======================
+// 舍友未能即時簽署時，先將張單暫存（settings.apply_drafts，跨裝置同步）；
+// 之後喺上方「暫存單」開返，簽名＋存檔完成後會自動移除該暫存。
+let currentDraftId = null;   // 而家表單係咪由暫存單開返（完成後要刪除嘅暫存 id）
+async function loadDrafts(){
+  try {
+    const s = await DB.getSettings();
+    return Array.isArray(s.apply_drafts) ? s.apply_drafts : [];
+  } catch { return []; }
+}
+async function saveDrafts(list){ await DB.setSetting('apply_drafts', list); }
+
+async function renderDraftPanel(){
+  const list = await loadDrafts();
+  $('draftPanel').classList.toggle('hidden', !list.length);
+  $('draftCount').textContent = list.length;
+  const box = $('draftList');
+  if (!list.length) { box.innerHTML = ''; box._rows = []; return; }
+  const canDelAll = ['admin','manager','cashier'].includes(sessionRole());
+  box.innerHTML = list.map(d => `
+    <div class="flex items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm">
+      <div class="min-w-0">
+        <span class="font-bold text-slate-800">${escapeHtml(d.house || '')} ${escapeHtml(d.payee || '')}</span>
+        <span class="font-bold text-amber-700"> $${escapeHtml(d.amount || '')}</span>
+        <div class="text-xs text-slate-500 mt-0.5">${escapeHtml(d.date || '')} · ${escapeHtml((d.cats || []).join('、')) || '未揀類別'} · 由 ${escapeHtml(d.created_by || '?')} 暫存 · ${fmtTime(d.created_at)}</div>
+      </div>
+      <div class="flex gap-1.5 shrink-0">
+        <button data-draft="open" data-id="${d.id}" class="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 text-xs font-bold hover:bg-blue-100 transition">開返</button>
+        ${(canDelAll || (staffUser && staffUser === d.created_by)) ? `<button data-draft="del" data-id="${d.id}" class="px-3 py-1.5 rounded-lg bg-red-50 text-red-500 text-xs font-bold hover:bg-red-100 transition">🗑</button>` : ''}
+      </div>
+    </div>`).join('');
+  box._rows = list;
+}
+$('draftToggle').addEventListener('click', () => {
+  const closed = $('draftList').classList.toggle('hidden');
+  $('draftArrow').textContent = closed ? '▾ 展開' : '▴ 收埋';
+});
+
+// 暫存：只需要 社別＋舍友＋金額（其餘可以開返先補）
+$('f_draft').addEventListener('click', async () => {
+  const d = formData();
+  if (!d.house) { alert('請揀社別。'); return; }
+  if (!d.payee) { alert('請揀收款人（舍友）。'); $('f_payee').focus(); return; }
+  if (!d.amount || isNaN(d.amount) || parseFloat(d.amount) <= 0) { alert('請填寫有效金額。'); $('f_amount').focus(); return; }
+  const draft = { ...d, id: 'd' + Date.now().toString(36), created_by: staffUser || $('f_staff').value || '', created_at: new Date().toISOString() };
+  try {
+    const list = await loadDrafts();
+    list.unshift(draft);
+    await saveDrafts(list);
+    toast('💾 已暫存：' + d.payee + ' $' + parseFloat(d.amount).toFixed(2) + '（簽得切嗰陣開返完成）');
+    currentDraftId = null;
+    resetForm();
+    renderDraftPanel();
+  } catch (e) { alert('暫存失敗：' + e.message); }
+});
+
+// 暫存清單操作：開返（載入表單繼續）／刪除
+$('draftList').addEventListener('click', async e => {
+  const btn = e.target.closest('button[data-draft]');
+  if (!btn) return;
+  const list = $('draftList')._rows && $('draftList')._rows.length ? $('draftList')._rows : await loadDrafts();
+  const d = list.find(x => x.id === btn.dataset.id);
+  if (!d) return;
+  if (btn.dataset.draft === 'open') {
+    loadDraftToForm(d);
+    toast('已開返暫存單：' + d.payee + '。完成支錢後暫存會自動移除。');
+    window.scrollTo(0, 0);
+  } else if (btn.dataset.draft === 'del') {
+    if (!confirm('刪除呢張暫存單？（' + d.payee + ' $' + d.amount + '）')) return;
+    try {
+      await saveDrafts((await loadDrafts()).filter(x => x.id !== d.id));
+      renderDraftPanel();
+      toast('已刪除暫存單。');
+    } catch (err) { alert('刪除失敗：' + err.message); }
+  }
+});
+
+// 開返暫存單 → 載入返表單；日期如果已經過咗本月規則，自動改做今日
+function loadDraftToForm(d){
+  currentDraftId = d.id;
+  loadRecordToForm({ doc_no: d.no, notion_id: d.notion, house: d.house, payee: d.payee,
+    amount: d.amount, decided_at: d.date, cats: d.cats, cat_other: d.catOther, remark: d.remark, safe_pay: d.safePay });
+  if (!dateInCurrentMonth($('f_date').value)) {
+    $('f_date').value = todayStr();
+    renderForm();
+    setTimeout(() => toast('⚠️ 暫存日期已過咗本月，自動改做今日（' + todayStr() + '）。'), 2800);
+  }
+}
 
 // ---- 自動序號：雲端計數，只加唔減；刪除記錄後序號唔會重用 ----
 async function nextSerial(){
@@ -1163,6 +1262,12 @@ $('f_archive').addEventListener('click', async () => {
       house: d.house, safePay: d.safePay, cloudOk, cloudMsg,
       balAfter: balAfter
     });
+    // 呢單如果係由暫存單開返嘅，完成後自動刪除該暫存
+    if (currentDraftId) {
+      try { await saveDrafts((await loadDrafts()).filter(x => x.id !== currentDraftId)); } catch {}
+      currentDraftId = null;
+      renderDraftPanel();
+    }
   } catch (e) {
     alert('PDF 已生成，但儲存記錄失敗：' + e.message);
   }

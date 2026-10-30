@@ -106,6 +106,11 @@
 
     <div id="roBanner" class="hidden card bg-sky-50 border-sky-200 p-3 text-xs text-sky-800">👀 導師／社工權限：呢頁只可以<b>睇</b>夾萬現存同各舍友現存（用嚟確認夠唔夠錢支錢），唔可以改數或存入。需要存入請搵管理夾萬同工，改數或過錢請搵管理級／admin。</div>
 
+    <!-- 社別分頁：「總覽」睇全七社重點；個別社只顯示該社資料（避免七社資料一次過晒出嚟） -->
+    <div id="view_tabs" class="flex gap-2 flex-wrap"></div>
+
+    <div id="viewOverview" class="space-y-6">
+
     <!-- 支錢狀況總覽（所有同事可見：各舍友支錢狀況＋夾萬狀況一目了然） -->
     <div class="card bg-white p-5 space-y-3" id="cardStats">
       <h3 class="text-sm font-bold text-teal-600 uppercase tracking-wide">📊 支錢狀況總覽</h3>
@@ -151,14 +156,25 @@
       <p class="text-xs text-slate-400">未結算金額＝同事墊支咗、未由夾萬攞返嘅錢（「夾萬支付」嘅單會即時自動結算，唔計入）；結算由管理夾萬同工或 admin 喺「🧾 支錢紀錄」頁處理。結算分項按結算時間計：本月／上月／累計已結算金額。</p>
     </div>
 
+    <!-- 夾萬對數總覽：全七社一表睇晒，對數大字粗體 -->
+    <div class="card bg-white p-5 space-y-3" id="cardSummary">
+      <h3 class="text-sm font-bold text-amber-600 uppercase tracking-wide">🏦 夾萬對數總覽</h3>
+      <p class="text-xs text-slate-500">每社「現存現金＋代管現金」應等於「舍友結存＋未結算墊支」。要改數、過錢或存入，請撳上面該社嘅分頁。</p>
+      <div id="vault_summary" class="overflow-x-auto"></div>
+    </div>
+
+    </div><!-- /viewOverview -->
+
+    <div id="viewHouse" class="hidden space-y-6">
+
     <!-- 夾萬現存（admin 改數；管理級可過錢；管理夾萬同工／導師／社工唯讀） -->
     <div class="card bg-white p-5 space-y-3" id="cardVault">
       <div class="flex items-center justify-between flex-wrap gap-2">
-        <h3 class="text-sm font-bold text-amber-600 uppercase tracking-wide">🏦 夾萬現存</h3>
+        <h3 class="text-sm font-bold text-amber-600 uppercase tracking-wide">🏦 夾萬現存 <span id="vault_one_badge" class="ml-1"></span></h3>
       </div>
       <div id="vault_check"></div>
-      <p class="text-xs text-slate-500">每社有兩個夾萬：現存現金（中心夾萬）過錢俾代管現金（家社夾萬）；舍友支出必由<b>該社代管現金</b>找數，代管現金唔夠錢就唔可以結算或用「夾萬支付」。各社現存現金＋代管現金總和 = 全體舍友總結存＋未結算墊支。</p>
-      <div id="vault_house_grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+      <p class="text-xs text-slate-500">每社有兩個夾萬：現存現金（中心夾萬）過錢俾代管現金（家社夾萬）；舍友支出必由<b>該社代管現金</b>找數，代管現金唔夠錢就唔可以結算或用「夾萬支付」。呢頁只顯示而家揀咗嘅社；睇其他社請撳上面分頁。</p>
+      <div id="vault_one"></div>
       <div class="flex items-center gap-2 flex-wrap">
         <button id="vault_save" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-amber-600 hover:bg-amber-700 transition">儲存夾萬現存</button>
         <span class="text-xs text-slate-400">直接改數會覆蓋現存；日常過錢請用下面「現存現金 → 代管現金」。</span>
@@ -166,7 +182,7 @@
       <div class="border-t border-slate-100 pt-3 space-y-2" id="vaultXferRow">
         <div class="flex items-center gap-2 flex-wrap">
           <span class="text-xs font-medium text-slate-500">現存現金過錢俾代管現金（只限管理級或以上）：</span>
-          <select id="vault_xfer_house" class="rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white outline-none"></select>
+          <select id="vault_xfer_house" class="hidden rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white outline-none"></select>
           <input id="vault_xfer_amt" type="number" step="0.01" min="0" class="w-28 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="金額">
           <input id="vault_xfer_by" type="text" maxlength="20" readonly class="w-24 rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-600 outline-none" placeholder="轉賬人" title="轉賬人＝登入嘅管理級同事，自動填寫">
           <select id="vault_xfer_to" class="rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white outline-none" title="收款人＝管理夾萬同工，按社別自動揀">
@@ -182,10 +198,13 @@
     <!-- 舍友現存（admin 改數；其他角色唯讀） -->
     <div class="card bg-white p-5 space-y-3" id="cardBal">
       <div class="flex items-center justify-between flex-wrap gap-2">
-        <h3 class="text-sm font-bold text-indigo-600 uppercase tracking-wide">👥 舍友現存</h3>
-        <span id="member_bal_total"></span>
+        <h3 class="text-sm font-bold text-indigo-600 uppercase tracking-wide">👥 舍友現存 <span id="bal_house_badge" class="ml-1"></span></h3>
+        <span class="flex items-center gap-3 flex-wrap">
+          <input id="bal_search" type="search" placeholder="🔍 搜尋姓名或編號…" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none w-48">
+          <span id="member_bal_total"></span>
+        </span>
       </div>
-      <p class="text-xs text-slate-500">支錢成功後會自動扣減該舍友結存；後台刪除記錄會自動回補。呢度可以人手修正。<b>現存未歸 0 嘅舍友唔可以退出服務或刪除。</b>舍友嘅新增／改名／排序／轉社／退出服務請去後台管理「👥 舍友戶口管理」。已退出嘅舍友會灰顯唔可以改。</p>
+      <p class="text-xs text-slate-500">只顯示而家揀咗嘅社；人多可以用搜尋快速搵人。支錢成功後會自動扣減該舍友結存；後台刪除記錄會自動回補。呢度可以人手修正。<b>現存未歸 0 嘅舍友唔可以退出服務或刪除。</b>舍友嘅新增／改名／排序／轉社／退出服務請去後台管理「👥 舍友戶口管理」。已退出嘅舍友會灰顯唔可以改。</p>
       <div id="member_bal_list" class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm"></div>
       <div class="flex items-center gap-3 flex-wrap">
         <button id="member_bal_save" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition">儲存舍友現存</button>
@@ -201,8 +220,8 @@
       <p class="text-xs text-slate-500">舍友存入款項時喺度登記：結存即時增加、款項落入你揀嘅<b>結算戶口</b>（預設代管現金），並自動開出收款編號（CYC xxxxxx，接續舊系統編號）。收款編號只會喺存入時出現。「列印票據」功能待開放。</p>
       <div class="flex items-end gap-2 flex-wrap">
         <label class="block">
-          <span class="text-xs font-medium text-slate-500">社別</span>
-          <select id="dep_house" class="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white outline-none"></select>
+          <span class="text-xs font-medium text-slate-500">社別（跟分頁）</span>
+          <select id="dep_house" class="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm bg-slate-100 outline-none" disabled></select>
         </label>
         <label class="block">
           <span class="text-xs font-medium text-slate-500">舍友</span>
@@ -241,6 +260,8 @@
       </div>
       <p id="dep_result" class="text-sm font-bold text-emerald-700"></p>
     </div>
+
+    </div><!-- /viewHouse -->
 
     <!-- 結存起點（首次月結用，只可以設一次；admin 專用） -->
     <div class="card bg-white p-5 space-y-3" id="cardSeed">
@@ -302,20 +323,73 @@ const r2 = n => Math.round(n * 100) / 100;
 function houseOf(h){ return window.houseKeyOf(h); }
 
 // ---- 動態社別 DOM（社別由 houses.js 定義，新增社別唔使改呢頁）----
-// 夾萬輸入格：每社一卡（現存現金＋代管現金）
-$('vault_house_grid').innerHTML = window.HOUSES.map(h => `
-  <div class="rounded-xl border-2 p-3 space-y-2" style="border-color:${h.color}55; background:${h.soft}55">
-    <div class="text-xs font-bold" style="color:${h.color}">■ ${h.name}</div>
-    <label class="block">
-      <span class="text-xs font-medium text-slate-500">${h.name}現存現金（中心夾萬）</span>
-      <input id="vault_${h.key}_big" type="number" step="0.01" min="0" class="vault_in mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="0.00">
-    </label>
-    <label class="block">
-      <span class="text-xs font-medium text-slate-500">${h.name}代管現金（家社夾萬）</span>
-      <input id="vault_${h.key}_small" type="number" step="0.01" min="0" class="vault_in mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="0.00">
-    </label>
-  </div>`).join('');
-// 過錢／存入嘅社別下拉
+// 版面模式：'overview'（總覽：支錢狀況＋七社對數表）或社名（單社：夾萬改數／舍友現存／存入）
+let VIEW = 'overview';
+let VIEW_INIT = false;          // 第一次 renderVault 時按登入人所屬社別定預設分頁
+let VAULT_ONE_HOUSE = '';       // vault_one 而家渲染緊邊社
+function renderViewTabs(){
+  const onOv = VIEW === 'overview';
+  const ovCls = onOv ? 'font-bold text-white bg-slate-700' : 'font-medium bg-slate-100 text-slate-600';
+  $('view_tabs').innerHTML =
+    `<button data-view="overview" class="view-tab px-4 py-2 rounded-lg text-sm transition ${ovCls}">📋 總覽</button>` +
+    window.HOUSES.map(h => {
+      const on = h.name === VIEW;
+      return `<button data-view="${h.name}" class="view-tab px-4 py-2 rounded-lg text-sm transition ${on ? 'font-bold text-white' : 'font-medium bg-slate-100 text-slate-600'}"${on ? ` style="background:${h.color}"` : ''}>${h.name}</button>`;
+    }).join('');
+}
+function applyView(){
+  const isOv = VIEW === 'overview';
+  $('viewOverview').classList.toggle('hidden', !isOv);
+  $('viewHouse').classList.toggle('hidden', isOv);
+  renderViewTabs();
+  if (!isOv) {
+    const k = window.houseKeyOf(VIEW);
+    const xh = $('vault_xfer_house');
+    if (xh.value !== k) { xh.value = k; const hit = KEEPERS.find(x => x.houses.includes(k)); $('vault_xfer_to').value = hit ? hit.name : ''; }
+    $('dep_house').value = k;
+    fillDepMembers();
+    const bs = $('bal_search'); if (bs) { bs.value = ''; filterBalRows(); }
+  }
+}
+$('view_tabs').addEventListener('click', e => {
+  const btn = e.target.closest('.view-tab');
+  if (!btn || btn.dataset.view === VIEW) return;
+  VIEW = btn.dataset.view;
+  applyView();
+  renderVault();
+});
+// 單社夾萬輸入卡（大字清晰；READONLY 角色會停用）
+function buildVaultOne(houseName, v){
+  const h = window.HOUSES.find(x => x.name === houseName) || window.HOUSES[0];
+  VAULT_ONE_HOUSE = h.name;
+  $('vault_one_badge').innerHTML = `<span class="rounded-full px-2.5 py-0.5 text-xs font-bold text-white" style="background:${h.color}">${h.name}</span>`;
+  $('vault_one').innerHTML = `
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <label class="block rounded-xl border-2 p-4" style="border-color:${h.color}; background:${h.soft}66">
+        <span class="text-sm font-bold" style="color:${h.color}">${h.name}現存現金（中心夾萬）</span>
+        <input id="vault_one_big" type="number" step="0.01" min="0" class="vault_in mt-2 w-full rounded-lg border-2 border-slate-300 bg-white px-3 py-2.5 text-2xl font-black outline-none" placeholder="0.00">
+      </label>
+      <label class="block rounded-xl border-2 p-4" style="border-color:${h.color}; background:${h.soft}66">
+        <span class="text-sm font-bold" style="color:${h.color}">${h.name}代管現金（家社夾萬）</span>
+        <input id="vault_one_small" type="number" step="0.01" min="0" class="vault_in mt-2 w-full rounded-lg border-2 border-slate-300 bg-white px-3 py-2.5 text-2xl font-black outline-none" placeholder="0.00">
+      </label>
+    </div>`;
+  if (v) {
+    $('vault_one_big').value = v.init ? v[h.key + '_big'].toFixed(2) : '';
+    $('vault_one_small').value = v.init ? v[h.key + '_small'].toFixed(2) : '';
+  }
+  if (READONLY) document.querySelectorAll('#vault_one .vault_in').forEach(i => { i.disabled = true; });
+}
+// 舍友現存搜尋：只係顯示過濾，唔會重繪（唔會整唔見未儲存嘅修改）
+function filterBalRows(){
+  const q = ($('bal_search') && $('bal_search').value || '').trim().toLowerCase();
+  document.querySelectorAll('#member_bal_list label[data-name]').forEach(lb => {
+    const txt = ((lb.dataset.name || '') + ' ' + (lb.dataset.id || '')).toLowerCase();
+    lb.style.display = !q || txt.includes(q) ? '' : 'none';
+  });
+}
+$('bal_search').addEventListener('input', filterBalRows);
+// 過錢／存入嘅社別下拉（value 跟分頁，畫面上收埋／停用）
 const HOUSE_OPTS = window.HOUSES.map(h => `<option value="${h.key}">${h.name}</option>`).join('');
 $('vault_xfer_house').innerHTML = HOUSE_OPTS;
 $('dep_house').innerHTML = HOUSE_OPTS;
@@ -473,47 +547,63 @@ async function ledgerInsert(rows){
   }
 }
 
-// ---- 主渲染：夾萬 input + 舍友現存清單 + 對照行 ----
+// ---- 主渲染：總覽（支錢狀況＋七社對數表）／單社（夾萬卡＋舍友現存＋對數）----
 async function renderVault(){
   const [v, bal, membersDb] = await Promise.all([getSafeVault(), getSettingValue('member_bal'), getSettingValue('members')]);
+  // 第一次載入：預設分頁＝登入人所屬社別（staff_dir），冇就總覽
+  if (!VIEW_INIT) {
+    VIEW_INIT = true;
+    try {
+      const dir = await getSettingValue('staff_dir');
+      const em = (sessionEmail() || '').toLowerCase();
+      const c = em && dir && typeof dir === 'object' ? dir[em] : null;
+      if (c && !c.deleted && c.house) {
+        const hn = window.houseNameOf(c.house);
+        if (window.HOUSE_NAMES.includes(hn)) VIEW = hn;
+      }
+    } catch {}
+    applyView();
+  }
   const members = (membersDb && membersDb['忠社'] && membersDb['孝社']) ? membersDb : DEFAULT_MEMBERS;
   window.HOUSE_NAMES.forEach(h => { if (!Array.isArray(members[h])) members[h] = []; });   // 新社未有舍友先補空陣列
   CUR_MEMBERS = members;
   fillDepMembers();
   getReceiptNext().then(n => { $('receipt_next').value = n; });
   const balMap = (bal && typeof bal === 'object') ? bal : {};
-  // 夾萬 input
-  window.HOUSES.forEach(h => {
-    $(`vault_${h.key}_big`).value = v.init ? v[h.key + '_big'].toFixed(2) : '';
-    $(`vault_${h.key}_small`).value = v.init ? v[h.key + '_small'].toFixed(2) : '';
-  });
-  // 舍友現存清單（分社顯示；社別跟 houses.js，名單冇嘅社照顯示空社）
+  // 單社夾萬卡（總覽模式唔使渲染；轉社先重建，否則只更新數值）
+  if (VIEW !== 'overview') {
+    const hk0 = window.houseKeyOf(VIEW);
+    if (VAULT_ONE_HOUSE !== VIEW) buildVaultOne(VIEW, v);
+    else if ($('vault_one_big')) {
+      $('vault_one_big').value = v.init ? v[hk0 + '_big'].toFixed(2) : '';
+      $('vault_one_small').value = v.init ? v[hk0 + '_small'].toFixed(2) : '';
+    }
+  }
+  // 全社結存合計（總覽表同單社對數都要用）
   let balTotal = 0;
   const houseTotals = {};
   const houseKeysInMembers = window.HOUSE_NAMES.filter(h => Array.isArray(members[h]));
-  Object.keys(members).forEach(h => { if (!houseKeysInMembers.includes(h)) houseKeysInMembers.push(h); });   // 名單有但 houses.js 未有嘅舊社都照顯
-  $('member_bal_list').innerHTML = houseKeysInMembers.map(h => `
-    <div>
-      <div class="text-xs font-bold mb-1" style="color:${window.houseColor(h)}">■ ${h}</div>
-      ${members[h].length ? members[h].map(m => {
-        const k = m.id || m.name;
-        const amt = Number(balMap[k]) || 0;
-        balTotal = r2(balTotal + amt);
-        houseTotals[h] = r2((houseTotals[h] || 0) + amt);
-        return `<label class="flex items-center gap-2 py-0.5 ${m.exited ? 'opacity-50' : ''}" data-house="${h}" data-name="${escapeHtml(m.name)}">
-          <span class="flex-1 min-w-0 truncate">${escapeHtml(m.name)} <span class="text-xs text-slate-400">${escapeHtml(m.id || '')}</span>${m.exited ? ' <span class="text-xs font-bold text-slate-400">（已退出）</span>' : ''}</span>
-          <input type="number" step="0.01" class="mbal_in w-24 rounded-lg border border-slate-300 px-2 py-1 text-sm outline-none" data-key="${escapeHtml(k)}" value="${amt ? amt.toFixed(2) : ''}" placeholder="0.00"${m.exited ? ' disabled' : ''}>
-        </label>`;
-      }).join('') : '<p class="text-xs text-slate-400 py-1">（未有名單，請去後台新增舍友）</p>'}
-    </div>`).join('');
-  // 舍友總結存：分社顯示＋合計（放大粗體，清晰易睇）
-  $('member_bal_total').innerHTML =
-    `<span class="text-base font-extrabold text-slate-700">舍友總結存：</span>` +
-    houseKeysInMembers.map(h =>
-      `<span class="text-base font-extrabold" style="color:${window.houseColor(h)}">${h} ${money(houseTotals[h] || 0)}</span>`
-    ).join(`<span class="text-sm font-bold text-slate-400"> ｜ </span>`) +
-    `<span class="text-sm font-bold text-slate-400"> ｜ </span>` +
-    `<span class="text-base font-extrabold text-slate-800">合計 ${money(balTotal)}</span>`;
+  Object.keys(members).forEach(h => { if (!houseKeysInMembers.includes(h)) houseKeysInMembers.push(h); });   // 名單有但 houses.js 未有嘅舊社都照計
+  houseKeysInMembers.forEach(h => (members[h] || []).forEach(m => {
+    const amt = Number(balMap[m.id || m.name]) || 0;
+    balTotal = r2(balTotal + amt);
+    houseTotals[h] = r2((houseTotals[h] || 0) + amt);
+  }));
+  // 舍友現存清單：只渲染而家揀咗嘅社（人多用搜尋過濾，唔會一次過晒幾百人出嚟）
+  if (VIEW !== 'overview') {
+    const list = members[VIEW] || [];
+    $('bal_house_badge').innerHTML = `<span class="rounded-full px-2.5 py-0.5 text-xs font-bold text-white" style="background:${window.houseColor(VIEW)}">${VIEW}</span>`;
+    $('member_bal_list').innerHTML = list.length ? list.map(m => {
+      const k = m.id || m.name;
+      const amt = Number(balMap[k]) || 0;
+      return `<label class="flex items-center gap-2 py-0.5 ${m.exited ? 'opacity-50' : ''}" data-house="${VIEW}" data-name="${escapeHtml(m.name)}" data-id="${escapeHtml(m.id || '')}">
+        <span class="flex-1 min-w-0 truncate">${escapeHtml(m.name)} <span class="text-xs text-slate-400">${escapeHtml(m.id || '')}</span>${m.exited ? ' <span class="text-xs font-bold text-slate-400">（已退出）</span>' : ''}</span>
+        <input type="number" step="0.01" class="mbal_in w-24 rounded-lg border border-slate-300 px-2 py-1 text-sm outline-none" data-key="${escapeHtml(k)}" value="${amt ? amt.toFixed(2) : ''}" placeholder="0.00"${m.exited ? ' disabled' : ''}>
+      </label>`;
+    }).join('') : '<p class="text-xs text-slate-400 py-1">（呢個社未有名單，請去後台新增舍友）</p>';
+    $('member_bal_total').innerHTML = `<span class="text-lg font-extrabold" style="color:${window.houseColor(VIEW)}">${VIEW}總結存 ${money(houseTotals[VIEW] || 0)}</span> <span class="text-xs text-slate-400">（${list.filter(m => !m.exited).length} 人）</span>`;
+    filterBalRows();
+  }
   if (READONLY) document.querySelectorAll('.mbal_in').forEach(i => { i.disabled = true; });
   // 未結算墊支（分社計；結算欄位未開通就當 0 並唔顯示對數）
   let adv = 0, advOk = true;
@@ -613,62 +703,100 @@ async function renderVault(){
   } catch {
     $('st_total_n').textContent = '未能載入';
   }
-  // 對照：分社夾萬（現存＋代管）vs 分社舍友結存＋墊支，再加全社總對數
+  // 對數：總覽 → 七社一表（vault_summary）；單社 → 大字對數卡（vault_check）
   const vaultHouse = {};
   window.HOUSES.forEach(h => { vaultHouse[h.name] = r2(v[h.key + '_big'] + v[h.key + '_small']); });
   const vaultTotal = r2(Object.values(vaultHouse).reduce((a, x) => a + x, 0));
+  const expHouse = {};
+  window.HOUSE_NAMES.forEach(h => { expHouse[h] = r2((houseTotals[h] || 0) + (advOk ? (advHouse[h] || 0) : 0)); });
+  const expTotal = r2(balTotal + (advOk ? adv : 0));
+  const chk = (a, b) => Math.abs(a - b) < 0.005;
   if (!v.init) {
-    $('vault_check').innerHTML = '<p class="text-sm font-bold text-red-600">⚠️ 夾萬未設定，請先輸入各社現存數再儲存。</p>';
-  } else {
-    const chk = (a, b) => Math.abs(a - b) < 0.005;
+    const warnHtml = '<p class="text-sm font-bold text-red-600">⚠️ 夾萬未設定，請先輸入現存數再儲存。</p>';
+    if (VIEW === 'overview') { $('vault_summary').innerHTML = warnHtml; $('vault_check').innerHTML = ''; }
+    else { $('vault_check').innerHTML = warnHtml; $('vault_summary').innerHTML = ''; }
+  } else if (VIEW === 'overview') {
+    $('vault_check').innerHTML = '';
     const badge = ok => ok
-      ? '<span class="text-base font-extrabold text-emerald-600">✅ 對數</span>'
-      : '<span class="text-base font-extrabold text-red-600">⚠️ 唔對數</span>';
-    const houseRow = h => {
-      const cls = `color:${window.houseColor(h)}`;
-      const hk = window.houseKeyOf(h);
-      const big = v[hk + '_big'], small = v[hk + '_small'];
-      let row = `<div class="flex items-baseline gap-x-2 gap-y-0.5 flex-wrap">
-        <span class="text-base font-extrabold" style="${cls}">${h}夾萬 ${money(vaultHouse[h])}</span>
-        <span class="text-xs text-slate-400">（現存 ${money(big)}＋代管 ${money(small)}）</span>`;
-      if (advOk) {
-        const expH = r2((houseTotals[h] || 0) + (advHouse[h] || 0));
-        row += `<span class="text-xs text-slate-500">結存 ${money(houseTotals[h] || 0)}＋墊支 ${money(advHouse[h] || 0)} ＝ ${money(expH)}</span>${badge(chk(vaultHouse[h], expH))}`;
-      }
-      return row + '</div>';
-    };
-    let html = window.HOUSE_NAMES.map(houseRow).join('');
-    if (advOk) {
-      const expected = r2(balTotal + adv);
-      html += `<div class="flex items-baseline gap-x-2 gap-y-0.5 flex-wrap border-t border-slate-200 pt-1.5 mt-1.5">
-        <span class="text-sm font-bold text-slate-600">各社總和 ${money(vaultTotal)} ＝ 總結存 ${money(balTotal)} ＋ 未結算墊支 ${money(adv)}</span>
-        ${badge(chk(vaultTotal, expected))}
-      </div>`;
-    } else {
-      html += `<div class="text-sm font-bold text-slate-600 border-t border-slate-200 pt-1.5 mt-1.5">各社現存＋代管總和 ${money(vaultTotal)} ｜ 舍友總結存 ${money(balTotal)}</div>`;
-    }
-    $('vault_check').innerHTML = html;
+      ? '<span class="text-base font-extrabold text-emerald-600 whitespace-nowrap">✅ 對數</span>'
+      : '<span class="text-base font-extrabold text-red-600 whitespace-nowrap">⚠️ 唔對數</span>';
+    const rowsHtml = window.HOUSE_NAMES.map(h => {
+      const col = window.houseColor(h);
+      const ok = advOk ? chk(vaultHouse[h], expHouse[h]) : null;
+      return `<tr class="border-b border-slate-100">
+        <td class="py-2 pr-3 font-extrabold whitespace-nowrap" style="color:${col}">${h}</td>
+        <td class="py-2 pr-3 text-right whitespace-nowrap">${money(v[window.houseKeyOf(h) + '_big'])}</td>
+        <td class="py-2 pr-3 text-right whitespace-nowrap">${money(v[window.houseKeyOf(h) + '_small'])}</td>
+        <td class="py-2 pr-3 text-right font-bold whitespace-nowrap">${money(vaultHouse[h])}</td>
+        <td class="py-2 pr-3 text-right whitespace-nowrap">${money(houseTotals[h] || 0)}</td>
+        <td class="py-2 pr-3 text-right whitespace-nowrap">${advOk ? money(advHouse[h] || 0) : '—'}</td>
+        <td class="py-2 text-center">${ok === null ? '<span class="text-xs text-slate-400">（未開通）</span>' : badge(ok)}</td>
+      </tr>`;
+    }).join('');
+    $('vault_summary').innerHTML = `<table class="w-full text-sm">
+      <thead><tr class="text-xs text-slate-400 border-b-2 border-slate-200">
+        <th class="py-1.5 pr-3 text-left font-bold">社別</th>
+        <th class="py-1.5 pr-3 text-right font-bold">現存現金</th>
+        <th class="py-1.5 pr-3 text-right font-bold">代管現金</th>
+        <th class="py-1.5 pr-3 text-right font-bold">夾萬合計</th>
+        <th class="py-1.5 pr-3 text-right font-bold">舍友結存</th>
+        <th class="py-1.5 pr-3 text-right font-bold">未結算墊支</th>
+        <th class="py-1.5 text-center font-bold">對數</th>
+      </tr></thead>
+      <tbody>${rowsHtml}</tbody>
+      <tfoot><tr class="border-t-2 border-slate-300 text-base font-black text-slate-800">
+        <td class="py-2 pr-3">全部</td>
+        <td class="py-2 pr-3 text-right" colspan="2"></td>
+        <td class="py-2 pr-3 text-right">${money(vaultTotal)}</td>
+        <td class="py-2 pr-3 text-right">${money(balTotal)}</td>
+        <td class="py-2 pr-3 text-right">${advOk ? money(adv) : '—'}</td>
+        <td class="py-2 text-center">${advOk ? (chk(vaultTotal, expTotal)
+          ? '<span class="text-lg font-black text-emerald-600 whitespace-nowrap">✅ 對數</span>'
+          : '<span class="text-lg font-black text-red-600 whitespace-nowrap">⚠️ 唔對數</span>') : ''}</td>
+      </tr></tfoot>
+    </table>`;
+  } else {
+    $('vault_summary').innerHTML = '';
+    const col = window.houseColor(VIEW);
+    const hk = window.houseKeyOf(VIEW);
+    const ok = advOk ? chk(vaultHouse[VIEW], expHouse[VIEW]) : null;
+    $('vault_check').innerHTML = `<div class="rounded-2xl border-2 p-4" style="border-color:${col}55; background:${window.houseSoft(VIEW)}55">
+      <div class="flex items-baseline justify-between flex-wrap gap-x-3 gap-y-1">
+        <span class="text-xl font-black" style="color:${col}">${VIEW}夾萬 ${money(vaultHouse[VIEW])}</span>
+        ${ok === null
+          ? '<span class="text-xs text-slate-400">（結算欄位未開通，未能對數）</span>'
+          : (ok
+            ? '<span class="text-2xl font-black text-emerald-600">✅ 對數</span>'
+            : '<span class="text-2xl font-black text-red-600">⚠️ 唔對數</span>')}
+      </div>
+      <div class="mt-1 text-sm text-slate-500">現存現金 ${money(v[hk + '_big'])} ＋ 代管現金 ${money(v[hk + '_small'])}${advOk ? ` ｜ 舍友結存 ${money(houseTotals[VIEW] || 0)} ＋ 未結算墊支 ${money(advHouse[VIEW] || 0)} ＝ <b>${money(expHouse[VIEW])}</b>` : ''}</div>
+    </div>`;
   }
 }
 
 // ---- 儲存夾萬現存（人手改數 → 每個有變嘅夾萬記一筆 adjust 流水）----
+// 只改而家揀咗嘅社嗰兩格；其他社沿用雲端現值，唔會被覆寫
 $('vault_save').addEventListener('click', async () => {
-  const v = {};
-  window.HOUSES.forEach(h => {
-    v[h.key + '_big'] = Number($(`vault_${h.key}_big`).value) || 0;
-    v[h.key + '_small'] = Number($(`vault_${h.key}_small`).value) || 0;
-  });
+  if (VIEW === 'overview' || !$('vault_one_big')) { alert('請先撳上面某個社嘅分頁，先可以改嗰個社嘅夾萬現存。'); return; }
   try {
     const prev = await getSafeVault();
+    const v = {};
+    window.HOUSES.forEach(h => {
+      v[h.key + '_big'] = prev.init ? prev[h.key + '_big'] : 0;
+      v[h.key + '_small'] = prev.init ? prev[h.key + '_small'] : 0;
+    });
+    const hk = window.houseKeyOf(VIEW);
+    v[hk + '_big'] = Number($('vault_one_big').value) || 0;
+    v[hk + '_small'] = Number($('vault_one_small').value) || 0;
     await saveSafeVault(v);
     const rows = [];
     const now = new Date().toISOString();
-    window.HOUSES.forEach(h => ['big', 'small'].forEach(a => {
-      const key = h.key + '_' + a, nv = v[key], ov = prev.init ? prev[key] : 0;
-      if (Math.abs(nv - ov) >= 0.005) rows.push({ created_at: now, house: h.key, kind: 'adjust', account: a, account_delta: r2(nv - ov), account_bal_after: nv, note: '人手修正' + (a === 'big' ? '現存現金' : '代管現金') });
-    }));
+    ['big', 'small'].forEach(a => {
+      const key = hk + '_' + a, nv = v[key], ov = prev.init ? prev[key] : 0;
+      if (Math.abs(nv - ov) >= 0.005) rows.push({ created_at: now, house: hk, kind: 'adjust', account: a, account_delta: r2(nv - ov), account_bal_after: nv, note: '人手修正' + (a === 'big' ? '現存現金' : '代管現金') });
+    });
     if (rows.length) await ledgerInsert(rows);
-    toast('已儲存夾萬現存。');
+    toast('已儲存' + VIEW + '夾萬現存。');
     renderVault();
   } catch (e) { alert('儲存失敗：' + e.message); }
 });
@@ -744,7 +872,7 @@ $('vault_xfer').addEventListener('click', async () => {
 // ---- 儲存舍友現存（人手改數 → 每個有變嘅舍友記一筆 adjust 流水）----
 $('member_bal_save').addEventListener('click', async () => {
   const prev = await getSettingValue('member_bal') || {};
-  const out = {};
+  const out = { ...prev };   // 保留其他社嘅結存，只覆寫而家呢社有顯示嘅舍友
   document.querySelectorAll('.mbal_in').forEach(inp => { out[inp.dataset.key] = Number(inp.value) || 0; });
   try {
     const { error } = await sb.from('settings').upsert({ key: 'member_bal', value: out });
@@ -856,11 +984,16 @@ $('seed_open').addEventListener('click', async () => {
     return;
   }
   $('seed_status').textContent = '';
-  // 預填：日期＝今日；夾萬＝而家畫面嘅數；舍友＝而家結存
+  // 預填：日期＝今日；夾萬同舍友結存由雲端讀返（唔靠畫面，因為而家畫面只顯示一個社）
   $('seed_date').value = new Date().toLocaleDateString('sv');
+  let seedV = { init: false }, seedBal = {};
+  try {
+    [seedV, seedBal] = await Promise.all([getSafeVault(), getSettingValue('member_bal')]);
+    if (!seedBal || typeof seedBal !== 'object') seedBal = {};
+  } catch {}
   window.HOUSES.forEach(h => {
-    $(`seed_${h.key}_big`).value = $(`vault_${h.key}_big`).value;
-    $(`seed_${h.key}_small`).value = $(`vault_${h.key}_small`).value;
+    $(`seed_${h.key}_big`).value = seedV.init ? seedV[h.key + '_big'].toFixed(2) : '';
+    $(`seed_${h.key}_small`).value = seedV.init ? seedV[h.key + '_small'].toFixed(2) : '';
   });
   const seedHouses = window.HOUSE_NAMES.filter(h => Array.isArray((CUR_MEMBERS || {})[h]));
   $('seed_members').innerHTML = seedHouses.map(h => `
@@ -872,10 +1005,10 @@ $('seed_open').addEventListener('click', async () => {
           <input type="number" step="0.01" class="seed_m w-24 rounded-lg border border-slate-300 px-2 py-1 text-sm outline-none" data-key="${escapeHtml(m.id || m.name)}" data-name="${escapeHtml(m.name)}" data-house="${h}" placeholder="0.00">
         </label>`).join('')}
     </div>`).join('');
-  // 預填現有結存
+  // 預填現有結存（由雲端 member_bal）
   document.querySelectorAll('.seed_m').forEach(inp => {
-    const cur = document.querySelector(`.mbal_in[data-key="${CSS.escape(inp.dataset.key)}"]`);
-    if (cur && cur.value) inp.value = cur.value;
+    const cur = Number(seedBal[inp.dataset.key]) || 0;
+    if (cur) inp.value = cur.toFixed(2);
   });
   $('seedModal').classList.remove('hidden');
 });

@@ -718,41 +718,38 @@ async function renderVault(){
   } else if (VIEW === 'overview') {
     $('vault_check').innerHTML = '';
     const badge = ok => ok
-      ? '<span class="text-base font-extrabold text-emerald-600 whitespace-nowrap">✅ 對數</span>'
-      : '<span class="text-base font-extrabold text-red-600 whitespace-nowrap">⚠️ 唔對數</span>';
+      ? '<span class="text-sm font-extrabold text-emerald-600 whitespace-nowrap">✅ 對數</span>'
+      : '<span class="text-sm font-extrabold text-red-600 whitespace-nowrap">⚠️ 唔對數</span>';
     const rowsHtml = window.HOUSE_NAMES.map(h => {
       const col = window.houseColor(h);
       const ok = advOk ? chk(vaultHouse[h], expHouse[h]) : null;
       return `<tr class="border-b border-slate-100">
-        <td class="py-2 pr-3 font-extrabold whitespace-nowrap" style="color:${col}">${h}</td>
+        <td class="py-2 pr-3 whitespace-nowrap"><span class="font-extrabold" style="color:${col}">${h}</span> ${ok === null ? '<span class="text-xs text-slate-400">（未開通）</span>' : badge(ok)}</td>
         <td class="py-2 pr-3 text-right whitespace-nowrap">${money(v[window.houseKeyOf(h) + '_big'])}</td>
         <td class="py-2 pr-3 text-right whitespace-nowrap">${money(v[window.houseKeyOf(h) + '_small'])}</td>
         <td class="py-2 pr-3 text-right font-bold whitespace-nowrap">${money(vaultHouse[h])}</td>
         <td class="py-2 pr-3 text-right whitespace-nowrap">${money(houseTotals[h] || 0)}</td>
-        <td class="py-2 pr-3 text-right whitespace-nowrap">${advOk ? money(advHouse[h] || 0) : '—'}</td>
-        <td class="py-2 text-center">${ok === null ? '<span class="text-xs text-slate-400">（未開通）</span>' : badge(ok)}</td>
+        <td class="py-2 text-right whitespace-nowrap">${advOk ? money(advHouse[h] || 0) : '—'}</td>
       </tr>`;
     }).join('');
     $('vault_summary').innerHTML = `<table class="w-full text-sm">
       <thead><tr class="text-xs text-slate-400 border-b-2 border-slate-200">
-        <th class="py-1.5 pr-3 text-left font-bold">社別</th>
+        <th class="py-1.5 pr-3 text-left font-bold">社別（對數）</th>
         <th class="py-1.5 pr-3 text-right font-bold">現存現金</th>
         <th class="py-1.5 pr-3 text-right font-bold">代管現金</th>
         <th class="py-1.5 pr-3 text-right font-bold">夾萬合計</th>
         <th class="py-1.5 pr-3 text-right font-bold">舍友結存</th>
-        <th class="py-1.5 pr-3 text-right font-bold">未結算墊支</th>
-        <th class="py-1.5 text-center font-bold">對數</th>
+        <th class="py-1.5 text-right font-bold">未結算墊支</th>
       </tr></thead>
       <tbody>${rowsHtml}</tbody>
       <tfoot><tr class="border-t-2 border-slate-300 text-base font-black text-slate-800">
-        <td class="py-2 pr-3">全部</td>
+        <td class="py-2 pr-3 whitespace-nowrap">全部 ${advOk ? (chk(vaultTotal, expTotal)
+          ? '<span class="text-base font-black text-emerald-600 whitespace-nowrap">✅ 對數</span>'
+          : '<span class="text-base font-black text-red-600 whitespace-nowrap">⚠️ 唔對數</span>') : ''}</td>
         <td class="py-2 pr-3 text-right" colspan="2"></td>
-        <td class="py-2 pr-3 text-right">${money(vaultTotal)}</td>
-        <td class="py-2 pr-3 text-right">${money(balTotal)}</td>
-        <td class="py-2 pr-3 text-right">${advOk ? money(adv) : '—'}</td>
-        <td class="py-2 text-center">${advOk ? (chk(vaultTotal, expTotal)
-          ? '<span class="text-lg font-black text-emerald-600 whitespace-nowrap">✅ 對數</span>'
-          : '<span class="text-lg font-black text-red-600 whitespace-nowrap">⚠️ 唔對數</span>') : ''}</td>
+        <td class="py-2 pr-3 text-right whitespace-nowrap">${money(vaultTotal)}</td>
+        <td class="py-2 pr-3 text-right whitespace-nowrap">${money(balTotal)}</td>
+        <td class="py-2 text-right whitespace-nowrap">${advOk ? money(adv) : '—'}</td>
       </tr></tfoot>
     </table>`;
   } else {

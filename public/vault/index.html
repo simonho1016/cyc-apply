@@ -335,7 +335,7 @@ const EMAIL_STAFF_MAP = {
   'man.yc@sbccyc.org.hk': '文然澤'
 };
 let CLOUD_STAFF_DIR = {};
-let KEEPERS = [];   // 管理夾萬同工清單 [{email, name, house}]，setupXfer 由雲端 roles 載入
+let KEEPERS = [];   // 管理夾萬同工清單 [{email, name, houses:[社key...]}]，setupXfer 由雲端 roles 載入
 function sessionEmail(){
   const s = simInfo();
   if (s && s.email) return s.email;
@@ -687,7 +687,7 @@ async function setupXfer(){
         if (roles[em] !== 'cashier') return;
         const c = CLOUD_STAFF_DIR[e];
         if (c && c.deleted) return;
-        KEEPERS.push({ email: e, name: staffNameOf(e) || e, house: (c && c.house) || '' });
+        KEEPERS.push({ email: e, name: staffNameOf(e) || e, houses: (c && Array.isArray(c.houses) && c.houses.length ? c.houses : (c && c.house ? [c.house] : [])) });
       });
     }
   } catch {}
@@ -695,18 +695,18 @@ async function setupXfer(){
   const sel = $('vault_xfer_to');
   if (KEEPERS.length) {
     sel.innerHTML = '<option value="">— 收款人（管理夾萬同工）—</option>' +
-      KEEPERS.map(k => `<option value="${escapeHtml(k.name)}">${escapeHtml(k.name)}${k.house ? '（' + window.houseNameOf(k.house) + '夾萬）' : ''}</option>`).join('');
+      KEEPERS.map(k => `<option value="${escapeHtml(k.name)}">${escapeHtml(k.name)}${k.houses.length ? '（' + k.houses.map(window.houseNameOf).join('・') + '夾萬）' : ''}</option>`).join('');
   } else {
     sel.innerHTML = '<option value="">（未有管理夾萬同工，請 admin 喺後台指派）</option>';
   }
   // 預設社別觸發一次自動揀收款人
-  const hit0 = KEEPERS.find(k => k.house === $('vault_xfer_house').value);
+  const hit0 = KEEPERS.find(k => k.houses.includes($('vault_xfer_house').value));
   if (hit0) sel.value = hit0.name;
 }
 $('vault_xfer_house').addEventListener('change', () => {
   const h = $('vault_xfer_house').value;   // 社別 key（houses.js 動態）
   const sel = $('vault_xfer_to');
-  const hit = KEEPERS.find(k => k.house === h);
+  const hit = KEEPERS.find(k => k.houses.includes(h));
   sel.value = hit ? hit.name : '';
   if (!hit && KEEPERS.length) toast('該社未指派管理夾萬同工，請手動揀收款人。');
 });

@@ -506,7 +506,7 @@ function officersOf(hk){
   return Object.keys(ROLES).filter(em => {
     if (ROLES[em] !== 'cashier') return false;
     const c = CLOUD_STAFF_DIR[(em || '').toLowerCase()];
-    return c && !c.deleted && c.house === hk;
+    return c && !c.deleted && (Array.isArray(c.houses) && c.houses.length ? c.houses.includes(hk) : c.house === hk);
   }).map(staffNameOf);
 }
 function expectedOfficers(){ return officersOf(houseKeyNow()); }

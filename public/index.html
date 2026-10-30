@@ -178,36 +178,15 @@
           <span class="card-url">/apply/</span>
         </div>
 
-        <div class="card card-vault" id="cardVaultLink" data-url="/vault/" role="link" tabindex="0" aria-label="夾萬・現存">
-          <span class="card-icon" aria-hidden="true">🏦</span>
-          <span class="card-name">夾萬・現存</span>
-          <span class="card-desc">忠孝現存現金・代管現金、各舍友現存，<br>支錢前查結存；存入及改數限負責同事。</span>
-          <span class="card-url">/vault/</span>
-        </div>
-
-        <div class="card card-admin" id="cardAdminLink" data-url="/admin/" role="link" tabindex="0" aria-label="後台管理">
-          <span class="card-icon" aria-hidden="true">📊</span>
-          <span class="card-name">後台管理</span>
-          <span class="card-desc">舍友戶口管理、記錄封存同刪除、<br>帳號權限及系統設定。</span>
-          <span class="card-url">/admin/</span>
-        </div>
-
         <div class="card card-records" data-url="/records/" role="link" tabindex="0" aria-label="支錢紀錄">
           <span class="card-icon" aria-hidden="true">🧾</span>
           <span class="card-name">支錢紀錄</span>
           <span class="card-desc">支出統計、已結算／未結算一目了然，<br>隨時列印或匯出記錄。</span>
           <span class="card-url">/records/</span>
         </div>
-
-        <div class="card card-sign" id="cardSignLink" data-url="/sign/" role="link" tabindex="0" aria-label="月結簽署・報告">
-          <span class="card-icon" aria-hidden="true">✍️</span>
-          <span class="card-name">月結簽署・報告</span>
-          <span class="card-desc">舍友逐個電子簽署收支紀錄表，<br>簽齊後列印社別月結同收支紀錄表。</span>
-          <span class="card-url">/sign/</span>
-        </div>
       </div>
 
-      <p class="note">支錢系統獨立運作，資料均儲存於雲端。</p>
+      <p class="note">精簡版：零用金申請 ＋ 支錢紀錄。資料均儲存於雲端。</p>
     </section>
 
     <p class="foot"><a href="/version/" style="color:inherit">📋 版本記錄</a>　·　<a href="/feedback/" style="color:inherit">💬 問題回報</a></p>
@@ -405,11 +384,7 @@ function showLock(msg) {
 function showMain() {
   $('lockView').hidden = true;
   $('mainView').hidden = false;
-  // 按角色收放功能卡：導師／社工可以用零用金申請、支錢紀錄同夾萬（唯讀）；社工起入得月結簽署・報告；後台管理限 admin 同管理級（模擬檢視時用模擬角色）
-  const role = effectiveRole();
-  $('cardVaultLink').style.display = '';                    // 導師／社工都入得（唯讀睇數）
-  $('cardSignLink').style.display = role === 'tutor' ? 'none' : '';
-  $('cardAdminLink').style.display = (role === 'admin' || role === 'manager') ? '' : 'none';
+  // A 版本：精簡版只得「零用金申請」＋「支錢紀錄」兩張卡，冇角色收放
   // 模擬檢視提示橫額
   const s = simInfo();
   if (s) {

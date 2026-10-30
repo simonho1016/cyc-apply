@@ -329,7 +329,7 @@ if (!CAN_SETTLE) $('settle_btn').classList.add('hidden');
   const hint = {
     admin: '全部紀錄：批量列印／ZIP／CSV／結算（刪除請去後台管理）',
     manager: '全部紀錄：批量列印／ZIP／CSV（結算由管理夾萬同工或 admin 處理）',
-    cashier: '全部紀錄：批量列印／ZIP／CSV／結算',
+    cashier: '你所管社別嘅紀錄：批量列印／ZIP／CSV／結算',
     sw: '查返自己嘅支錢紀錄，隨時列印',
     tutor: '查返自己嘅支錢紀錄，隨時列印'
   };
@@ -345,6 +345,34 @@ const EMAIL_STAFF_MAP = {
   'wong.tw@sbccyc.org.hk': '王子維',
   'man.yc@sbccyc.org.hk': '文然澤'
 };
+// 雲端名冊（settings.staff_dir）：載入後補姓名對照＋計權限社別
+let STAFF_DIR_CLOUD = null;
+let MY_KEYS = null;   // 權限社別 key 陣列；null＝無限制（admin／管理級／未設定社別）
+async function ensureStaffDir(){
+  if (STAFF_DIR_CLOUD) return;
+  try {
+    const { data } = await sb.from('settings').select('value').eq('key', 'staff_dir').maybeSingle();
+    STAFF_DIR_CLOUD = (data && data.value && typeof data.value === 'object') ? data.value : {};
+    Object.keys(STAFF_DIR_CLOUD).forEach(em => {
+      const c = STAFF_DIR_CLOUD[em];
+      if (c && !c.deleted && c.name) EMAIL_STAFF_MAP[em.toLowerCase()] = c.name;
+    });
+    const c = STAFF_DIR_CLOUD[(sessionEmail() || '').toLowerCase()];
+    MY_KEYS = window.accessibleHouseKeys(ROLE_NOW, c);
+    // 社別篩選下拉：有權限限制就收窄到可見社別
+    if (MY_KEYS) {
+      const names = MY_KEYS.map(window.houseNameOf).filter(n => window.HOUSE_NAMES.includes(n));
+      if (names.length) $('f_house').innerHTML = '<option value="">全部社別</option>' + names.map(h => `<option value="${h}">${h}</option>`).join('');
+    }
+  } catch { STAFF_DIR_CLOUD = {}; }
+}
+// 權限基礎過濾：管理夾萬同工＝所管社別嘅單；社工／導師＝自己嘅單；admin／管理級＝全部
+function baseRows(){
+  let rows = allRows;
+  if (ROLE_NOW === 'cashier' && MY_KEYS) rows = rows.filter(r => MY_KEYS.includes(houseKey(r.house)));
+  else if (!CAN_BATCH) { const me = myStaffName(); rows = rows.filter(r => (r.staff || '') === me); }
+  return rows;
+}
 
 // 模擬檢視提示橫額
 const SIM_NOW = simInfo();
@@ -404,16 +432,13 @@ function fmtTime(iso){
 let allRows = [];
 let tabNow = 'unsettled';   // 預設未結算；「未結算」同「已結算」分頁顯示，唔會混埋
 
-function myStaffName(){ return EMAIL_STAFF_MAP[sessionEmail()] || ''; }
+function myStaffName(){ return EMAIL_STAFF_MAP[(sessionEmail() || '').toLowerCase()] || ''; }
 
 function visibleRows(){
-  let rows = allRows;
+  let rows = baseRows();
   if (CAN_BATCH) {
     const f = $('staffFilter').value;
     if (f) rows = rows.filter(r => (r.staff || '') === f);
-  } else {
-    const me = myStaffName();
-    rows = rows.filter(r => (r.staff || '') === me);
   }
   const h = $('f_house').value;
   if (h) rows = rows.filter(r => (r.house || '') === h);
@@ -433,9 +458,9 @@ function settleBadge(r){
   return `<span class="rounded-full px-2.5 py-0.5 text-xs font-bold bg-amber-100 text-amber-700">⏳ 未結算</span>`;
 }
 
-// ---- 支出統計：只計未結算嘅單（已結算唔顯示），按社別／日期篩選，職員篩選唔影響 ----
+// ---- 支出統計：只計未結算嘅單（已結算唔顯示），按社別／日期篩選，職員篩選唔影響；權限跟 baseRows ----
 function statRows(){
-  let rows = allRows.filter(r => !r.settled_at);   // 統計永遠只計未結算，唔跟分頁
+  let rows = baseRows().filter(r => !r.settled_at);   // 統計永遠只計未結算，唔跟分頁
   const h = $('f_house').value;
   if (h) rows = rows.filter(r => (r.house || '') === h);
   const from = $('f_from').value, to = $('f_to').value;
@@ -449,8 +474,9 @@ function renderStats(){
   const pendingStaff = [...new Set(rows.map(r => r.staff || '（未填）'))].sort();
   $('sum_total').textContent = money(sum(rows));
   $('sum_count').textContent = rows.length + ' 張單';
-  // 分社統計卡：動態渲染全部社別
-  $('sum_house_grid').innerHTML = window.HOUSES.map(h => {
+  // 分社統計卡：動態渲染（有權限限制時只顯示可見社別）
+  const statHouses = MY_KEYS ? window.HOUSES.filter(h => MY_KEYS.includes(h.key)) : window.HOUSES;
+  $('sum_house_grid').innerHTML = statHouses.map(h => {
     const hRows = rows.filter(r => r.house === h.name);
     return `<div class="rounded-xl p-3" style="border:2px solid #141414; background:${h.soft};"><div class="text-xs text-slate-500">${h.name}</div><div class="text-xl font-black mt-0.5" style="color:${h.color};">${money(sum(hRows))}</div><div class="text-xs text-slate-400 mt-0.5">${hRows.length} 張單</div></div>`;
   }).join('');
@@ -577,6 +603,7 @@ function refreshBatchBtns(){
 async function loadRecords(){
   const box = $('r_list');
   box.innerHTML = '<p class="text-sm text-slate-500">載入中…</p>';
+  await ensureStaffDir();   // 雲端名冊：姓名對照＋權限社別
   // 非批量角色冇對照 → 提示＋唔顯示任何紀錄
   if (!CAN_BATCH && !myStaffName()) {
     $('noMapWarn').classList.remove('hidden');
@@ -586,10 +613,10 @@ async function loadRecords(){
   $('noMapWarn').classList.add('hidden');
   try {
     allRows = await listDone(500);
-    // 批量角色：職員篩選下拉
+    // 批量角色：職員篩選下拉（管理夾萬同工只列出所管社別有份嘅職員）
     if (CAN_BATCH) {
       const cur = $('staffFilter').value;
-      const names = [...new Set(allRows.map(r => r.staff).filter(Boolean))];
+      const names = [...new Set(baseRows().map(r => r.staff).filter(Boolean))];
       $('staffFilter').innerHTML = '<option value="">全部職員</option>' + names.map(n => `<option${n === cur ? ' selected' : ''}>${escapeHtml(n)}</option>`).join('');
       $('staffFilter').classList.remove('hidden');
     }
@@ -605,12 +632,18 @@ async function loadRecords(){
         const hint = $('safe_hint');
         if (v.init) {
           const need = {};
-          allRows.forEach(r => { if (!r.settled_at) { const k = houseKey(r.house); need[k] = r2((need[k] || 0) + Number(r.amount || 0)); } });
+          allRows.forEach(r => {
+            if (r.settled_at) return;
+            const k = houseKey(r.house);
+            if (MY_KEYS && !MY_KEYS.includes(k)) return;   // 管理夾萬同工只睇所管社別
+            need[k] = r2((need[k] || 0) + Number(r.amount || 0));
+          });
           const cell = (label, have, want) => {
             const ok = have >= want - 0.005;
             return `<span class="${ok ? 'text-emerald-700' : 'text-red-600'}">${label}代管現金 ${money(have)}${want ? `（未結算 ${money(want)} ${ok ? '✅ 夠' : '⚠️ 唔夠'}）` : ''}</span>`;
           };
-          hint.innerHTML = '🏦 ' + window.HOUSES.map(h => cell(h.name, v[h.key + '_small'] || 0, need[h.key] || 0)).join(' ｜ ');
+          const hintHouses = MY_KEYS ? window.HOUSES.filter(h => MY_KEYS.includes(h.key)) : window.HOUSES;
+          hint.innerHTML = '🏦 ' + hintHouses.map(h => cell(h.name, v[h.key + '_small'] || 0, need[h.key] || 0)).join(' ｜ ');
           hint.classList.remove('hidden');
         }
       } catch { /* 顯示唔到都唔阻主流程 */ }

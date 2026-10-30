@@ -35,3 +35,25 @@ window.houseSoft = function (name) {
   const h = window.HOUSES.find(h => h.name === name);
   return h ? h.soft : '#f1f5f9';
 };
+
+// ============================================================
+// 權限社別（v1.26.0 起）：同事可以接觸邊幾個社嘅資料
+// 用法：const keys = accessibleHouseKeys(role, staffDirEntry);
+//   - 回傳 null ＝ 無限制（admin／管理級，或名冊未設定社別——向後兼容）
+//   - 回傳 key 陣列 ＝ 只可以接觸呢啲社（管理夾萬同工＝負責嘅夾萬社別；社工／導師＝所屬社別，可多選）
+// entry 係 staff_dir[email]：{ name, title, house, houses[], deleted }
+// ============================================================
+window.accessibleHouseKeys = function (role, entry) {
+  if (role === 'admin' || role === 'manager') return null;
+  if (!entry || entry.deleted) return null;
+  if (Array.isArray(entry.houses) && entry.houses.length) return entry.houses.slice();
+  if (entry.house) return [entry.house];
+  return null;
+};
+// 權限社別（社名陣列版本，已過濾無效 key）
+window.accessibleHouseNames = function (role, entry) {
+  const ks = window.accessibleHouseKeys(role, entry);
+  if (!ks) return null;
+  const names = ks.map(window.houseNameOf).filter(n => window.HOUSE_NAMES.includes(n));
+  return names.length ? names : null;
+};

@@ -899,16 +899,12 @@ const roleSel = (email, cur) => `<select class="role_sel shrink-0 rounded-lg bor
   <option value="manager"${cur === 'manager' ? ' selected' : ''}>管理級</option>
   <option value="admin"${cur === 'admin' ? ' selected' : ''}>admin</option>
 </select>`;
-// 同事所屬社別（管理夾萬同工：過錢時收款人會按社別自動揀；其他同事：支錢頁預設社別）
-const houseSel = (email, cur) => `<select class="house_sel shrink-0 rounded-lg border border-amber-300 bg-amber-50 px-2 py-1 text-xs outline-none" data-email="${email}" title="所屬社別（管理夾萬同工＝負責嘅夾萬）">
-  <option value=""${!cur ? ' selected' : ''}>所屬社別…</option>
-  ${window.HOUSES.map(h => `<option value="${h.key}"${cur === h.key ? ' selected' : ''}>${h.name}</option>`).join('')}
-</select>`;
 const titleSel = (email, cur) => `<select class="title_sel shrink-0 rounded-lg border border-slate-300 px-2 py-1 text-xs bg-white outline-none" data-email="${email}">
   <option value=""${!cur ? ' selected' : ''}>職級…</option>${TITLES.map(t => `<option${cur === t ? ' selected' : ''}>${t}</option>`).join('')}
 </select>`;
-// 管理夾萬同工嘅多社夾萬勾選（houses 陣列；可以管多過一個社）
-const houseMulti = (email, curArr) => `<span class="house_multi shrink-0 inline-flex items-center gap-1.5 flex-wrap rounded-lg border border-amber-300 bg-amber-50 px-2 py-1 text-xs" data-email="${email}" title="管理邊幾個社嘅夾萬（可多選）"><span class="font-bold text-amber-700">管夾萬:</span>${window.HOUSES.map(h => `<label class="inline-flex items-center gap-0.5"><input type="checkbox" class="house_chk accent-amber-600" value="${h.key}"${curArr.includes(h.key) ? ' checked' : ''}>${h.name.replace(/社$/, '')}</label>`).join('')}</span>`;
+// 同事社別多選勾選（houses 陣列；所有同事都可以屬多過一個社）
+// 管理夾萬同工＝負責嘅夾萬（過錢收款人按社別自動揀）；其他同事＝所屬社別（支錢頁預設＋資料瀏覽範圍）
+const houseMulti = (email, curArr, isCashier) => `<span class="house_multi shrink-0 inline-flex items-center gap-1.5 flex-wrap rounded-lg border border-amber-300 bg-amber-50 px-2 py-1 text-xs" data-email="${email}" title="${isCashier ? '管理邊幾個社嘅夾萬（可多選）' : '所屬社別（可多選）：支錢預設社別＋可以睇邊啲社嘅資料'}"><span class="font-bold text-amber-700">${isCashier ? '管夾萬' : '社別'}:</span>${window.HOUSES.map(h => `<label class="inline-flex items-center gap-0.5"><input type="checkbox" class="house_chk accent-amber-600" value="${h.key}"${curArr.includes(h.key) ? ' checked' : ''}>${h.name.replace(/社$/, '')}</label>`).join('')}</span>`;
 const delBtn = email => `<button class="staff_del shrink-0 px-2.5 py-1 rounded-lg bg-red-50 text-red-600 text-xs font-bold hover:bg-red-100 transition" data-email="${email}">刪除</button>`;
 async function saveRoles(){
   const { error } = await sb.from('settings').upsert({ key: 'roles', value: ROLES_MAP });
@@ -932,7 +928,7 @@ async function loadRoles(){
     const cur = s.perm ? 'admin' : (VALID_ROLES.includes(ROLES_MAP[s.email]) ? ROLES_MAP[s.email] : derivedRole(s.title));
     const right = s.perm
       ? '<span class="shrink-0 text-xs font-bold text-indigo-600">永久 admin</span>'
-      : titleSel(s.email, s.title) + houseSel(s.email, s.house) + (cur === 'cashier' ? houseMulti(s.email, housesOf(s)) : '') + roleSel(s.email, cur) + delBtn(s.email);
+      : titleSel(s.email, s.title) + houseMulti(s.email, housesOf(s), cur === 'cashier') + roleSel(s.email, cur) + delBtn(s.email);
     return `<div class="flex items-center justify-between gap-2 border border-slate-200 rounded-lg px-3 py-2">
       <span class="min-w-0 truncate"><b>${escapeHtml(s.name)}</b> <span class="text-xs text-slate-400">${escapeHtml(s.email)}</span></span>
       <span class="flex items-center gap-1.5 shrink-0">${right}</span></div>`;
@@ -946,8 +942,7 @@ async function loadRoles(){
       <span class="min-w-0 flex-1 text-xs text-slate-500 truncate">${escapeHtml(em)}<br>Google 名：${escapeHtml((STAFF_SEEN[em] || {}).name || '—')}</span>
       <input class="seen_name w-24 rounded-lg border border-slate-300 px-2 py-1 text-xs outline-none" data-email="${em}" placeholder="姓名" maxlength="10">
       ${titleSel(em, '')}
-      ${houseSel(em, (STAFF_DIR[em] && !STAFF_DIR[em].deleted && STAFF_DIR[em].house) || '')}
-      ${(ROLES_MAP[em] || '') === 'cashier' ? houseMulti(em, (STAFF_DIR[em] && !STAFF_DIR[em].deleted && Array.isArray(STAFF_DIR[em].houses)) ? STAFF_DIR[em].houses : []) : ''}
+      ${houseMulti(em, (STAFF_DIR[em] && !STAFF_DIR[em].deleted && Array.isArray(STAFF_DIR[em].houses)) ? STAFF_DIR[em].houses : ((STAFF_DIR[em] && !STAFF_DIR[em].deleted && STAFF_DIR[em].house) ? [STAFF_DIR[em].house] : []), (ROLES_MAP[em] || '') === 'cashier')}
       ${roleSel(em, VALID_ROLES.includes(ROLES_MAP[em]) ? ROLES_MAP[em] : 'tutor')}
       ${delBtn(em)}
     </div>`).join('');
@@ -980,42 +975,30 @@ async function onTitleChange(s){
     loadRoles();
   } catch (err) { alert('儲存失敗：' + err.message); loadRoles(); }
 }
-// 改同事所屬社別（存入 staff_dir.house；管理夾萬同工＝夾萬指派，過錢收款人按社別自動揀；其他同事＝支錢頁預設社別）
-async function onHouseChange(s){
-  const em = s.dataset.email, house = s.value;
-  const entry = dirMerged().find(x => x.email === em);
-  const name = entry ? entry.name : '';
-  if (!name) { alert('請先幫呢位同事填姓名，再設定社別。'); loadRoles(); return; }
-  try {
-    const c = STAFF_DIR[em] && !STAFF_DIR[em].deleted ? STAFF_DIR[em] : {};
-    STAFF_DIR[em] = { ...c, name: c.name || name, title: c.title || (entry ? entry.title : '') || '', house };
-    await saveDir();
-    toast(`已更新 ${name} 嘅所屬社別：${house ? window.houseNameOf(house) : '（取消）'}。`);
-    loadRoles();
-  } catch (err) { alert('儲存失敗：' + err.message); loadRoles(); }
-}
-// 改管理夾萬同工嘅多社夾萬勾選（存入 staff_dir.houses 陣列；如未設所屬社別會自動用第一個勾選）
+// 改同事社別多選（存入 staff_dir.houses 陣列；所有同事都可以屬多過一個社）
+// house（單值）＝預設社別：如果原有預設仲喺勾選入面就保留，否則用第一個勾選
 async function onHousesChange(box){
   const em = box.dataset.email;
   const houses = [...box.querySelectorAll('.house_chk:checked')].map(c => c.value);
   const entry = dirMerged().find(x => x.email === em);
   const name = entry ? entry.name : '';
-  if (!name) { alert('請先幫呢位同事填姓名，再設定夾萬。'); loadRoles(); return; }
+  if (!name) { alert('請先幫呢位同事填姓名，再設定社別。'); loadRoles(); return; }
   try {
     const c = STAFF_DIR[em] && !STAFF_DIR[em].deleted ? STAFF_DIR[em] : {};
-    STAFF_DIR[em] = { ...c, name: c.name || name, title: c.title || (entry ? entry.title : '') || '', house: c.house || houses[0] || '', houses };
+    const house = houses.includes(c.house) ? c.house : (houses[0] || '');
+    STAFF_DIR[em] = { ...c, name: c.name || name, title: c.title || (entry ? entry.title : '') || '', house, houses };
     await saveDir();
-    toast(`已更新 ${name} 管理嘅夾萬：${houses.length ? houses.map(window.houseNameOf).join('、') : '（全部取消）'}。`);
+    toast(`已更新 ${name} 嘅社別：${houses.length ? houses.map(window.houseNameOf).join('、') : '（全部取消）'}。`);
     loadRoles();
   } catch (err) { alert('儲存失敗：' + err.message); loadRoles(); }
 }
 $('role_list').addEventListener('change', e => {
-  const rs = e.target.closest('.role_sel'), ts = e.target.closest('.title_sel'), hs = e.target.closest('.house_sel'), hc = e.target.closest('.house_chk');
-  if (rs) onRoleChange(rs); else if (ts) onTitleChange(ts); else if (hs) onHouseChange(hs); else if (hc) onHousesChange(hc.closest('.house_multi'));
+  const rs = e.target.closest('.role_sel'), ts = e.target.closest('.title_sel'), hc = e.target.closest('.house_chk');
+  if (rs) onRoleChange(rs); else if (ts) onTitleChange(ts); else if (hc) onHousesChange(hc.closest('.house_multi'));
 });
 $('seen_list').addEventListener('change', e => {
-  const rs = e.target.closest('.role_sel'), ts = e.target.closest('.title_sel'), hs = e.target.closest('.house_sel'), hc = e.target.closest('.house_chk');
-  if (rs) onRoleChange(rs); else if (ts) onTitleChange(ts); else if (hs) onHouseChange(hs); else if (hc) onHousesChange(hc.closest('.house_multi'));
+  const rs = e.target.closest('.role_sel'), ts = e.target.closest('.title_sel'), hc = e.target.closest('.house_chk');
+  if (rs) onRoleChange(rs); else if (ts) onTitleChange(ts); else if (hc) onHousesChange(hc.closest('.house_multi'));
 });
 // 刪除同事資料（名冊＋權限一齊刪；預設 7 人用隱藏標記；永久 admin 唔刪得）
 async function onStaffDel(btn){
@@ -1049,7 +1032,7 @@ $('sf_save').addEventListener('click', async () => {
   if (!title) { alert('請揀職級。'); $('sf_title').focus(); return; }
   if (role === 'admin' && !confirm(`確定將 ${name}（${em}）設定為 admin？\nadmin 擁有所有權限，包括新增其他 admin。`)) return;
   try {
-    STAFF_DIR[em] = { name, title, house };
+    STAFF_DIR[em] = { name, title, house, houses: house ? [house] : [] };   // 新增時單選社別，之後可以喺清單度多選
     // tutor／sw 都明確存落 ROLES_MAP（明確指定優先於職級推導）
     ROLES_MAP[em] = role;
     await saveDir();

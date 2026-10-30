@@ -444,6 +444,17 @@ function staffNameOf(em){
     if (d.data && d.data.value && typeof d.data.value === 'object') CLOUD_STAFF_DIR = d.data.value;
     if (r.data && r.data.value && typeof r.data.value === 'object') ROLES = r.data.value;
     renderStaffList();   // 職銜同夾萬社別指派載入後重繪（預期簽署人姓名）
+    // 非管理級：社別選擇收窄到自己所屬社別（後台設定，可多選）
+    const myNames = window.accessibleHouseNames(ROLE_NOW, CLOUD_STAFF_DIR[(sessionEmail() || '').toLowerCase()]);
+    if (myNames) {
+      ['s_house', 'ms_house', 'mr_house'].forEach(id => {
+        const cur = $(id).value;
+        $(id).innerHTML = myNames.map(h => `<option>${h}</option>`).join('');
+        $(id).value = myNames.includes(cur) ? cur : myNames[0];
+      });
+      if (ROLE_NOW !== 'tutor') loadSignRows();
+      if (CAN_REPORT) loadMemberPicker();
+    }
   } catch {}
 })();
 

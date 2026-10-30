@@ -327,12 +327,15 @@ function houseOf(h){ return window.houseKeyOf(h); }
 let VIEW = 'overview';
 let VIEW_INIT = false;          // 第一次 renderVault 時按登入人所屬社別定預設分頁
 let VAULT_ONE_HOUSE = '';       // vault_one 而家渲染緊邊社
+let MY_KEYS = null;             // 權限社別 key 陣列；null＝無限制（admin／管理級／未設定社別）
+const myHouses = () => MY_KEYS ? window.HOUSES.filter(h => MY_KEYS.includes(h.key)) : window.HOUSES;
+const myHouseNames = () => MY_KEYS ? myHouses().map(h => h.name) : window.HOUSE_NAMES;
 function renderViewTabs(){
   const onOv = VIEW === 'overview';
   const ovCls = onOv ? 'font-bold text-white bg-slate-700' : 'font-medium bg-slate-100 text-slate-600';
   $('view_tabs').innerHTML =
     `<button data-view="overview" class="view-tab px-4 py-2 rounded-lg text-sm transition ${ovCls}">📋 總覽</button>` +
-    window.HOUSES.map(h => {
+    myHouses().map(h => {
       const on = h.name === VIEW;
       return `<button data-view="${h.name}" class="view-tab px-4 py-2 rounded-lg text-sm transition ${on ? 'font-bold text-white' : 'font-medium bg-slate-100 text-slate-600'}"${on ? ` style="background:${h.color}"` : ''}>${h.name}</button>`;
     }).join('');
@@ -550,16 +553,21 @@ async function ledgerInsert(rows){
 // ---- 主渲染：總覽（支錢狀況＋七社對數表）／單社（夾萬卡＋舍友現存＋對數）----
 async function renderVault(){
   const [v, bal, membersDb] = await Promise.all([getSafeVault(), getSettingValue('member_bal'), getSettingValue('members')]);
-  // 第一次載入：預設分頁＝登入人所屬社別（staff_dir），冇就總覽
+  // 第一次載入：讀名冊→設定權限社別（MY_KEYS）＋預設分頁＝登入人所屬社別，冇就總覽
   if (!VIEW_INIT) {
     VIEW_INIT = true;
     try {
       const dir = await getSettingValue('staff_dir');
       const em = (sessionEmail() || '').toLowerCase();
       const c = em && dir && typeof dir === 'object' ? dir[em] : null;
+      MY_KEYS = window.accessibleHouseKeys(sessionRole(), c);   // null＝無限制（admin／管理級／未設定）
       if (c && !c.deleted && c.house) {
         const hn = window.houseNameOf(c.house);
         if (window.HOUSE_NAMES.includes(hn)) VIEW = hn;
+      }
+      // 權限外嘅分頁唔入得：揀咗唔屬於自己嘅社就彈返第一個可見社
+      if (MY_KEYS && VIEW !== 'overview' && !MY_KEYS.includes(window.houseKeyOf(VIEW))) {
+        VIEW = window.houseNameOf(MY_KEYS[0]);
       }
     } catch {}
     applyView();
@@ -579,16 +587,20 @@ async function renderVault(){
       $('vault_one_small').value = v.init ? v[hk0 + '_small'].toFixed(2) : '';
     }
   }
-  // 全社結存合計（總覽表同單社對數都要用）
+  // 全社結存合計（總覽表同單社對數都要用；有權限限制時只計可見社別）
   let balTotal = 0;
   const houseTotals = {};
   const houseKeysInMembers = window.HOUSE_NAMES.filter(h => Array.isArray(members[h]));
   Object.keys(members).forEach(h => { if (!houseKeysInMembers.includes(h)) houseKeysInMembers.push(h); });   // 名單有但 houses.js 未有嘅舊社都照計
-  houseKeysInMembers.forEach(h => (members[h] || []).forEach(m => {
-    const amt = Number(balMap[m.id || m.name]) || 0;
-    balTotal = r2(balTotal + amt);
-    houseTotals[h] = r2((houseTotals[h] || 0) + amt);
-  }));
+  const allowedNames = MY_KEYS ? myHouseNames() : null;
+  houseKeysInMembers.forEach(h => {
+    if (allowedNames && !allowedNames.includes(h)) return;   // 權限外嘅社唔計入合計
+    (members[h] || []).forEach(m => {
+      const amt = Number(balMap[m.id || m.name]) || 0;
+      balTotal = r2(balTotal + amt);
+      houseTotals[h] = r2((houseTotals[h] || 0) + amt);
+    });
+  });
   // 舍友現存清單：只渲染而家揀咗嘅社（人多用搜尋過濾，唔會一次過晒幾百人出嚟）
   if (VIEW !== 'overview') {
     const list = members[VIEW] || [];
@@ -605,23 +617,24 @@ async function renderVault(){
     filterBalRows();
   }
   if (READONLY) document.querySelectorAll('.mbal_in').forEach(i => { i.disabled = true; });
-  // 未結算墊支（分社計；結算欄位未開通就當 0 並唔顯示對數）
+  // 未結算墊支（分社計；結算欄位未開通就當 0 並唔顯示對數；有權限限制時只計可見社別）
   let adv = 0, advOk = true;
   const advHouse = {};
   try {
     const { data, error } = await sb.from('applications').select('amount,house').is('settled_at', null).limit(1000);
     if (error) { if (/settled_at|42703|schema cache/i.test(error.message)) advOk = false; }
     else (data || []).forEach(r => {
+      if (MY_KEYS && r.house && !MY_KEYS.includes(window.houseKeyOf(r.house))) return;   // 權限外嘅社唔計
       const a = Number(r.amount || 0);
       adv = r2(adv + a);
       if (r.house) advHouse[r.house] = r2((advHouse[r.house] || 0) + a);
     });
   } catch { advOk = false; }
-  // 支錢狀況總覽（總支出／分社支出／未結算；所有角色可見）
+  // 支錢狀況總覽（總支出／分社支出／未結算；所有角色可見，但有權限限制時只計可見社別）
   try {
     const { data: allApps, error: stErr } = await sb.from('applications').select('amount,house').neq('status', 'pending').limit(1000);
     if (stErr) throw new Error(stErr.message);
-    const arr = allApps || [];
+    const arr = (allApps || []).filter(r => !MY_KEYS || !r.house || MY_KEYS.includes(window.houseKeyOf(r.house)));
     const tot = arr.reduce((a, r) => a + Number(r.amount || 0), 0);
     $('st_total').textContent = money(tot);
     $('st_total_n').textContent = arr.length + ' 張單';
@@ -633,7 +646,7 @@ async function renderVault(){
       houseSums[r.house].sum = r2(houseSums[r.house].sum + Number(r.amount || 0));
       houseSums[r.house].n++;
     });
-    $('st_house_grid').innerHTML = window.HOUSE_NAMES.map(h => {
+    $('st_house_grid').innerHTML = myHouseNames().map(h => {
       const s = houseSums[h] || { sum: 0, n: 0 };
       return `<div class="rounded-xl border-2 p-3" style="border-color:${window.houseColor(h)}44; background:${window.houseSoft(h)}66">
         <div class="text-xs" style="color:${window.houseColor(h)}">${h}支出</div>
@@ -643,7 +656,7 @@ async function renderVault(){
     }).join('');
     if (advOk) {
       $('st_unsettled').textContent = money(adv);
-      $('st_unsettled_n').textContent = window.HOUSE_NAMES.map(h => `${h} ${money(advHouse[h] || 0)}`).join(' ｜ ');
+      $('st_unsettled_n').textContent = myHouseNames().map(h => `${h} ${money(advHouse[h] || 0)}`).join(' ｜ ');
     } else {
       $('st_unsettled').textContent = '—';
       $('st_unsettled_n').textContent = '（結算欄位未開通）';
@@ -656,7 +669,7 @@ async function renderVault(){
       const curYm = `${now.getFullYear()}-${p2(now.getMonth() + 1)}`;
       const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       const prevYm = `${prev.getFullYear()}-${p2(prev.getMonth() + 1)}`;
-      const rows = setApps || [];
+      const rows = (setApps || []).filter(r => !MY_KEYS || !r.house || MY_KEYS.includes(window.houseKeyOf(r.house)));   // 結算分項同樣受權限社別限制
       const SET_BUCKETS = {
         m:   { label: `本月結算（${curYm}）`,  rows: rows.filter(r => String(r.settled_at || '').slice(0, 7) === curYm) },
         p:   { label: `上月結算（${prevYm}）`, rows: rows.filter(r => String(r.settled_at || '').slice(0, 7) === prevYm) },
@@ -685,7 +698,7 @@ async function renderVault(){
           const b = SET_BUCKETS[k];
           const sumA = arr => arr.reduce((a, r) => a + Number(r.amount || 0), 0);
           $('sd_title').textContent = `${b.label}：${money(bucketSum(b))}（${b.rows.length} 張單）`;
-          $('sd_sub').textContent = window.HOUSE_NAMES.map(h => {
+          $('sd_sub').textContent = myHouseNames().map(h => {
             const rs = b.rows.filter(r => r.house === h);
             return `${h} ${money(sumA(rs))}（${rs.length} 張）`;
           }).join('｜');
@@ -703,10 +716,11 @@ async function renderVault(){
   } catch {
     $('st_total_n').textContent = '未能載入';
   }
-  // 對數：總覽 → 七社一表（vault_summary）；單社 → 大字對數卡（vault_check）
+  // 對數：總覽 → 各社一表（vault_summary）；單社 → 大字對數卡（vault_check）
+  // 有權限限制時（MY_KEYS）：表格只顯示可見社別，合計都只計可見社別
   const vaultHouse = {};
   window.HOUSES.forEach(h => { vaultHouse[h.name] = r2(v[h.key + '_big'] + v[h.key + '_small']); });
-  const vaultTotal = r2(Object.values(vaultHouse).reduce((a, x) => a + x, 0));
+  const vaultTotal = r2(myHouseNames().reduce((a, h) => a + (vaultHouse[h] || 0), 0));
   const expHouse = {};
   window.HOUSE_NAMES.forEach(h => { expHouse[h] = r2((houseTotals[h] || 0) + (advOk ? (advHouse[h] || 0) : 0)); });
   const expTotal = r2(balTotal + (advOk ? adv : 0));
@@ -720,7 +734,7 @@ async function renderVault(){
     const badge = ok => ok
       ? '<span class="text-sm font-extrabold text-emerald-600 whitespace-nowrap">✅ 對數</span>'
       : '<span class="text-sm font-extrabold text-red-600 whitespace-nowrap">⚠️ 唔對數</span>';
-    const rowsHtml = window.HOUSE_NAMES.map(h => {
+    const rowsHtml = myHouseNames().map(h => {
       const col = window.houseColor(h);
       const ok = advOk ? chk(vaultHouse[h], expHouse[h]) : null;
       return `<tr class="border-b border-slate-100">

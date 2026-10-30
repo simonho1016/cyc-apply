@@ -208,7 +208,7 @@
     <!-- 帳號及權限管理（admin 專用） -->
     <div id="cardRoles" class="card bg-white p-5 space-y-3">
       <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wide">👥 帳號及權限管理</h3>
-      <p class="text-xs text-slate-500">五層權限：<b>admin</b>（所有權限）＞ <b>管理級</b>（管理夾萬同工所有功能 ＋ 夾萬「現存→代管」過錢）＞ <b>管理夾萬同工</b>（支錢、舍友存入、製作及下載文件；要指派管理邊個社嘅夾萬）＞ <b>社工</b>（基本權限 ＋ 月結簽署，負責「社工簽署」位）＝ <b>導師</b>（基本權限：支錢、檢視文件、夾萬唯讀）。所有 <b>@sbccyc.org.hk</b> 網域登入嘅同事，冇明確指派時會按職級自動分流：職級係「社工／專責個案社工」→ 社工，其餘 → 導師。新同事第一次登入後會出現喺「未登記同事」區，由 admin 補返姓名同職級。admin 可以新增、修改、刪除任何帳號，<b>包括新增其他 admin</b>；ho.ml／ho.lh 係永久 admin，唔可以改。設定喺同事下次登入時生效。</p>
+      <p class="text-xs text-slate-500">五層權限：<b>admin</b>（所有權限）＞ <b>管理級</b>（管理夾萬同工所有功能 ＋ 夾萬「現存→代管」過錢）＞ <b>管理夾萬同工</b>（支錢、舍友存入、製作及下載文件）＞ <b>社工</b>（基本權限 ＋ 月結簽署，負責「社工簽署」位）＝ <b>導師</b>（基本權限：支錢、檢視文件、夾萬唯讀）。每位同事可以設定<b>所屬社別</b>：管理夾萬同工嘅社別＝佢負責嘅夾萬（過錢收款人自動帶出）；其他同事嘅社別會做支錢頁嘅預設社別。所有 <b>@sbccyc.org.hk</b> 網域登入嘅同事，冇明確指派時會按職級自動分流：職級係「社工／專責個案社工」→ 社工，其餘 → 導師。新同事第一次登入後會出現喺「未登記同事」區，由 admin 補返姓名同職級。admin 可以新增、修改、刪除任何帳號，<b>包括新增其他 admin</b>；ho.ml／ho.lh 係永久 admin，唔可以改。設定喺同事下次登入時生效。</p>
       <div id="role_list" class="space-y-2 text-sm"></div>
       <div id="seen_wrap" class="hidden space-y-2">
         <div class="text-xs font-bold text-amber-600">⚠️ 未登記同事（已登入過但未設定姓名／職級）</div>
@@ -223,6 +223,9 @@
             <option value="">職級…</option>
             <option>導師</option><option>社工</option><option>專責個案社工</option>
             <option>主任</option><option>副院長</option><option>院長</option>
+          </select>
+          <select id="sf_house" class="rounded-lg border border-slate-300 px-2 py-2 text-sm bg-white outline-none" title="同事所屬社別；管理夾萬同工會用佢做夾萬指派">
+            <option value="">所屬社別…</option>
           </select>
           <select id="sf_role" class="rounded-lg border border-slate-300 px-2 py-2 text-sm bg-white outline-none">
             <option value="tutor">導師</option>
@@ -432,8 +435,9 @@ function showMain(){
     loadFeedback();
     checkGoLive();
   }
-  // 社別篩選：動態填入全部社別
+  // 社別篩選＋新增帳號社別：動態填入全部社別
   $('q_house').innerHTML = '<option value="">全部</option>' + window.HOUSE_NAMES.map(h => `<option>${h}</option>`).join('');
+  $('sf_house').innerHTML = '<option value="">所屬社別…</option>' + window.HOUSE_NAMES.map(h => `<option value="${window.houseKeyOf(h)}">${h}</option>`).join('');
   loadData();
   mgLoad();
 }
@@ -892,10 +896,10 @@ const roleSel = (email, cur) => `<select class="role_sel shrink-0 rounded-lg bor
   <option value="manager"${cur === 'manager' ? ' selected' : ''}>管理級</option>
   <option value="admin"${cur === 'admin' ? ' selected' : ''}>admin</option>
 </select>`;
-// 管理夾萬同工嘅社別指派（夾萬過錢時收款人會按社別自動揀）
-const houseSel = (email, cur) => `<select class="house_sel shrink-0 rounded-lg border border-amber-300 bg-amber-50 px-2 py-1 text-xs outline-none" data-email="${email}" title="管理邊個社嘅夾萬">
-  <option value=""${!cur ? ' selected' : ''}>管邊社夾萬…</option>
-  ${window.HOUSES.map(h => `<option value="${h.key}"${cur === h.key ? ' selected' : ''}>${h.name}夾萬</option>`).join('')}
+// 同事所屬社別（管理夾萬同工：過錢時收款人會按社別自動揀；其他同事：支錢頁預設社別）
+const houseSel = (email, cur) => `<select class="house_sel shrink-0 rounded-lg border border-amber-300 bg-amber-50 px-2 py-1 text-xs outline-none" data-email="${email}" title="所屬社別（管理夾萬同工＝負責嘅夾萬）">
+  <option value=""${!cur ? ' selected' : ''}>所屬社別…</option>
+  ${window.HOUSES.map(h => `<option value="${h.key}"${cur === h.key ? ' selected' : ''}>${h.name}</option>`).join('')}
 </select>`;
 const titleSel = (email, cur) => `<select class="title_sel shrink-0 rounded-lg border border-slate-300 px-2 py-1 text-xs bg-white outline-none" data-email="${email}">
   <option value=""${!cur ? ' selected' : ''}>職級…</option>${TITLES.map(t => `<option${cur === t ? ' selected' : ''}>${t}</option>`).join('')}
@@ -923,7 +927,7 @@ async function loadRoles(){
     const cur = s.perm ? 'admin' : (VALID_ROLES.includes(ROLES_MAP[s.email]) ? ROLES_MAP[s.email] : derivedRole(s.title));
     const right = s.perm
       ? '<span class="shrink-0 text-xs font-bold text-indigo-600">永久 admin</span>'
-      : titleSel(s.email, s.title) + (cur === 'cashier' ? houseSel(s.email, s.house) : '') + roleSel(s.email, cur) + delBtn(s.email);
+      : titleSel(s.email, s.title) + houseSel(s.email, s.house) + roleSel(s.email, cur) + delBtn(s.email);
     return `<div class="flex items-center justify-between gap-2 border border-slate-200 rounded-lg px-3 py-2">
       <span class="min-w-0 truncate"><b>${escapeHtml(s.name)}</b> <span class="text-xs text-slate-400">${escapeHtml(s.email)}</span></span>
       <span class="flex items-center gap-1.5 shrink-0">${right}</span></div>`;
@@ -937,7 +941,7 @@ async function loadRoles(){
       <span class="min-w-0 flex-1 text-xs text-slate-500 truncate">${escapeHtml(em)}<br>Google 名：${escapeHtml((STAFF_SEEN[em] || {}).name || '—')}</span>
       <input class="seen_name w-24 rounded-lg border border-slate-300 px-2 py-1 text-xs outline-none" data-email="${em}" placeholder="姓名" maxlength="10">
       ${titleSel(em, '')}
-      ${(ROLES_MAP[em] || 'tutor') === 'cashier' ? houseSel(em, (STAFF_DIR[em] && !STAFF_DIR[em].deleted && STAFF_DIR[em].house) || '') : ''}
+      ${houseSel(em, (STAFF_DIR[em] && !STAFF_DIR[em].deleted && STAFF_DIR[em].house) || '')}
       ${roleSel(em, VALID_ROLES.includes(ROLES_MAP[em]) ? ROLES_MAP[em] : 'tutor')}
       ${delBtn(em)}
     </div>`).join('');
@@ -970,17 +974,17 @@ async function onTitleChange(s){
     loadRoles();
   } catch (err) { alert('儲存失敗：' + err.message); loadRoles(); }
 }
-// 改管理夾萬同工嘅社別指派（存入 staff_dir.house；過錢收款人按社別自動揀）
+// 改同事所屬社別（存入 staff_dir.house；管理夾萬同工＝夾萬指派，過錢收款人按社別自動揀；其他同事＝支錢頁預設社別）
 async function onHouseChange(s){
   const em = s.dataset.email, house = s.value;
   const entry = dirMerged().find(x => x.email === em);
   const name = entry ? entry.name : '';
-  if (!name) { alert('請先幫呢位同事填姓名，再指派社別。'); loadRoles(); return; }
+  if (!name) { alert('請先幫呢位同事填姓名，再設定社別。'); loadRoles(); return; }
   try {
     const c = STAFF_DIR[em] && !STAFF_DIR[em].deleted ? STAFF_DIR[em] : {};
     STAFF_DIR[em] = { ...c, name: c.name || name, title: c.title || (entry ? entry.title : '') || '', house };
     await saveDir();
-    toast(`已指派 ${name} 管理${house ? window.houseNameOf(house) : '（取消指派）'}夾萬。`);
+    toast(`已更新 ${name} 嘅所屬社別：${house ? window.houseNameOf(house) : '（取消）'}。`);
     loadRoles();
   } catch (err) { alert('儲存失敗：' + err.message); loadRoles(); }
 }
@@ -1011,11 +1015,12 @@ async function onStaffDel(btn){
 }
 $('role_list').addEventListener('click', e => { const b = e.target.closest('.staff_del'); if (b) onStaffDel(b); });
 $('seen_list').addEventListener('click', e => { const b = e.target.closest('.staff_del'); if (b) onStaffDel(b); });
-// 新增／修訂帳號（電郵＋姓名＋職級＋權限）
+// 新增／修訂帳號（電郵＋姓名＋職級＋社別＋權限）
 $('sf_save').addEventListener('click', async () => {
   const em = $('sf_email').value.trim().toLowerCase();
   const name = $('sf_name').value.trim();
   const title = $('sf_title').value;
+  const house = $('sf_house').value;
   const role = $('sf_role').value;
   if (!em || !em.endsWith('@sbccyc.org.hk')) { alert('請輸入 @sbccyc.org.hk 電郵。'); return; }
   if (ADMIN_EMAILS.includes(em)) { alert('呢個係永久 admin，唔可以喺度修改。'); return; }
@@ -1023,13 +1028,13 @@ $('sf_save').addEventListener('click', async () => {
   if (!title) { alert('請揀職級。'); $('sf_title').focus(); return; }
   if (role === 'admin' && !confirm(`確定將 ${name}（${em}）設定為 admin？\nadmin 擁有所有權限，包括新增其他 admin。`)) return;
   try {
-    STAFF_DIR[em] = { name, title };
+    STAFF_DIR[em] = { name, title, house };
     // tutor／sw 都明確存落 ROLES_MAP（明確指定優先於職級推導）
     ROLES_MAP[em] = role;
     await saveDir();
     await saveRoles();
-    $('sf_email').value = ''; $('sf_name').value = ''; $('sf_title').value = ''; $('sf_role').value = 'tutor';
-    toast(`已儲存帳號：${name}（${title} · ${ROLE_LABELS[role]}），下次登入生效。`);
+    $('sf_email').value = ''; $('sf_name').value = ''; $('sf_title').value = ''; $('sf_house').value = ''; $('sf_role').value = 'tutor';
+    toast(`已儲存帳號：${name}（${title}${house ? ' · ' + window.houseNameOf(house) : ''} · ${ROLE_LABELS[role]}），下次登入生效。`);
     loadRoles();
   } catch (e) { alert('儲存失敗：' + e.message); }
 });

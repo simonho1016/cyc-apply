@@ -282,8 +282,8 @@
         </div>
 
         <div>
-          <span class="text-xs font-medium text-slate-500">社別</span>
-          <div class="mt-1 grid grid-cols-3 gap-2" id="f_house_grid"></div>
+          <span class="text-xs font-medium text-slate-500">社別（預設係你所屬社別）</span>
+          <select id="f_house_sel" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"></select>
         </div>
 
         <label class="block">
@@ -726,6 +726,17 @@ async function loadSettings(){
     const s = await DB.getSettings();
     if (s.members && typeof s.members === 'object' && window.HOUSE_NAMES.some(h => Array.isArray(s.members[h]))) CFG.members = s.members;
     window.HOUSE_NAMES.forEach(h => { if (!Array.isArray(CFG.members[h])) CFG.members[h] = []; });   // 補齊新社空名單
+    // 預設社別：登入人喺 staff_dir 嘅所屬社別
+    try {
+      const a = JSON.parse(localStorage.getItem('cyc-portal-auth') || 'null');
+      const em = ((a && a.email) || '').toLowerCase();
+      const c = em && s.staff_dir && typeof s.staff_dir === 'object' ? s.staff_dir[em] : null;
+      if (c && !c.deleted && c.house) {
+        const hn = window.houseNameOf(c.house);
+        if (window.HOUSE_NAMES.includes(hn)) DEFAULT_HOUSE = hn;
+      }
+    } catch {}
+    if (!f_house_touched) { applyDefaultHouse(); populatePayee(); }
     if (Array.isArray(s.staff) && s.staff.length) CFG.staff = s.staff;
     if (typeof s.entry_pw === 'string' && s.entry_pw) CFG.entryPw = s.entry_pw;
   } catch { /* 用預設值 */ }
@@ -786,6 +797,13 @@ function backToLogin(){
 let staffUser = '';
 let currentRec = null;   // 重印用
 let f_house = '';
+let DEFAULT_HOUSE = window.HOUSE_NAMES[0];   // 預設社別：登入人嘅所屬社別（loadSettings 讀 staff_dir 更新）
+let f_house_touched = false;                 // 同事手動改過社別就唔再被預設覆蓋
+function applyDefaultHouse(){
+  f_house = DEFAULT_HOUSE;
+  const sel = $('f_house_sel');
+  if (sel) sel.value = DEFAULT_HOUSE;
+}
 
 // ---- 支款人選擇：有簽名檔案嘅職員（何文諾、何樂軒）要先輸入個人密碼；驗證後唔設時限（關分頁即止） ----
 const STAFF_OK_MS = 365 * 24 * 60 * 60 * 1000;
@@ -830,22 +848,14 @@ function enterForm(){
   renderDraftPanel();   // 刷新暫存單列表
 }
 
-// 社別按鈕：由 houses.js 動態生成（新增社別只要改 houses.js）
-$('f_house_grid').innerHTML = window.HOUSES.map(h =>
-  `<button type="button" data-house="${h.name}" class="f-house-btn rounded-lg border border-slate-300 bg-white text-slate-600 px-3 py-2 text-sm font-medium transition">${h.name}</button>`
-).join('');
-// 社別 → 收款人名單
-document.querySelectorAll('.f-house-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    f_house = btn.dataset.house;
-    document.querySelectorAll('.f-house-btn').forEach(b => {
-      const on = b === btn;
-      b.classList.toggle('bg-emerald-600', on); b.classList.toggle('text-white', on); b.classList.toggle('border-emerald-600', on);
-      b.classList.toggle('bg-white', !on); b.classList.toggle('border-slate-300', !on); b.classList.toggle('text-slate-600', !on);
-    });
-    populatePayee();
-    renderForm();
-  });
+// 社別下拉：由 houses.js 動態生成（新增社別只要改 houses.js）；預設揀登入人所屬社別
+$('f_house_sel').innerHTML = window.HOUSE_NAMES.map(h => `<option value="${h}">${h}</option>`).join('');
+applyDefaultHouse();
+$('f_house_sel').addEventListener('change', () => {
+  f_house = $('f_house_sel').value;
+  f_house_touched = true;
+  populatePayee();
+  renderForm();
 });
 function populatePayee(){
   const sel = $('f_payee');
@@ -942,11 +952,7 @@ function renderForm(){ fillSheet(formData()); }
 // 清空表單（日期返今日）
 function resetForm(){
   ['f_no','f_notion','f_amount','f_cat_other','f_remark','f_payee_other'].forEach(id => $(id).value = '');
-  f_house = '';
-  document.querySelectorAll('.f-house-btn').forEach(b => {
-    b.classList.remove('bg-emerald-600','text-white','border-emerald-600');
-    b.classList.add('bg-white','border-slate-300','text-slate-600');
-  });
+  applyDefaultHouse();   // 清空後返返去預設社別（登入人所屬社別）
   populatePayee();
   document.querySelectorAll('#f_cats input').forEach(cb => {
     cb.checked = false;
@@ -1351,12 +1357,9 @@ $('s_list').addEventListener('click', async e => {
 function loadRecordToForm(rec){
   $('f_no').value = rec.doc_no || '';
   $('f_notion').value = rec.notion_id || '';
-  f_house = rec.house || '';
-  document.querySelectorAll('.f-house-btn').forEach(b => {
-    const on = b.dataset.house === f_house;
-    b.classList.toggle('bg-emerald-600', on); b.classList.toggle('text-white', on); b.classList.toggle('border-emerald-600', on);
-    b.classList.toggle('bg-white', !on); b.classList.toggle('border-slate-300', !on); b.classList.toggle('text-slate-600', !on);
-  });
+  f_house = rec.house || DEFAULT_HOUSE;
+  f_house_touched = true;
+  $('f_house_sel').value = f_house;
   populatePayee();
   if ([...$('f_payee').options].some(o => o.value === rec.payee)) {
     $('f_payee').value = rec.payee;

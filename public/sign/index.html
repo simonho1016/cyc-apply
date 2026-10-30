@@ -15,6 +15,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@400;700&family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/houses.js"></script>
 <style>
   :root { --ink: #141414; --pow: #ffd23f; }
   body {
@@ -187,9 +188,7 @@
     <div class="bg-white rounded-2xl p-4 space-y-3">
       <div class="flex items-end gap-2 flex-wrap">
         <label class="block"><span class="text-xs font-medium text-slate-500">社別</span>
-          <select id="s_house" class="mt-1 px-3 py-2 text-sm outline-none">
-            <option>忠社</option><option>孝社</option>
-          </select></label>
+          <select id="s_house" class="mt-1 px-3 py-2 text-sm outline-none"></select></label>
         <label class="block"><span class="text-xs font-medium text-slate-500">月份</span>
           <input id="s_month" type="month" class="mt-1 px-3 py-2 text-sm outline-none"></label>
         <button id="s_load" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-violet-600 hover:bg-violet-700 transition">載入名單</button>
@@ -231,9 +230,7 @@
         <p class="text-xs text-slate-500">輸出同舊系統一樣格式嘅社別月結單（戶口資料、戶口轉賬紀錄、舍友戶口紀錄、三級簽署欄）。<b>承前結存</b>由「結存起點」同過往流水計出。</p>
         <div class="flex items-end gap-2 flex-wrap">
           <label class="block"><span class="text-xs font-medium text-slate-500">社別</span>
-            <select id="ms_house" class="mt-1 rounded-lg px-3 py-2 text-sm outline-none">
-              <option>忠社</option><option>孝社</option>
-            </select></label>
+            <select id="ms_house" class="mt-1 rounded-lg px-3 py-2 text-sm outline-none"></select></label>
           <label class="block"><span class="text-xs font-medium text-slate-500">月份</span>
             <input id="ms_month" type="month" class="mt-1 rounded-lg px-3 py-2 text-sm outline-none"></label>
           <button id="ms_go" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition">預覽月結</button>
@@ -246,9 +243,7 @@
         <p class="text-xs text-slate-500">每人每月一版 A4：承前結餘、逐筆存入／支出、結餘、分類小計同簽署欄，同舊系統「舍友零用金收支紀錄表」格式一樣。可以勾選個別舍友列印；內容多過一版會自動收窄，保證每人啱啱一頁。</p>
         <div class="flex items-end gap-2 flex-wrap">
           <label class="block"><span class="text-xs font-medium text-slate-500">社別</span>
-            <select id="mr_house" class="mt-1 rounded-lg px-3 py-2 text-sm outline-none">
-              <option>忠社</option><option>孝社</option>
-            </select></label>
+            <select id="mr_house" class="mt-1 rounded-lg px-3 py-2 text-sm outline-none"></select></label>
           <label class="block"><span class="text-xs font-medium text-slate-500">月份</span>
             <input id="mr_month" type="month" class="mt-1 rounded-lg px-3 py-2 text-sm outline-none"></label>
           <button id="mr_go" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 transition">預覽收支紀錄表</button>
@@ -504,8 +499,8 @@ const STAFF_SLOTS = [
   { slot: 'officer',  label: '負責職員', hint: '須由該社「管理夾萬同工」簽署' },
   { slot: 'reviewer', label: '審核職員', hint: '須由「管理級」同事簽署' }
 ];
-function houseKeyNow(){ return $('s_house').value === '孝社' ? 'xiao' : 'zhong'; }
-function houseKey(h){ return h === '孝社' ? 'xiao' : 'zhong'; }
+function houseKeyNow(){ return window.houseKeyOf($('s_house').value); }
+function houseKey(h){ return window.houseKeyOf(h); }
 // 指定社別被指派嘅管理夾萬同工（負責職員括號預期姓名；收支紀錄表「經手人」都係佢哋）
 function officersOf(hk){
   return Object.keys(ROLES).filter(em => {
@@ -1003,8 +998,12 @@ async function getSettingValue(key){
 }
 async function getSafeVault(){
   const v = await getSettingValue('safe_vault');
-  if (v && typeof v === 'object') return { init: true, zhong_big: +v.zhong_big || 0, zhong_small: +v.zhong_small || 0, xiao_big: +v.xiao_big || 0, xiao_small: +v.xiao_small || 0 };
-  return { init: false, zhong_big: 0, zhong_small: 0, xiao_big: 0, xiao_small: 0 };
+  const out = { init: !!(v && typeof v === 'object') };
+  window.HOUSES.forEach(h => {
+    out[h.key + '_big'] = out.init ? +v[h.key + '_big'] || 0 : 0;
+    out[h.key + '_small'] = out.init ? +v[h.key + '_small'] || 0 : 0;
+  });
+  return out;
 }
 const fmtD = d => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
 const fmtDT = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
@@ -1073,7 +1072,7 @@ async function buildStatement(houseName, ym){
 }
 
 function statementHtml(st){
-  const accPre = st.hk === 'xiao' ? '孝' : '忠';
+  const accPre = (st.houseName || window.houseNameOf(st.hk) || st.hk).replace(/社$/, '');
   const totalAcct = (st.bigBal !== null && st.smallBal !== null) ? fmtMoney(r2(st.bigBal + st.smallBal)) : '—';
   const xferRows = st.xfers.map(x => `
     <tr><td>${fmtDT(new Date(x.created_at))}</td><td>${accPre}_現存現金</td><td>${accPre}_代管現金</td>
@@ -1387,15 +1386,22 @@ $('sheet_close').addEventListener('click', () => {
 $('sheet_print').addEventListener('click', () => window.print());
 
 // ---- 初始化 ----
+// 三個社別 select：動態填入全部社別
+['s_house', 'ms_house', 'mr_house'].forEach(id => {
+  $(id).innerHTML = window.HOUSE_NAMES.map(h => `<option>${h}</option>`).join('');
+});
 $('s_month').value = new Date().toLocaleDateString('sv').slice(0, 7);
 $('ms_month').value = new Date().toLocaleDateString('sv').slice(0, 7);
 $('mr_month').value = new Date().toLocaleDateString('sv').slice(0, 7);
-// URL 參數：?house=zhong|xiao&month=YYYY-MM
+// URL 參數：?house=<社key>&month=YYYY-MM
 try {
   const q = new URLSearchParams(location.search);
   if (q.get('house')) {
-    $('s_house').value = q.get('house') === 'xiao' ? '孝社' : '忠社';
-    $('mr_house').value = $('s_house').value; $('ms_house').value = $('s_house').value;
+    const hn = window.houseNameOf(q.get('house'));
+    if (window.HOUSE_NAMES.includes(hn)) {
+      $('s_house').value = hn;
+      $('mr_house').value = hn; $('ms_house').value = hn;
+    }
   }
   if (q.get('month')) { $('s_month').value = q.get('month'); $('mr_month').value = q.get('month'); $('ms_month').value = q.get('month'); }
 } catch {}

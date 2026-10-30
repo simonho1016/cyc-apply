@@ -10,6 +10,7 @@
 <title>則仁中心 — 夾萬・舍友現存</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/houses.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
@@ -108,21 +109,11 @@
     <!-- 支錢狀況總覽（所有同事可見：各舍友支錢狀況＋夾萬狀況一目了然） -->
     <div class="card bg-white p-5 space-y-3" id="cardStats">
       <h3 class="text-sm font-bold text-teal-600 uppercase tracking-wide">📊 支錢狀況總覽</h3>
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div class="grid grid-cols-2 gap-3">
         <div class="rounded-xl border-2 border-slate-200 p-3">
           <div class="text-xs text-slate-500">總支出（累計）</div>
           <div id="st_total" class="text-xl font-black text-slate-800 mt-0.5">—</div>
           <div id="st_total_n" class="text-xs text-slate-400 mt-0.5">載入中…</div>
-        </div>
-        <div class="rounded-xl border-2 border-rose-200 bg-rose-50/50 p-3">
-          <div class="text-xs text-rose-500">忠社支出</div>
-          <div id="st_zhong" class="text-xl font-black text-rose-600 mt-0.5">—</div>
-          <div id="st_zhong_n" class="text-xs text-rose-400 mt-0.5"></div>
-        </div>
-        <div class="rounded-xl border-2 border-blue-200 bg-blue-50/50 p-3">
-          <div class="text-xs text-blue-500">孝社支出</div>
-          <div id="st_xiao" class="text-xl font-black text-blue-600 mt-0.5">—</div>
-          <div id="st_xiao_n" class="text-xs text-blue-400 mt-0.5"></div>
         </div>
         <div class="rounded-xl border-2 border-amber-200 bg-amber-50/50 p-3">
           <div class="text-xs text-amber-600">未結算金額</div>
@@ -130,6 +121,7 @@
           <div id="st_unsettled_n" class="text-xs text-amber-500 mt-0.5"></div>
         </div>
       </div>
+      <div id="st_house_grid" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
       <div>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <button type="button" data-settle="m" class="settle-tab text-left rounded-xl border-2 border-emerald-200 bg-emerald-50/50 p-3 transition hover:bg-emerald-100/60">
@@ -165,31 +157,8 @@
         <h3 class="text-sm font-bold text-amber-600 uppercase tracking-wide">🏦 夾萬現存</h3>
       </div>
       <div id="vault_check"></div>
-      <p class="text-xs text-slate-500">每社有兩個夾萬：現存現金（中心夾萬）過錢俾代管現金（家社夾萬）；舍友支出必由<b>該社代管現金</b>找數，代管現金唔夠錢就唔可以結算或用「夾萬支付」。兩社現存現金＋代管現金總和 = 全體舍友總結存＋未結算墊支。</p>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div class="rounded-xl border-2 border-rose-200 bg-rose-50/50 p-3 space-y-2">
-          <div class="text-xs font-bold text-rose-600">■ 忠社</div>
-          <label class="block">
-            <span class="text-xs font-medium text-slate-500">忠社現存現金（中心夾萬）</span>
-            <input id="vault_zhong_big" type="number" step="0.01" min="0" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="0.00">
-          </label>
-          <label class="block">
-            <span class="text-xs font-medium text-slate-500">忠社代管現金（家社夾萬）</span>
-            <input id="vault_zhong_small" type="number" step="0.01" min="0" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="0.00">
-          </label>
-        </div>
-        <div class="rounded-xl border-2 border-blue-200 bg-blue-50/50 p-3 space-y-2">
-          <div class="text-xs font-bold text-blue-600">■ 孝社</div>
-          <label class="block">
-            <span class="text-xs font-medium text-slate-500">孝社現存現金（中心夾萬）</span>
-            <input id="vault_xiao_big" type="number" step="0.01" min="0" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="0.00">
-          </label>
-          <label class="block">
-            <span class="text-xs font-medium text-slate-500">孝社代管現金（家社夾萬）</span>
-            <input id="vault_xiao_small" type="number" step="0.01" min="0" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="0.00">
-          </label>
-        </div>
-      </div>
+      <p class="text-xs text-slate-500">每社有兩個夾萬：現存現金（中心夾萬）過錢俾代管現金（家社夾萬）；舍友支出必由<b>該社代管現金</b>找數，代管現金唔夠錢就唔可以結算或用「夾萬支付」。各社現存現金＋代管現金總和 = 全體舍友總結存＋未結算墊支。</p>
+      <div id="vault_house_grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
       <div class="flex items-center gap-2 flex-wrap">
         <button id="vault_save" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-amber-600 hover:bg-amber-700 transition">儲存夾萬現存</button>
         <span class="text-xs text-slate-400">直接改數會覆蓋現存；日常過錢請用下面「現存現金 → 代管現金」。</span>
@@ -197,10 +166,7 @@
       <div class="border-t border-slate-100 pt-3 space-y-2" id="vaultXferRow">
         <div class="flex items-center gap-2 flex-wrap">
           <span class="text-xs font-medium text-slate-500">現存現金過錢俾代管現金（只限管理級或以上）：</span>
-          <select id="vault_xfer_house" class="rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white outline-none">
-            <option value="zhong">忠社</option>
-            <option value="xiao">孝社</option>
-          </select>
+          <select id="vault_xfer_house" class="rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white outline-none"></select>
           <input id="vault_xfer_amt" type="number" step="0.01" min="0" class="w-28 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="金額">
           <input id="vault_xfer_by" type="text" maxlength="20" readonly class="w-24 rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-600 outline-none" placeholder="轉賬人" title="轉賬人＝登入嘅管理級同事，自動填寫">
           <select id="vault_xfer_to" class="rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white outline-none" title="收款人＝管理夾萬同工，按社別自動揀">
@@ -236,10 +202,7 @@
       <div class="flex items-end gap-2 flex-wrap">
         <label class="block">
           <span class="text-xs font-medium text-slate-500">社別</span>
-          <select id="dep_house" class="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white outline-none">
-            <option value="zhong">忠社</option>
-            <option value="xiao">孝社</option>
-          </select>
+          <select id="dep_house" class="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white outline-none"></select>
         </label>
         <label class="block">
           <span class="text-xs font-medium text-slate-500">舍友</span>
@@ -282,7 +245,7 @@
     <!-- 結存起點（首次月結用，只可以設一次；admin 專用） -->
     <div class="card bg-white p-5 space-y-3" id="cardSeed">
       <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wide">🚩 結存起點</h3>
-      <p class="text-xs text-slate-500">由舊系統轉過嚟嗰陣，喺度入返各舍友嘅承前結存同四個夾萬嘅起始現存（以轉換日為準）。<b>只可以設定一次</b>：流水賬一有記錄就會鎖定。設定後月結紀錄先計到「承前結存」。</p>
+      <p class="text-xs text-slate-500">由舊系統轉過嚟嗰陣，喺度入返各舍友嘅承前結存同各社夾萬嘅起始現存（以轉換日為準）。<b>只可以設定一次</b>：流水賬一有記錄就會鎖定。設定後月結紀錄先計到「承前結存」。</p>
       <div class="flex items-center gap-3 flex-wrap">
         <button id="seed_open" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-slate-700 hover:bg-slate-800 transition">設定結存起點</button>
         <span id="seed_status" class="text-xs text-slate-500"></span>
@@ -303,13 +266,8 @@
         <input id="seed_date" type="date" class="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none">
       </label>
       <div>
-        <p class="text-xs font-bold text-slate-500 mb-1">四個夾萬起始現存</p>
-        <div class="grid grid-cols-2 gap-2 text-sm">
-          <label class="block"><span class="text-xs text-slate-500">忠社現存現金</span><input id="seed_zb" type="number" step="0.01" min="0" class="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1.5 outline-none"></label>
-          <label class="block"><span class="text-xs text-slate-500">忠社代管現金</span><input id="seed_zs" type="number" step="0.01" min="0" class="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1.5 outline-none"></label>
-          <label class="block"><span class="text-xs text-slate-500">孝社現存現金</span><input id="seed_xb" type="number" step="0.01" min="0" class="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1.5 outline-none"></label>
-          <label class="block"><span class="text-xs text-slate-500">孝社代管現金</span><input id="seed_xs" type="number" step="0.01" min="0" class="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1.5 outline-none"></label>
-        </div>
+        <p class="text-xs font-bold text-slate-500 mb-1">各社夾萬起始現存</p>
+        <div id="seed_vault_grid" class="grid grid-cols-2 gap-2 text-sm"></div>
       </div>
       <div>
         <p class="text-xs font-bold text-slate-500 mb-1">各舍友承前結存</p>
@@ -341,7 +299,30 @@ function toast(msg){
 function escapeHtml(s){ return (s || '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 const money = n => '$' + Number(n || 0).toFixed(2);
 const r2 = n => Math.round(n * 100) / 100;
-function houseOf(h){ return h === '孝社' ? 'xiao' : 'zhong'; }
+function houseOf(h){ return window.houseKeyOf(h); }
+
+// ---- 動態社別 DOM（社別由 houses.js 定義，新增社別唔使改呢頁）----
+// 夾萬輸入格：每社一卡（現存現金＋代管現金）
+$('vault_house_grid').innerHTML = window.HOUSES.map(h => `
+  <div class="rounded-xl border-2 p-3 space-y-2" style="border-color:${h.color}55; background:${h.soft}55">
+    <div class="text-xs font-bold" style="color:${h.color}">■ ${h.name}</div>
+    <label class="block">
+      <span class="text-xs font-medium text-slate-500">${h.name}現存現金（中心夾萬）</span>
+      <input id="vault_${h.key}_big" type="number" step="0.01" min="0" class="vault_in mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="0.00">
+    </label>
+    <label class="block">
+      <span class="text-xs font-medium text-slate-500">${h.name}代管現金（家社夾萬）</span>
+      <input id="vault_${h.key}_small" type="number" step="0.01" min="0" class="vault_in mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="0.00">
+    </label>
+  </div>`).join('');
+// 過錢／存入嘅社別下拉
+const HOUSE_OPTS = window.HOUSES.map(h => `<option value="${h.key}">${h.name}</option>`).join('');
+$('vault_xfer_house').innerHTML = HOUSE_OPTS;
+$('dep_house').innerHTML = HOUSE_OPTS;
+// 結存起點 modal：每社兩格
+$('seed_vault_grid').innerHTML = window.HOUSES.map(h => `
+  <label class="block"><span class="text-xs text-slate-500">${h.name}現存現金</span><input id="seed_${h.key}_big" type="number" step="0.01" min="0" class="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1.5 outline-none"></label>
+  <label class="block"><span class="text-xs text-slate-500">${h.name}代管現金</span><input id="seed_${h.key}_small" type="number" step="0.01" min="0" class="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1.5 outline-none"></label>`).join('');
 
 // ---- 職員姓名對照（雲端名冊 settings.staff_dir 優先，hardcode 後備；同支錢頁一致） ----
 const EMAIL_STAFF_MAP = {
@@ -388,7 +369,7 @@ function showMain(){
   if (role === 'tutor' || role === 'sw') {
     // 導師／社工：睇夾萬現存同各舍友現存（決定支唔支到錢），但唔可以改任何嘢
     READONLY = true;
-    ['vault_zhong_big', 'vault_zhong_small', 'vault_xiao_big', 'vault_xiao_small'].forEach(id => { const el = $(id); if (el) el.disabled = true; });
+    document.querySelectorAll('.vault_in').forEach(el => { el.disabled = true; });
     $('vault_save').classList.add('hidden');
     $('vaultXferRow').classList.add('hidden');
     $('member_bal_save').classList.add('hidden');
@@ -402,7 +383,7 @@ function showMain(){
   } else if (role === 'cashier') {
     // 管理夾萬同工：觀看夾萬現存＋各舍友結存（結算前要知道夠唔夠錢）＋舍友存入；唔可以改夾萬數、過錢、改舍友結存
     READONLY = true;
-    ['vault_zhong_big', 'vault_zhong_small', 'vault_xiao_big', 'vault_xiao_small'].forEach(id => { const el = $(id); if (el) el.disabled = true; });
+    document.querySelectorAll('.vault_in').forEach(el => { el.disabled = true; });
     $('vault_save').classList.add('hidden');
     $('vaultXferRow').classList.add('hidden');
     $('member_bal_save').classList.add('hidden');
@@ -413,7 +394,7 @@ function showMain(){
   } else if (role === 'manager') {
     // 管理級：夾萬「現存→代管」過錢＋舍友存入＋睇數；夾萬直接改數、舍友現存修正、結存起點、收款編號設定仍然係 admin 專用
     READONLY = true;   // 舍友現存唯讀（mbal 輸入停用）
-    ['vault_zhong_big', 'vault_zhong_small', 'vault_xiao_big', 'vault_xiao_small'].forEach(id => { const el = $(id); if (el) el.disabled = true; });
+    document.querySelectorAll('.vault_in').forEach(el => { el.disabled = true; });
     $('vault_save').classList.add('hidden');
     $('member_bal_save').classList.add('hidden');
     const seed = $('cardSeed'); if (seed) seed.classList.add('hidden');
@@ -453,20 +434,26 @@ async function getSettingValue(key){
 }
 async function getSafeVault(){
   const v = await getSettingValue('safe_vault');
+  const out = {};
   if (v && typeof v === 'object') {
-    return {
-      zhong_big: Number(v.zhong_big) || 0, zhong_small: Number(v.zhong_small) || 0,
-      xiao_big: Number(v.xiao_big) || 0,   xiao_small: Number(v.xiao_small) || 0,
-      init: ('zhong_small' in v || 'xiao_small' in v)
-    };
+    window.HOUSES.forEach(h => {
+      out[h.key + '_big'] = Number(v[h.key + '_big']) || 0;
+      out[h.key + '_small'] = Number(v[h.key + '_small']) || 0;
+    });
+    out.init = window.HOUSES.some(h => (h.key + '_small') in v);
+    return out;
   }
-  return { zhong_big: 0, zhong_small: 0, xiao_big: 0, xiao_small: 0, init: false };
+  window.HOUSES.forEach(h => { out[h.key + '_big'] = 0; out[h.key + '_small'] = 0; });
+  out.init = false;
+  return out;
 }
 async function saveSafeVault(v){
-  const { error } = await sb.from('settings').upsert({ key: 'safe_vault', value: {
-    zhong_big: r2(v.zhong_big), zhong_small: r2(v.zhong_small),
-    xiao_big: r2(v.xiao_big),   xiao_small: r2(v.xiao_small)
-  } });
+  const value = {};
+  window.HOUSES.forEach(h => {
+    value[h.key + '_big'] = r2(Number(v[h.key + '_big']) || 0);
+    value[h.key + '_small'] = r2(Number(v[h.key + '_small']) || 0);
+  });
+  const { error } = await sb.from('settings').upsert({ key: 'safe_vault', value });
   if (error) throw new Error(error.message);
 }
 
@@ -490,52 +477,54 @@ async function ledgerInsert(rows){
 async function renderVault(){
   const [v, bal, membersDb] = await Promise.all([getSafeVault(), getSettingValue('member_bal'), getSettingValue('members')]);
   const members = (membersDb && membersDb['忠社'] && membersDb['孝社']) ? membersDb : DEFAULT_MEMBERS;
+  window.HOUSE_NAMES.forEach(h => { if (!Array.isArray(members[h])) members[h] = []; });   // 新社未有舍友先補空陣列
   CUR_MEMBERS = members;
   fillDepMembers();
   getReceiptNext().then(n => { $('receipt_next').value = n; });
   const balMap = (bal && typeof bal === 'object') ? bal : {};
   // 夾萬 input
-  $('vault_zhong_big').value = v.init ? v.zhong_big.toFixed(2) : '';
-  $('vault_zhong_small').value = v.init ? v.zhong_small.toFixed(2) : '';
-  $('vault_xiao_big').value = v.init ? v.xiao_big.toFixed(2) : '';
-  $('vault_xiao_small').value = v.init ? v.xiao_small.toFixed(2) : '';
-  // 舍友現存清單（分社顯示）
+  window.HOUSES.forEach(h => {
+    $(`vault_${h.key}_big`).value = v.init ? v[h.key + '_big'].toFixed(2) : '';
+    $(`vault_${h.key}_small`).value = v.init ? v[h.key + '_small'].toFixed(2) : '';
+  });
+  // 舍友現存清單（分社顯示；社別跟 houses.js，名單冇嘅社照顯示空社）
   let balTotal = 0;
-  const houseTotals = { '忠社': 0, '孝社': 0 };
-  const houseCls = { '忠社': 'text-rose-600', '孝社': 'text-blue-600' };
-  $('member_bal_list').innerHTML = ['忠社', '孝社'].map(h => `
+  const houseTotals = {};
+  const houseKeysInMembers = window.HOUSE_NAMES.filter(h => Array.isArray(members[h]));
+  Object.keys(members).forEach(h => { if (!houseKeysInMembers.includes(h)) houseKeysInMembers.push(h); });   // 名單有但 houses.js 未有嘅舊社都照顯
+  $('member_bal_list').innerHTML = houseKeysInMembers.map(h => `
     <div>
-      <div class="text-xs font-bold ${houseCls[h]} mb-1">■ ${h}</div>
-      ${members[h].map(m => {
+      <div class="text-xs font-bold mb-1" style="color:${window.houseColor(h)}">■ ${h}</div>
+      ${members[h].length ? members[h].map(m => {
         const k = m.id || m.name;
         const amt = Number(balMap[k]) || 0;
         balTotal = r2(balTotal + amt);
-        houseTotals[h] = r2(houseTotals[h] + amt);
+        houseTotals[h] = r2((houseTotals[h] || 0) + amt);
         return `<label class="flex items-center gap-2 py-0.5 ${m.exited ? 'opacity-50' : ''}" data-house="${h}" data-name="${escapeHtml(m.name)}">
           <span class="flex-1 min-w-0 truncate">${escapeHtml(m.name)} <span class="text-xs text-slate-400">${escapeHtml(m.id || '')}</span>${m.exited ? ' <span class="text-xs font-bold text-slate-400">（已退出）</span>' : ''}</span>
           <input type="number" step="0.01" class="mbal_in w-24 rounded-lg border border-slate-300 px-2 py-1 text-sm outline-none" data-key="${escapeHtml(k)}" value="${amt ? amt.toFixed(2) : ''}" placeholder="0.00"${m.exited ? ' disabled' : ''}>
         </label>`;
-      }).join('')}
+      }).join('') : '<p class="text-xs text-slate-400 py-1">（未有名單，請去後台新增舍友）</p>'}
     </div>`).join('');
   // 舍友總結存：分社顯示＋合計（放大粗體，清晰易睇）
   $('member_bal_total').innerHTML =
     `<span class="text-base font-extrabold text-slate-700">舍友總結存：</span>` +
-    `<span class="text-base font-extrabold text-rose-600">忠社 ${money(houseTotals['忠社'])}</span>` +
-    `<span class="text-sm font-bold text-slate-400"> ｜ </span>` +
-    `<span class="text-base font-extrabold text-blue-600">孝社 ${money(houseTotals['孝社'])}</span>` +
+    houseKeysInMembers.map(h =>
+      `<span class="text-base font-extrabold" style="color:${window.houseColor(h)}">${h} ${money(houseTotals[h] || 0)}</span>`
+    ).join(`<span class="text-sm font-bold text-slate-400"> ｜ </span>`) +
     `<span class="text-sm font-bold text-slate-400"> ｜ </span>` +
     `<span class="text-base font-extrabold text-slate-800">合計 ${money(balTotal)}</span>`;
   if (READONLY) document.querySelectorAll('.mbal_in').forEach(i => { i.disabled = true; });
   // 未結算墊支（分社計；結算欄位未開通就當 0 並唔顯示對數）
   let adv = 0, advOk = true;
-  const advHouse = { '忠社': 0, '孝社': 0 };
+  const advHouse = {};
   try {
     const { data, error } = await sb.from('applications').select('amount,house').is('settled_at', null).limit(1000);
     if (error) { if (/settled_at|42703|schema cache/i.test(error.message)) advOk = false; }
     else (data || []).forEach(r => {
       const a = Number(r.amount || 0);
       adv = r2(adv + a);
-      if (r.house === '忠社' || r.house === '孝社') advHouse[r.house] = r2(advHouse[r.house] + a);
+      if (r.house) advHouse[r.house] = r2((advHouse[r.house] || 0) + a);
     });
   } catch { advOk = false; }
   // 支錢狀況總覽（總支出／分社支出／未結算；所有角色可見）
@@ -543,18 +532,28 @@ async function renderVault(){
     const { data: allApps, error: stErr } = await sb.from('applications').select('amount,house').neq('status', 'pending').limit(1000);
     if (stErr) throw new Error(stErr.message);
     const arr = allApps || [];
-    const sumH = h => arr.filter(r => r.house === h);
     const tot = arr.reduce((a, r) => a + Number(r.amount || 0), 0);
-    const zh = sumH('忠社'), xi = sumH('孝社');
     $('st_total').textContent = money(tot);
     $('st_total_n').textContent = arr.length + ' 張單';
-    $('st_zhong').textContent = money(zh.reduce((a, r) => a + Number(r.amount || 0), 0));
-    $('st_zhong_n').textContent = zh.length + ' 張單';
-    $('st_xiao').textContent = money(xi.reduce((a, r) => a + Number(r.amount || 0), 0));
-    $('st_xiao_n').textContent = xi.length + ' 張單';
+    // 分社支出卡（動態，跟 houses.js）
+    const houseSums = {};
+    arr.forEach(r => {
+      if (!r.house) return;
+      houseSums[r.house] = houseSums[r.house] || { sum: 0, n: 0 };
+      houseSums[r.house].sum = r2(houseSums[r.house].sum + Number(r.amount || 0));
+      houseSums[r.house].n++;
+    });
+    $('st_house_grid').innerHTML = window.HOUSE_NAMES.map(h => {
+      const s = houseSums[h] || { sum: 0, n: 0 };
+      return `<div class="rounded-xl border-2 p-3" style="border-color:${window.houseColor(h)}44; background:${window.houseSoft(h)}66">
+        <div class="text-xs" style="color:${window.houseColor(h)}">${h}支出</div>
+        <div class="text-xl font-black mt-0.5" style="color:${window.houseColor(h)}">${money(s.sum)}</div>
+        <div class="text-xs text-slate-400 mt-0.5">${s.n} 張單</div>
+      </div>`;
+    }).join('');
     if (advOk) {
       $('st_unsettled').textContent = money(adv);
-      $('st_unsettled_n').textContent = `忠社 ${money(advHouse['忠社'])} ｜ 孝社 ${money(advHouse['孝社'])}`;
+      $('st_unsettled_n').textContent = window.HOUSE_NAMES.map(h => `${h} ${money(advHouse[h] || 0)}`).join(' ｜ ');
     } else {
       $('st_unsettled').textContent = '—';
       $('st_unsettled_n').textContent = '（結算欄位未開通）';
@@ -594,10 +593,12 @@ async function renderVault(){
           if (settleOpen === k) { settleOpen = null; det.classList.add('hidden'); return; }
           settleOpen = k;
           const b = SET_BUCKETS[k];
-          const zh = b.rows.filter(r => r.house === '忠社'), xi = b.rows.filter(r => r.house === '孝社');
           const sumA = arr => arr.reduce((a, r) => a + Number(r.amount || 0), 0);
           $('sd_title').textContent = `${b.label}：${money(bucketSum(b))}（${b.rows.length} 張單）`;
-          $('sd_sub').textContent = `忠社 ${money(sumA(zh))}（${zh.length} 張）｜孝社 ${money(sumA(xi))}（${xi.length} 張）`;
+          $('sd_sub').textContent = window.HOUSE_NAMES.map(h => {
+            const rs = b.rows.filter(r => r.house === h);
+            return `${h} ${money(sumA(rs))}（${rs.length} 張）`;
+          }).join('｜');
           $('sd_list').innerHTML = b.rows.length ? b.rows.map(r => `
             <div class="flex items-center justify-between gap-2 border-b border-slate-100 pb-1">
               <span class="min-w-0 truncate">${escapeHtml(r.payee || '')} <span class="text-xs text-slate-400">${escapeHtml(r.payee_id || '')} · ${escapeHtml(r.house || '')}${r.serial ? ' · 序號 ' + escapeHtml(r.serial) : ''}${r.safe_pay ? ' · 🏦 夾萬支付' : ''}</span></span>
@@ -612,37 +613,39 @@ async function renderVault(){
   } catch {
     $('st_total_n').textContent = '未能載入';
   }
-  // 對照：分社夾萬（現存＋代管）vs 分社舍友結存＋墊支，再加兩社總對數
-  const vaultHouse = { '忠社': r2(v.zhong_big + v.zhong_small), '孝社': r2(v.xiao_big + v.xiao_small) };
-  const vaultTotal = r2(vaultHouse['忠社'] + vaultHouse['孝社']);
+  // 對照：分社夾萬（現存＋代管）vs 分社舍友結存＋墊支，再加全社總對數
+  const vaultHouse = {};
+  window.HOUSES.forEach(h => { vaultHouse[h.name] = r2(v[h.key + '_big'] + v[h.key + '_small']); });
+  const vaultTotal = r2(Object.values(vaultHouse).reduce((a, x) => a + x, 0));
   if (!v.init) {
-    $('vault_check').innerHTML = '<p class="text-sm font-bold text-red-600">⚠️ 夾萬未設定，請先輸入四個現存數再儲存。</p>';
+    $('vault_check').innerHTML = '<p class="text-sm font-bold text-red-600">⚠️ 夾萬未設定，請先輸入各社現存數再儲存。</p>';
   } else {
     const chk = (a, b) => Math.abs(a - b) < 0.005;
     const badge = ok => ok
       ? '<span class="text-base font-extrabold text-emerald-600">✅ 對數</span>'
       : '<span class="text-base font-extrabold text-red-600">⚠️ 唔對數</span>';
-    const houseRow = (h, cls) => {
-      const big = h === '忠社' ? v.zhong_big : v.xiao_big;
-      const small = h === '忠社' ? v.zhong_small : v.xiao_small;
+    const houseRow = h => {
+      const cls = `color:${window.houseColor(h)}`;
+      const hk = window.houseKeyOf(h);
+      const big = v[hk + '_big'], small = v[hk + '_small'];
       let row = `<div class="flex items-baseline gap-x-2 gap-y-0.5 flex-wrap">
-        <span class="text-base font-extrabold ${cls}">${h}夾萬 ${money(vaultHouse[h])}</span>
+        <span class="text-base font-extrabold" style="${cls}">${h}夾萬 ${money(vaultHouse[h])}</span>
         <span class="text-xs text-slate-400">（現存 ${money(big)}＋代管 ${money(small)}）</span>`;
       if (advOk) {
-        const expH = r2(houseTotals[h] + advHouse[h]);
-        row += `<span class="text-xs text-slate-500">結存 ${money(houseTotals[h])}＋墊支 ${money(advHouse[h])} ＝ ${money(expH)}</span>${badge(chk(vaultHouse[h], expH))}`;
+        const expH = r2((houseTotals[h] || 0) + (advHouse[h] || 0));
+        row += `<span class="text-xs text-slate-500">結存 ${money(houseTotals[h] || 0)}＋墊支 ${money(advHouse[h] || 0)} ＝ ${money(expH)}</span>${badge(chk(vaultHouse[h], expH))}`;
       }
       return row + '</div>';
     };
-    let html = houseRow('忠社', 'text-rose-600') + houseRow('孝社', 'text-blue-600');
+    let html = window.HOUSE_NAMES.map(houseRow).join('');
     if (advOk) {
       const expected = r2(balTotal + adv);
       html += `<div class="flex items-baseline gap-x-2 gap-y-0.5 flex-wrap border-t border-slate-200 pt-1.5 mt-1.5">
-        <span class="text-sm font-bold text-slate-600">兩社總和 ${money(vaultTotal)} ＝ 總結存 ${money(balTotal)} ＋ 未結算墊支 ${money(adv)}</span>
+        <span class="text-sm font-bold text-slate-600">各社總和 ${money(vaultTotal)} ＝ 總結存 ${money(balTotal)} ＋ 未結算墊支 ${money(adv)}</span>
         ${badge(chk(vaultTotal, expected))}
       </div>`;
     } else {
-      html += `<div class="text-sm font-bold text-slate-600 border-t border-slate-200 pt-1.5 mt-1.5">兩社現存＋代管總和 ${money(vaultTotal)} ｜ 舍友總結存 ${money(balTotal)}</div>`;
+      html += `<div class="text-sm font-bold text-slate-600 border-t border-slate-200 pt-1.5 mt-1.5">各社現存＋代管總和 ${money(vaultTotal)} ｜ 舍友總結存 ${money(balTotal)}</div>`;
     }
     $('vault_check').innerHTML = html;
   }
@@ -650,21 +653,20 @@ async function renderVault(){
 
 // ---- 儲存夾萬現存（人手改數 → 每個有變嘅夾萬記一筆 adjust 流水）----
 $('vault_save').addEventListener('click', async () => {
-  const v = {
-    zhong_big: Number($('vault_zhong_big').value) || 0,
-    zhong_small: Number($('vault_zhong_small').value) || 0,
-    xiao_big: Number($('vault_xiao_big').value) || 0,
-    xiao_small: Number($('vault_xiao_small').value) || 0
-  };
+  const v = {};
+  window.HOUSES.forEach(h => {
+    v[h.key + '_big'] = Number($(`vault_${h.key}_big`).value) || 0;
+    v[h.key + '_small'] = Number($(`vault_${h.key}_small`).value) || 0;
+  });
   try {
     const prev = await getSafeVault();
     await saveSafeVault(v);
     const rows = [];
     const now = new Date().toISOString();
-    [['zhong','big','現存現金'],['zhong','small','代管現金'],['xiao','big','現存現金'],['xiao','small','代管現金']].forEach(([h, a, label]) => {
-      const key = h + '_' + a, nv = v[key], ov = prev.init ? prev[key] : 0;
-      if (Math.abs(nv - ov) >= 0.005) rows.push({ created_at: now, house: h, kind: 'adjust', account: a, account_delta: r2(nv - ov), account_bal_after: nv, note: '人手修正' + label });
-    });
+    window.HOUSES.forEach(h => ['big', 'small'].forEach(a => {
+      const key = h.key + '_' + a, nv = v[key], ov = prev.init ? prev[key] : 0;
+      if (Math.abs(nv - ov) >= 0.005) rows.push({ created_at: now, house: h.key, kind: 'adjust', account: a, account_delta: r2(nv - ov), account_bal_after: nv, note: '人手修正' + (a === 'big' ? '現存現金' : '代管現金') });
+    }));
     if (rows.length) await ledgerInsert(rows);
     toast('已儲存夾萬現存。');
     renderVault();
@@ -693,16 +695,16 @@ async function setupXfer(){
   const sel = $('vault_xfer_to');
   if (KEEPERS.length) {
     sel.innerHTML = '<option value="">— 收款人（管理夾萬同工）—</option>' +
-      KEEPERS.map(k => `<option value="${escapeHtml(k.name)}">${escapeHtml(k.name)}${k.house ? '（' + (k.house === 'zhong' ? '忠社' : '孝社') + '夾萬）' : ''}</option>`).join('');
+      KEEPERS.map(k => `<option value="${escapeHtml(k.name)}">${escapeHtml(k.name)}${k.house ? '（' + window.houseNameOf(k.house) + '夾萬）' : ''}</option>`).join('');
   } else {
     sel.innerHTML = '<option value="">（未有管理夾萬同工，請 admin 喺後台指派）</option>';
   }
-  // 預設社別（忠社）觸發一次自動揀收款人
+  // 預設社別觸發一次自動揀收款人
   const hit0 = KEEPERS.find(k => k.house === $('vault_xfer_house').value);
   if (hit0) sel.value = hit0.name;
 }
 $('vault_xfer_house').addEventListener('change', () => {
-  const h = $('vault_xfer_house').value;   // zhong / xiao
+  const h = $('vault_xfer_house').value;   // 社別 key（houses.js 動態）
   const sel = $('vault_xfer_to');
   const hit = KEEPERS.find(k => k.house === h);
   sel.value = hit ? hit.name : '';
@@ -717,12 +719,13 @@ $('vault_xfer').addEventListener('click', async () => {
   const by = $('vault_xfer_by').value.trim(), to = $('vault_xfer_to').value.trim();
   if (!by) { alert('未能識別登入同事姓名，請聯絡 admin 喺後台帳號管理補登姓名。'); return; }
   if (!to) { alert('請揀收款人（管理夾萬同工）（月結紀錄需要）。'); return; }
-  const k = $('vault_xfer_house').value;             // zhong / xiao
-  const hName = k === 'xiao' ? '孝社' : '忠社';
+  const k = $('vault_xfer_house').value;             // 社別 key（見 houses.js）
+  const hName = window.houseNameOf(k);
   const v = await getSafeVault();
-  if (!v.init) { alert('請先設定四個夾萬現存數。'); return; }
+  if (!v.init) { alert('請先設定各社夾萬現存數。'); return; }
   if (v[k + '_big'] < amt) { alert(`${hName}現存現金現存 ${money(v[k + '_big'])} 唔夠過 ${money(amt)}。`); return; }
-  const next = { zhong_big: v.zhong_big, zhong_small: v.zhong_small, xiao_big: v.xiao_big, xiao_small: v.xiao_small };
+  const next = {};
+  window.HOUSES.forEach(h => { next[h.key + '_big'] = v[h.key + '_big']; next[h.key + '_small'] = v[h.key + '_small']; });
   next[k + '_big'] = r2(next[k + '_big'] - amt);
   next[k + '_small'] = r2(next[k + '_small'] + amt);
   try {
@@ -779,17 +782,17 @@ $('receipt_next_save').addEventListener('click', async () => {
 });
 
 // ---- 舍友存入 ----
-let CUR_MEMBERS = null;   // renderVault 填入 {忠社:[...], 孝社:[...]}
+let CUR_MEMBERS = null;   // renderVault 填入 {社名:[...]}
 function fillDepMembers(){
-  const h = $('dep_house').value === 'xiao' ? '孝社' : '忠社';
+  const h = window.houseNameOf($('dep_house').value);
   const list = ((CUR_MEMBERS && CUR_MEMBERS[h]) || []).filter(m => !m.exited);   // 已退出服務唔可以存入
   $('dep_member').innerHTML = list.map(m => `<option value="${escapeHtml(m.id || m.name)}" data-name="${escapeHtml(m.name)}">${escapeHtml(m.name)} ${escapeHtml(m.id || '')}</option>`).join('');
 }
 $('dep_house').addEventListener('change', fillDepMembers);
 
 $('dep_go').addEventListener('click', async () => {
-  const k = $('dep_house').value;                    // zhong / xiao
-  const hName = k === 'xiao' ? '孝社' : '忠社';
+  const k = $('dep_house').value;                    // 社別 key
+  const hName = window.houseNameOf(k);
   const sel = $('dep_member').selectedOptions[0];
   if (!sel) { alert('請揀舍友。'); return; }
   const mid = sel.value, mName = sel.dataset.name;
@@ -801,7 +804,7 @@ $('dep_go').addEventListener('click', async () => {
   const depAcct = $('dep_acct').value;                  // big（現存現金）/ small（代管現金）
   const acctLabel = depAcct === 'big' ? '現存現金（中心夾萬）' : '代管現金（家社夾萬）';
   const v = await getSafeVault();
-  if (!v.init) { alert('請先設定四個夾萬現存數（存入嘅款項要落入結算戶口）。'); return; }
+  if (!v.init) { alert('請先設定各社夾萬現存數（存入嘅款項要落入結算戶口）。'); return; }
   if (!confirm(`確定 ${hName} ${mName} 存入 ${money(amt)}？\n類別：${depCat}　結算戶口：${acctLabel}\n會開出收款編號，結存同戶口即時增加。`)) return;
   $('dep_go').disabled = true;
   try {
@@ -816,7 +819,8 @@ $('dep_go').addEventListener('click', async () => {
       if (error) throw new Error(error.message);
     }
     // 3) 結算戶口 +
-    const next = { zhong_big: v.zhong_big, zhong_small: v.zhong_small, xiao_big: v.xiao_big, xiao_small: v.xiao_small };
+    const next = {};
+    window.HOUSES.forEach(h => { next[h.key + '_big'] = v[h.key + '_big']; next[h.key + '_small'] = v[h.key + '_small']; });
     next[k + '_' + depAcct] = r2(next[k + '_' + depAcct] + amt);
     await saveSafeVault(next);
     // 4) 流水賬（類別記落 note 開頭，月結／將來每日表用）
@@ -854,11 +858,14 @@ $('seed_open').addEventListener('click', async () => {
   $('seed_status').textContent = '';
   // 預填：日期＝今日；夾萬＝而家畫面嘅數；舍友＝而家結存
   $('seed_date').value = new Date().toLocaleDateString('sv');
-  $('seed_zb').value = $('vault_zhong_big').value; $('seed_zs').value = $('vault_zhong_small').value;
-  $('seed_xb').value = $('vault_xiao_big').value; $('seed_xs').value = $('vault_xiao_small').value;
-  $('seed_members').innerHTML = ['忠社', '孝社'].map(h => `
+  window.HOUSES.forEach(h => {
+    $(`seed_${h.key}_big`).value = $(`vault_${h.key}_big`).value;
+    $(`seed_${h.key}_small`).value = $(`vault_${h.key}_small`).value;
+  });
+  const seedHouses = window.HOUSE_NAMES.filter(h => Array.isArray((CUR_MEMBERS || {})[h]));
+  $('seed_members').innerHTML = seedHouses.map(h => `
     <div>
-      <div class="text-xs font-bold ${h === '忠社' ? 'text-rose-600' : 'text-blue-600'} mb-1">■ ${h}</div>
+      <div class="text-xs font-bold mb-1" style="color:${window.houseColor(h)}">■ ${h}</div>
       ${((CUR_MEMBERS && CUR_MEMBERS[h]) || []).map(m => `
         <label class="flex items-center gap-2 py-0.5">
           <span class="flex-1 min-w-0 truncate">${escapeHtml(m.name)} <span class="text-xs text-slate-400">${escapeHtml(m.id || '')}</span></span>
@@ -879,9 +886,13 @@ $('seed_save').addEventListener('click', async () => {
   if (!confirm('確定設定結存起點？設定後流水賬開始記數，呢個起點唔可以再改。')) return;
   const ts = new Date(d + 'T00:00:00').toISOString();
   const rows = [];
-  const vaultVals = { zhong_big: Number($('seed_zb').value) || 0, zhong_small: Number($('seed_zs').value) || 0, xiao_big: Number($('seed_xb').value) || 0, xiao_small: Number($('seed_xs').value) || 0 };
-  ['zhong', 'xiao'].forEach(h => ['big', 'small'].forEach(a => {
-    rows.push({ created_at: ts, house: h, kind: 'opening', account: a, account_delta: 0, account_bal_after: vaultVals[h + '_' + a], note: '結存起點' });
+  const vaultVals = {};
+  window.HOUSES.forEach(h => {
+    vaultVals[h.key + '_big'] = Number($(`seed_${h.key}_big`).value) || 0;
+    vaultVals[h.key + '_small'] = Number($(`seed_${h.key}_small`).value) || 0;
+  });
+  window.HOUSES.forEach(h => ['big', 'small'].forEach(a => {
+    rows.push({ created_at: ts, house: h.key, kind: 'opening', account: a, account_delta: 0, account_bal_after: vaultVals[h.key + '_' + a], note: '結存起點' });
   }));
   const bal = {};
   document.querySelectorAll('.seed_m').forEach(inp => {

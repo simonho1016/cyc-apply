@@ -23,8 +23,9 @@
 
 ## 金錢邏輯（重要）
 
-- 夾萬存於 `settings` 表 key=`safe_vault`，格式 `{zhong_big, zhong_small, xiao_big, xiao_small}`。
-- 舍友結存存於 key=`member_bal`。
+- 社別設定：`public/houses.js`（v1.25.0 起）係全系統唯一社別來源——`window.HOUSES`（忠 zhong／孝 xiao／德 de／智 zhi／禮 li／信 xin／仁 ren）、`HOUSE_NAMES`、`houseKeyOf(name)`、`houseNameOf(key)`、`houseColor/houseSoft`。每頁 `<script src="/houses.js">` 引入；加社只要改呢個檔。**任何頁面唔好再寫死忠社／孝社／zhong／xiao**（DEFAULT_MEMBERS 嘅預設名單 key 除外）。
+- 夾萬存於 `settings` 表 key=`safe_vault`，動態格式 `{<key>_big, <key>_small, ...}`（七社共 14 個欄）。
+- 舍友結存存於 key=`member_bal`；舍友名單存 key=`members`，格式 `{社名:[{id,name,exited?}]}`，讀取時要用 `HOUSE_NAMES.forEach` 補齊新社空陣列。
 - 一般申請：要喺後台「結算」先扣細夾萬；「夾萬支付」嘅單即時扣細夾萬，唔使再結算。
 - 結算時同時扣舍友結存；結存唔夠會彈 confirm。
 - 刪單會自動回補舍友結存同細夾萬。
@@ -34,13 +35,13 @@
 
 - URL `https://abtsyfbbtpvozywqaofs.supabase.co`，anon key 寫喺各頁 `SUPABASE_ANON_KEY`。
 - 表：`applications`（serial、payee_sign、pdf_path、settled_at、settled_by、safe_pay 等）、`settings`（key-value）、**`ledger`（流水賬，月結紀錄嘅根基）**。
-- ledger 欄位：`house(zhong/xiao)、kind(opening/deposit/expense/settle/transfer/adjust/rollback)、member_id、member_name、amount、member_delta、account(big/small)、account_delta、member_bal_after、account_bal_after、receipt_no、serial、staff、staff2、note、created_at`。
+- ledger 欄位：`house(社key：zhong/xiao/de/zhi/li/xin/ren)、kind(opening/deposit/expense/settle/transfer/adjust/rollback/transfer_in/transfer_out)、member_id、member_name、amount、member_delta、account(big/small)、account_delta、member_bal_after、account_bal_after、receipt_no、serial、staff、staff2、note、created_at`。
   - 每個銀錢變動寫一筆：`member_bal_after`／`account_bal_after` 係事件後結存快照，月結嘅「承前結存」＝月起前最後一筆嘅快照。
   - transfer 過錢寫兩筆（big 出、small 入）；支出（expense）即時記 member_delta，夾萬支付先帶 account_delta；墊支單由 admin 結算嗰陣記 settle（account_delta）；刪單記 rollback 回補。
 - 收款編號：`settings` key=`receipt_counter`（整數，下一個號），格式 `CYC xxxxxx`，只限存入；預設由 101334 接續舊系統，vault 頁可改。
 - 結存起點：vault 頁「🚩 結存起點」一次性寫 opening 流水（ledger 有記錄後鎖定）。
 - 月結輸出：admin「🧾 零用月結紀錄（社別）」，照舊系統格式（現存現金＝大夾萬、代管現金＝細夾萬），A4 直向列印。
-- Storage：bucket `apply-archive`，路徑只准英數（zhong/xiao/payeeId）。
+- Storage：bucket `apply-archive`，路徑只准英數（社 key／payeeId）。
 - 主網站（舍務抽籤、舍友名單）用**另一個** Supabase project，唔好搞亂。
 
 ## 測試流程

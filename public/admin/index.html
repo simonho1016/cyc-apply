@@ -12,6 +12,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<script src="/houses.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
@@ -107,7 +108,7 @@
       <label class="block">
         <span class="text-xs font-medium text-slate-500">社別</span>
         <select id="q_house" class="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white outline-none">
-          <option value="">全部</option><option>忠社</option><option>孝社</option>
+          <option value="">全部</option>
         </select>
       </label>
       <label class="block">
@@ -139,7 +140,7 @@
 
     <!-- 支出統計（已搬去「🧾 支錢紀錄」頁，全體同事可見） -->
     <a href="/records/" class="card bg-teal-50 p-4 flex items-center justify-between gap-3 hover:bg-teal-100 transition">
-      <span class="text-sm"><span class="font-bold text-teal-700">📊 支出統計</span><span class="block text-xs text-slate-500 mt-0.5">總支出／忠社孝社／未結算金額、按舍友（分社別）・按同事（墊支）・按類別統計——已搬去「🧾 支錢紀錄」頁，跟篩選即時更新</span></span>
+      <span class="text-sm"><span class="font-bold text-teal-700">📊 支出統計</span><span class="block text-xs text-slate-500 mt-0.5">總支出／分社／未結算金額、按舍友（分社別）・按同事（墊支）・按類別統計——已搬去「🧾 支錢紀錄」頁，跟篩選即時更新</span></span>
       <span class="shrink-0 px-4 py-2 rounded-lg text-sm font-bold text-white bg-teal-600">前往 →</span>
     </a>
 
@@ -159,10 +160,7 @@
     <div class="card bg-white p-5 space-y-3">
       <div class="flex items-center justify-between flex-wrap gap-2">
         <h3 class="text-sm font-bold text-sky-700 uppercase tracking-wide">👥 舍友戶口管理</h3>
-        <div class="flex gap-2">
-          <button data-mghouse="忠社" class="mg-house-tab px-3 py-1.5 rounded-lg text-sm font-bold bg-sky-600 text-white transition">忠社</button>
-          <button data-mghouse="孝社" class="mg-house-tab px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-100 text-slate-600 transition">孝社</button>
-        </div>
+        <div class="flex gap-2 flex-wrap" id="mg_house_tabs"></div>
       </div>
       <p class="text-xs text-slate-500">新增／修訂舍友編號同姓名、調整排序、轉社、退出服務。<b>現存未歸 0 嘅舍友唔可以刪除、改編號或退出服務</b>；轉社會將結存連同款項由舊社代管現金搬去新社，並記入流水賬。舍友離宿請用「<b>退出服務</b>」：名單除名但<b>歷史記錄同雲端 PDF 全部封存保留</b>，隨時查返；「刪除」只用於錯誤新增嘅戶口。</p>
       <div id="mg_list" class="space-y-1.5 text-sm"></div>
@@ -278,7 +276,7 @@
     <!-- 電子存檔說明（admin 專用；由支錢頁系統設定搬入） -->
     <div id="cardArchive" class="card bg-white p-5 space-y-2">
       <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wide">🗂️ 電子存檔（Supabase Storage）</h3>
-      <p class="text-xs text-slate-500">「電子存檔」會將 PDF 上傳到 Supabase Storage 嘅 <strong>apply-archive</strong> bucket，按 <strong>zhong／xiao（社別）→ 舍友編號 → 檔案</strong> 分類（Supabase 唔支援中文路徑，所以用英文編碼）；本機同時會下載一份做後備，本機檔名維持「舍友編號_日期」。免費計劃（1 GB）大約可儲存 2,500–5,000 張 PDF。</p>
+      <p class="text-xs text-slate-500">「電子存檔」會將 PDF 上傳到 Supabase Storage 嘅 <strong>apply-archive</strong> bucket，按 <strong>社別英文代號 → 舍友編號 → 檔案</strong> 分類（Supabase 唔支援中文路徑，所以用英文編碼）；本機同時會下載一份做後備，本機檔名維持「舍友編號_日期」。免費計劃（1 GB）大約可儲存 2,500–5,000 張 PDF。</p>
       <p class="text-xs text-slate-400">Bucket 未開通時，存檔仍會儲存雲端記錄同本機下載 PDF，只係冇雲端檔案；記錄頁嘅「下載 PDF」掣會喺該記錄有雲端檔案時先出現。</p>
     </div>
 
@@ -371,7 +369,11 @@
       <h3 class="font-bold text-slate-900">🔀 舍友轉社</h3>
       <div id="mg_x_info" class="text-sm space-y-1 rounded-lg bg-slate-50 border border-slate-200 p-3"></div>
       <label class="block">
-        <span class="text-xs font-medium text-slate-500">轉入 <b id="mg_x_to"></b> 嘅新編號</span>
+        <span class="text-xs font-medium text-slate-500">轉入社別</span>
+        <select id="mg_x_to" class="mt-1 w-40 rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white outline-none"></select>
+      </label>
+      <label class="block">
+        <span class="text-xs font-medium text-slate-500">新編號</span>
         <input id="mg_x_id" maxlength="6" class="mt-1 w-32 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none" placeholder="例如 B14">
       </label>
       <p class="text-xs text-slate-500">確認後：舍友會即刻轉社；結存（如有）會由舊社<b>代管現金</b>自動搬去新社代管現金，並記入流水賬（月結會顯示轉出／轉入）。舊編號嘅歷史支錢記錄會保留唔變。</p>
@@ -430,6 +432,8 @@ function showMain(){
     loadFeedback();
     checkGoLive();
   }
+  // 社別篩選：動態填入全部社別
+  $('q_house').innerHTML = '<option value="">全部</option>' + window.HOUSE_NAMES.map(h => `<option>${h}</option>`).join('');
   loadData();
   mgLoad();
 }
@@ -554,12 +558,13 @@ async function deleteRecords(list){
   try {
     const vault = await getSafeVault();
     if (vault.init) {
-      const run = { zhong: vault.zhong_small, xiao: vault.xiao_small };
-      const back = { zhong: 0, xiao: 0 };
+      const run = {};
+      window.HOUSES.forEach(h => { run[h.key] = vault[h.key + '_small'] || 0; });
+      const back = {};
       list.forEach(r => {
         if (r.safe_pay || r.settled_at) {
           const hk = houseKey(r.house);
-          back[hk] = r2(back[hk] + Number(r.amount || 0));
+          back[hk] = r2((back[hk] || 0) + Number(r.amount || 0));
           run[hk] = r2(run[hk] + Number(r.amount || 0));
           // 同一筆流水補返夾萬資料（冇舍友結存回補嘅單就獨立一筆）
           const ex = ledRows.find(x => x.serial === (r.serial || '') && x.member_id === (r.payee_id || ''));
@@ -569,11 +574,13 @@ async function deleteRecords(list){
             serial: r.serial || '', note: '刪單回補' });
         }
       });
-      if (back.zhong || back.xiao) {
-        await saveSafeVault({
-          zhong_big: vault.zhong_big, zhong_small: r2(vault.zhong_small + back.zhong),
-          xiao_big: vault.xiao_big,   xiao_small: r2(vault.xiao_small + back.xiao)
+      if (Object.keys(back).length) {
+        const nv = {};
+        window.HOUSES.forEach(h => {
+          nv[h.key + '_big'] = vault[h.key + '_big'];
+          nv[h.key + '_small'] = r2((vault[h.key + '_small'] || 0) + (back[h.key] || 0));
         });
+        await saveSafeVault(nv);
       }
     }
   } catch { /* 同上 */ }
@@ -647,7 +654,7 @@ $('zip_btn').addEventListener('click', async () => {
       try {
         const { data, error } = await sb.storage.from('apply-archive').download(r.pdf_path);
         if (error) throw new Error(error.message);
-        zip.file(r.pdf_path, data);          // 保持 zhong／xiao → 舍友編號 → 檔案 結構
+        zip.file(r.pdf_path, data);          // 保持 社別代號 → 舍友編號 → 檔案 結構
       } catch { fail++; }
       done++;
     }
@@ -715,29 +722,30 @@ $('print_btn').addEventListener('click', async () => {
   refreshSettleBtn();
 });
 
-// ---- 夾萬現存（同支錢系統共用 settings key: safe_vault = { zhong_big/zhong_small, xiao_big/xiao_small }）----
+// ---- 夾萬現存（同支錢系統共用 settings key: safe_vault = { <社key>_big/<社key>_small ... }，動態社別）----
 // 結算扣數同刪除回補用呢套；現存嘅睇數同改數喺獨立頁面 /vault/
 const r2 = n => Math.round(n * 100) / 100;
-function houseKey(h){ return h === '孝社' ? 'xiao' : 'zhong'; }
+function houseKey(h){ return window.houseKeyOf(h); }
 async function getSafeVault(){
+  const out = { init: false };
+  window.HOUSES.forEach(h => { out[h.key + '_big'] = 0; out[h.key + '_small'] = 0; });
   try {
     const { data, error } = await sb.from('settings').select('value').eq('key', 'safe_vault').maybeSingle();
     if (!error && data && data.value) {
       const v = data.value;
-      return {
-        zhong_big: Number(v.zhong_big) || 0, zhong_small: Number(v.zhong_small) || 0,
-        xiao_big: Number(v.xiao_big) || 0,   xiao_small: Number(v.xiao_small) || 0,
-        init: ('zhong_small' in v || 'xiao_small' in v)   // 舊三格格式當未設定，要去 /vault/ 重設
-      };
+      window.HOUSES.forEach(h => {
+        out[h.key + '_big'] = Number(v[h.key + '_big']) || 0;
+        out[h.key + '_small'] = Number(v[h.key + '_small']) || 0;
+        if (h.key + '_small' in v || h.key + '_big' in v) out.init = true;
+      });
     }
   } catch {}
-  return { zhong_big: 0, zhong_small: 0, xiao_big: 0, xiao_small: 0, init: false };
+  return out;
 }
 async function saveSafeVault(v){
-  const { error } = await sb.from('settings').upsert({ key: 'safe_vault', value: {
-    zhong_big: r2(v.zhong_big), zhong_small: r2(v.zhong_small),
-    xiao_big: r2(v.xiao_big),   xiao_small: r2(v.xiao_small)
-  } });
+  const val = {};
+  window.HOUSES.forEach(h => { val[h.key + '_big'] = r2(v[h.key + '_big']); val[h.key + '_small'] = r2(v[h.key + '_small']); });
+  const { error } = await sb.from('settings').upsert({ key: 'safe_vault', value: val });
   if (error) throw new Error(error.message);
 }
 async function getSettingValue(key){
@@ -772,11 +780,13 @@ $('settle_btn').addEventListener('click', async () => {
   // 檢查代管現金夠唔夠錢結算（夾萬未設定就跳過檢查，照舊結算）
   const vault = await getSafeVault();
   if (vault.init) {
-    const need = { zhong: 0, xiao: 0 };
-    sel.forEach(r => { need[houseKey(r.house)] = r2(need[houseKey(r.house)] + Number(r.amount || 0)); });
+    const need = {};
+    sel.forEach(r => { const k = houseKey(r.house); need[k] = r2((need[k] || 0) + Number(r.amount || 0)); });
     const lacks = [];
-    if (need.zhong > vault.zhong_small) lacks.push(`忠社代管現金：需要 ${money(need.zhong)}，現存 ${money(vault.zhong_small)}（差 ${money(r2(need.zhong - vault.zhong_small))}）`);
-    if (need.xiao > vault.xiao_small) lacks.push(`孝社代管現金：需要 ${money(need.xiao)}，現存 ${money(vault.xiao_small)}（差 ${money(r2(need.xiao - vault.xiao_small))}）`);
+    window.HOUSES.forEach(h => {
+      const have = vault[h.key + '_small'] || 0, want = need[h.key] || 0;
+      if (want > have) lacks.push(`${h.name}代管現金：需要 ${money(want)}，現存 ${money(have)}（差 ${money(r2(want - have))}）`);
+    });
     if (lacks.length) { alert('代管現金唔夠錢，未能結算：\n' + lacks.join('\n') + '\n\n請先去「🏦 夾萬・現存」頁由現存現金過錢俾代管現金。'); return; }
   }
   // 按同事（墊支人）分項：結算即係由夾萬攞錢俾返墊支嘅同事
@@ -810,15 +820,18 @@ $('settle_ok').addEventListener('click', async () => {
     try {
       const vault = await getSafeVault();
       if (vault.init) {
-        const need = { zhong: 0, xiao: 0 };
-        targets.forEach(r => { need[houseKey(r.house)] = r2(need[houseKey(r.house)] + Number(r.amount || 0)); });
-        await saveSafeVault({
-          zhong_big: vault.zhong_big, zhong_small: r2(vault.zhong_small - need.zhong),
-          xiao_big: vault.xiao_big,   xiao_small: r2(vault.xiao_small - need.xiao)
+        const need = {};
+        targets.forEach(r => { const k = houseKey(r.house); need[k] = r2((need[k] || 0) + Number(r.amount || 0)); });
+        const nv = {};
+        window.HOUSES.forEach(h => {
+          nv[h.key + '_big'] = vault[h.key + '_big'];
+          nv[h.key + '_small'] = r2((vault[h.key + '_small'] || 0) - (need[h.key] || 0));
         });
+        await saveSafeVault(nv);
         deducted = true;
         // 流水賬：每張單一筆 settle，代管現金結餘逐張累扣
-        const run = { zhong: vault.zhong_small, xiao: vault.xiao_small };
+        const run = {};
+        window.HOUSES.forEach(h => { run[h.key] = vault[h.key + '_small'] || 0; });
         const now2 = new Date().toISOString();
         await ledgerInsert(targets.map(r => {
           const hk = houseKey(r.house);
@@ -837,7 +850,7 @@ $('settle_ok').addEventListener('click', async () => {
 });
 
 // ---- 帳號及權限管理 ----
-// settings keys：roles（電郵→admin/manager/cashier/sw/tutor，冇＝按職級推導：社工/專責個案社工→sw 社工，其餘→tutor 導師）、staff_dir（電郵→{name,title,house?}；house＝管理夾萬同工負責嘅社別 zhong/xiao；{deleted:true}＝隱藏預設同事）、staff_seen（登入過嘅電郵→{name,last}，前置頁自動記錄）
+// settings keys：roles（電郵→admin/manager/cashier/sw/tutor，冇＝按職級推導：社工/專責個案社工→sw 社工，其餘→tutor 導師）、staff_dir（電郵→{name,title,house?}；house＝管理夾萬同工負責嘅社別 key；{deleted:true}＝隱藏預設同事）、staff_seen（登入過嘅電郵→{name,last}，前置頁自動記錄）
 // 五層權限：admin ＞ manager 管理級（管理夾萬同工所有功能＋夾萬過錢）＞ cashier 管理夾萬同工（支錢、存入、文件）＞ sw 社工（基本＋月結簽署）＝ tutor 導師（基本）
 const ROLE_LABELS = { admin: 'admin', manager: '管理級', cashier: '管理夾萬同工', sw: '社工', tutor: '導師' };
 const VALID_ROLES = ['admin', 'manager', 'cashier', 'sw', 'tutor'];
@@ -882,8 +895,7 @@ const roleSel = (email, cur) => `<select class="role_sel shrink-0 rounded-lg bor
 // 管理夾萬同工嘅社別指派（夾萬過錢時收款人會按社別自動揀）
 const houseSel = (email, cur) => `<select class="house_sel shrink-0 rounded-lg border border-amber-300 bg-amber-50 px-2 py-1 text-xs outline-none" data-email="${email}" title="管理邊個社嘅夾萬">
   <option value=""${!cur ? ' selected' : ''}>管邊社夾萬…</option>
-  <option value="zhong"${cur === 'zhong' ? ' selected' : ''}>忠社夾萬</option>
-  <option value="xiao"${cur === 'xiao' ? ' selected' : ''}>孝社夾萬</option>
+  ${window.HOUSES.map(h => `<option value="${h.key}"${cur === h.key ? ' selected' : ''}>${h.name}夾萬</option>`).join('')}
 </select>`;
 const titleSel = (email, cur) => `<select class="title_sel shrink-0 rounded-lg border border-slate-300 px-2 py-1 text-xs bg-white outline-none" data-email="${email}">
   <option value=""${!cur ? ' selected' : ''}>職級…</option>${TITLES.map(t => `<option${cur === t ? ' selected' : ''}>${t}</option>`).join('')}
@@ -968,7 +980,7 @@ async function onHouseChange(s){
     const c = STAFF_DIR[em] && !STAFF_DIR[em].deleted ? STAFF_DIR[em] : {};
     STAFF_DIR[em] = { ...c, name: c.name || name, title: c.title || (entry ? entry.title : '') || '', house };
     await saveDir();
-    toast(`已指派 ${name} 管理${house === 'zhong' ? '忠社' : house === 'xiao' ? '孝社' : '（取消指派）'}夾萬。`);
+    toast(`已指派 ${name} 管理${house ? window.houseNameOf(house) : '（取消指派）'}夾萬。`);
     loadRoles();
   } catch (err) { alert('儲存失敗：' + err.message); loadRoles(); }
 }
@@ -1096,9 +1108,9 @@ const DEFAULT_MEMBERS = {
     {id:'B26',name:'林戩翹'}
   ]
 };
-let mgMembers = null;   // {忠社:[{id,name}...], 孝社:[...]}
+let mgMembers = null;   // {社名:[{id,name}...]}（動態社別）
 let mgBal = {};         // member_bal：編號 → 現存
-let mgHouse = '忠社';
+let mgHouse = window.HOUSE_NAMES[0];
 let mgEditId = null, mgXferId = null;
 
 function mgStaffName(){
@@ -1107,26 +1119,27 @@ function mgStaffName(){
 async function mgLoad(){
   try {
     const m = await getSettingValue('members');
-    mgMembers = (m && typeof m === 'object' && !Array.isArray(m) && (Array.isArray(m['忠社']) || Array.isArray(m['孝社'])))
-      ? { '忠社': Array.isArray(m['忠社']) ? m['忠社'] : [], '孝社': Array.isArray(m['孝社']) ? m['孝社'] : [] }
-      : JSON.parse(JSON.stringify(DEFAULT_MEMBERS));
+    const hasCloud = m && typeof m === 'object' && !Array.isArray(m) && window.HOUSE_NAMES.some(h => Array.isArray(m[h]));
+    mgMembers = hasCloud ? m : JSON.parse(JSON.stringify(DEFAULT_MEMBERS));
   } catch { mgMembers = JSON.parse(JSON.stringify(DEFAULT_MEMBERS)); }
+  window.HOUSE_NAMES.forEach(h => { if (!Array.isArray(mgMembers[h])) mgMembers[h] = []; });   // 補齊新社空陣列
   try {
     const b = await getSettingValue('member_bal');
     mgBal = (b && typeof b === 'object' && !Array.isArray(b)) ? b : {};
   } catch { mgBal = {}; }
+  mgRenderTabs();
   mgRender();
 }
 const mgBalOf = id => Number(mgBal[id]) || 0;
-// 全兩社編號／姓名（except = {house, id} 嘅話會略過嗰位舍友，修訂時用）
+// 全社編號／姓名（except = {house, id} 嘅話會略過嗰位舍友，修訂時用）
 function mgAllIds(except){
   const out = [];
-  ['忠社', '孝社'].forEach(h => (mgMembers[h] || []).forEach(m => { if (!except || !(except.house === h && m.id === except.id)) out.push(m.id); }));
+  window.HOUSE_NAMES.forEach(h => (mgMembers[h] || []).forEach(m => { if (!except || !(except.house === h && m.id === except.id)) out.push(m.id); }));
   return out;
 }
 function mgAllNames(except){
   const out = [];
-  ['忠社', '孝社'].forEach(h => (mgMembers[h] || []).forEach(m => { if (!except || !(except.house === h && m.id === except.id)) out.push(m.name); }));
+  window.HOUSE_NAMES.forEach(h => (mgMembers[h] || []).forEach(m => { if (!except || !(except.house === h && m.id === except.id)) out.push(m.name); }));
   return out;
 }
 async function mgSaveMembers(){
@@ -1169,21 +1182,25 @@ function mgRender(){
         </div>`).join('')}
       </div>` : '');
 }
-document.querySelectorAll('.mg-house-tab').forEach(btn => {
-  btn.addEventListener('click', () => {
-    mgHouse = btn.dataset.mghouse;
-    document.querySelectorAll('.mg-house-tab').forEach(b => {
-      const on = b === btn;
-      b.className = 'mg-house-tab px-3 py-1.5 rounded-lg text-sm transition ' + (on ? 'font-bold bg-sky-600 text-white' : 'font-medium bg-slate-100 text-slate-600');
-    });
-    mgRender();
-  });
+// 社別分頁按鈕：動態渲染全部社別
+function mgRenderTabs(){
+  $('mg_house_tabs').innerHTML = window.HOUSES.map(h => {
+    const on = h.name === mgHouse;
+    return `<button data-mghouse="${h.name}" class="mg-house-tab px-3 py-1.5 rounded-lg text-sm transition ${on ? 'font-bold text-white' : 'font-medium bg-slate-100 text-slate-600'}"${on ? ` style="background:${h.color}"` : ''}>${h.name}</button>`;
+  }).join('');
+}
+$('mg_house_tabs').addEventListener('click', e => {
+  const btn = e.target.closest('.mg-house-tab');
+  if (!btn) return;
+  mgHouse = btn.dataset.mghouse;
+  mgRenderTabs();
+  mgRender();
 });
 $('mg_add').addEventListener('click', async () => {
   const id = $('mg_new_id').value.trim().toUpperCase();
   const name = $('mg_new_name').value.trim();
   if (!id || !name) { alert('請填舍友編號同姓名。'); return; }
-  if (mgAllIds().includes(id)) { alert(`編號 ${id} 已經用緊（忠孝兩社唔可以重複）。`); return; }
+  if (mgAllIds().includes(id)) { alert(`編號 ${id} 已經用緊（各社唔可以重複）。`); return; }
   if (mgAllNames().includes(name)) { alert(`姓名「${name}」已經用緊。`); return; }
   (mgMembers[mgHouse] = mgMembers[mgHouse] || []).push({ id, name });
   try {
@@ -1266,7 +1283,7 @@ $('mg_e_ok').addEventListener('click', async () => {
   const newName = $('mg_e_name').value.trim();
   if (!newId || !newName) { alert('請填編號同姓名。'); return; }
   if (newId !== oldId && mgBalOf(oldId) !== 0) { alert('現存未歸 0，唔可以改編號。'); return; }
-  if (newId !== oldId && mgAllIds({ house: mgHouse, id: oldId }).includes(newId)) { alert(`編號 ${newId} 已經用緊（忠孝兩社唔可以重複）。`); return; }
+  if (newId !== oldId && mgAllIds({ house: mgHouse, id: oldId }).includes(newId)) { alert(`編號 ${newId} 已經用緊（各社唔可以重複）。`); return; }
   if (mgAllNames({ house: mgHouse, id: oldId }).includes(newName)) { alert(`姓名「${newName}」已經用緊。`); return; }
   m.id = newId; m.name = newName;
   if (newId !== oldId && oldId in mgBal) { mgBal[newId] = mgBal[oldId]; delete mgBal[oldId]; }
@@ -1279,30 +1296,44 @@ $('mg_e_ok').addEventListener('click', async () => {
   } catch (err) { alert('儲存失敗：' + err.message); mgLoad(); }
 });
 // ---- 轉社 ----
+function mgXferTarget(){ return $('mg_x_to').value; }
+function mgXferInfo(){
+  const m = (mgMembers[mgHouse] || []).find(x => x.id === mgXferId);
+  if (!m) return;
+  const other = mgXferTarget();
+  const bal = mgBalOf(m.id);
+  $('mg_x_info').innerHTML = `<div>舍友：<b>${escapeHtml(m.name)}</b>（${escapeHtml(m.id)}）</div>
+    <div>轉出：${mgHouse} → 轉入：<b class="text-violet-700">${other}</b></div>
+    <div>現存結存：<b class="${bal !== 0 ? 'text-amber-600' : ''}">${money(bal)}</b>${bal > 0 ? `<span class="text-xs text-slate-500">（會由${mgHouse}代管現金搬去${other}代管現金）</span>` : ''}</div>`;
+}
 function mgOpenXfer(id){
   const m = (mgMembers[mgHouse] || []).find(x => x.id === id);
   if (!m) return;
   mgXferId = id;
-  const other = mgHouse === '忠社' ? '孝社' : '忠社';
-  const bal = mgBalOf(id);
-  $('mg_x_info').innerHTML = `<div>舍友：<b>${escapeHtml(m.name)}</b>（${escapeHtml(m.id)}）</div>
-    <div>轉出：${mgHouse} → 轉入：<b class="text-violet-700">${other}</b></div>
-    <div>現存結存：<b class="${bal !== 0 ? 'text-amber-600' : ''}">${money(bal)}</b>${bal > 0 ? `<span class="text-xs text-slate-500">（會由${mgHouse}代管現金搬去${other}代管現金）</span>` : ''}</div>`;
-  $('mg_x_to').textContent = other;
+  // 目標社別：除咗而家嘅社之外全部社別，預設第一個
+  const targets = window.HOUSE_NAMES.filter(h => h !== mgHouse);
+  $('mg_x_to').innerHTML = targets.map(h => `<option>${h}</option>`).join('');
+  mgXferInfo();
   // 新編號預填舊編號（如對方社未用緊）
-  $('mg_x_id').value = (mgMembers[other] || []).some(x => x.id === id) ? '' : id;
+  $('mg_x_id').value = (mgMembers[mgXferTarget()] || []).some(x => x.id === id) ? '' : id;
   $('mgXferModal').classList.remove('hidden');
 }
+$('mg_x_to').addEventListener('change', () => {
+  mgXferInfo();
+  const m = (mgMembers[mgHouse] || []).find(x => x.id === mgXferId);
+  if (m) $('mg_x_id').value = (mgMembers[mgXferTarget()] || []).some(x => x.id === m.id) ? '' : m.id;
+});
 $('mg_x_cancel').addEventListener('click', () => $('mgXferModal').classList.add('hidden'));
 $('mg_x_ok').addEventListener('click', async () => {
-  const oldHouse = mgHouse, newHouse = oldHouse === '忠社' ? '孝社' : '忠社';
+  const oldHouse = mgHouse, newHouse = mgXferTarget();
   const oldList = mgMembers[oldHouse] || [];
   const idx = oldList.findIndex(m => m.id === mgXferId);
   if (idx < 0) { $('mgXferModal').classList.add('hidden'); return; }
+  if (!newHouse || newHouse === oldHouse) { alert('請揀轉入社別。'); return; }
   const m = oldList[idx];
   const newId = $('mg_x_id').value.trim().toUpperCase();
   if (!newId) { alert('請填新編號。'); $('mg_x_id').focus(); return; }
-  if (mgAllIds().includes(newId)) { alert(`編號 ${newId} 已經用緊（忠孝兩社唔可以重複）。`); return; }
+  if (mgAllIds().includes(newId)) { alert(`編號 ${newId} 已經用緊（各社唔可以重複）。`); return; }
   const B = r2(mgBalOf(m.id));
   const ok = houseKey(oldHouse), nk = houseKey(newHouse);
   // 有結存就要檢查舊社代管現金夠唔夠搬
@@ -1314,7 +1345,8 @@ $('mg_x_ok').addEventListener('click', async () => {
       return;
     }
     if (vault.init) {
-      nv = { zhong_big: vault.zhong_big, zhong_small: vault.zhong_small, xiao_big: vault.xiao_big, xiao_small: vault.xiao_small };
+      nv = {};
+      window.HOUSES.forEach(h => { nv[h.key + '_big'] = vault[h.key + '_big']; nv[h.key + '_small'] = vault[h.key + '_small']; });
       nv[ok + '_small'] = r2(nv[ok + '_small'] - B);
       nv[nk + '_small'] = r2(nv[nk + '_small'] + B);
     }
@@ -1379,7 +1411,7 @@ $('gl_go').addEventListener('click', async () => {
     }
     if (opt.bal) {
       const zero = {};
-      ['忠社', '孝社'].forEach(h => (mgMembers[h] || []).forEach(m => { zero[m.id] = 0; }));
+      window.HOUSE_NAMES.forEach(h => (mgMembers[h] || []).forEach(m => { zero[m.id] = 0; }));
       const { error } = await sb.from('settings').upsert({ key: 'member_bal', value: zero });
       if (error) throw new Error(error.message);
       st.push('舍友結存已全部歸 0');
@@ -1387,7 +1419,7 @@ $('gl_go').addEventListener('click', async () => {
     if (opt.vault) {
       const { error } = await sb.from('settings').delete().eq('key', 'safe_vault');
       if (error) throw new Error(error.message);
-      st.push('四個夾萬現存已重設（未設定狀態）');
+      st.push('各社夾萬現存已重設（未設定狀態）');
     }
     if (opt.receipt) {
       const { error } = await sb.from('settings').upsert({ key: 'receipt_counter', value: rn });
@@ -1546,7 +1578,7 @@ $('rs_go').addEventListener('click', async () => {
     }
     if (opt.bal) {
       const zero = {};
-      ['忠社', '孝社'].forEach(h => (mgMembers[h] || []).forEach(m => { zero[m.id] = 0; }));
+      window.HOUSE_NAMES.forEach(h => (mgMembers[h] || []).forEach(m => { zero[m.id] = 0; }));
       const { error } = await sb.from('settings').upsert({ key: 'member_bal', value: zero });
       if (error) throw new Error(error.message);
       st.push('舍友結存已全部歸 0');
@@ -1554,7 +1586,7 @@ $('rs_go').addEventListener('click', async () => {
     if (opt.vault) {
       const { error } = await sb.from('settings').delete().eq('key', 'safe_vault');
       if (error) throw new Error(error.message);
-      st.push('四個夾萬現存已重設（未設定狀態）');
+      st.push('各社夾萬現存已重設（未設定狀態）');
     }
     if (opt.receipt) {
       const { error } = await sb.from('settings').upsert({ key: 'receipt_counter', value: rn });

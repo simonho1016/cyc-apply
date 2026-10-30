@@ -18,6 +18,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/version-data.js"></script>
+<script src="/houses.js"></script>
 <script src="/signatures.js"></script>
 <style>
   /* ===== 螢幕字型（黑體，易讀） ===== */
@@ -282,10 +283,7 @@
 
         <div>
           <span class="text-xs font-medium text-slate-500">社別</span>
-          <div class="mt-1 flex gap-2">
-            <button type="button" data-house="忠社" class="f-house-btn flex-1 rounded-lg border border-slate-300 bg-white text-slate-600 px-3 py-2 text-sm font-medium transition">忠社</button>
-            <button type="button" data-house="孝社" class="f-house-btn flex-1 rounded-lg border border-slate-300 bg-white text-slate-600 px-3 py-2 text-sm font-medium transition">孝社</button>
-          </div>
+          <div class="mt-1 grid grid-cols-3 gap-2" id="f_house_grid"></div>
         </div>
 
         <label class="block">
@@ -368,7 +366,7 @@
           </div>
 
           <div class="mt-10 text-center" style="white-space:nowrap;">
-            茲由<span id="p_house" class="fill" style="min-width:70px;">忠社／孝社</span>舍友
+            茲由<span id="p_house" class="fill" style="min-width:70px;">社別</span>舍友
             <span id="p_payee" class="fill" style="min-width:130px;"></span>
             之零用金戶口支付港幣$<span id="p_amount" class="fill" style="min-width:110px;"></span>。
           </div>
@@ -726,7 +724,8 @@ const DB = {
 async function loadSettings(){
   try {
     const s = await DB.getSettings();
-    if (s.members && s.members['忠社'] && s.members['孝社']) CFG.members = s.members;
+    if (s.members && typeof s.members === 'object' && window.HOUSE_NAMES.some(h => Array.isArray(s.members[h]))) CFG.members = s.members;
+    window.HOUSE_NAMES.forEach(h => { if (!Array.isArray(CFG.members[h])) CFG.members[h] = []; });   // 補齊新社空名單
     if (Array.isArray(s.staff) && s.staff.length) CFG.staff = s.staff;
     if (typeof s.entry_pw === 'string' && s.entry_pw) CFG.entryPw = s.entry_pw;
   } catch { /* 用預設值 */ }
@@ -831,6 +830,10 @@ function enterForm(){
   renderDraftPanel();   // 刷新暫存單列表
 }
 
+// 社別按鈕：由 houses.js 動態生成（新增社別只要改 houses.js）
+$('f_house_grid').innerHTML = window.HOUSES.map(h =>
+  `<button type="button" data-house="${h.name}" class="f-house-btn rounded-lg border border-slate-300 bg-white text-slate-600 px-3 py-2 text-sm font-medium transition">${h.name}</button>`
+).join('');
 // 社別 → 收款人名單
 document.querySelectorAll('.f-house-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -1059,17 +1062,19 @@ async function nextSerial(){
   }
 }
 
-// ---- 夾萬現存（safe_vault：每社有大細兩個夾萬 zhong_big/zhong_small、xiao_big/xiao_small）----
+// ---- 夾萬現存（safe_vault：每社有大細兩個夾萬 <key>_big/<key>_small，key 見 houses.js）----
 async function getSafeVault(){
   const s = await DB.getSettings();
   const v = s.safe_vault || {};
-  return {
-    zhong_big: Number(v.zhong_big) || 0, zhong_small: Number(v.zhong_small) || 0,
-    xiao_big: Number(v.xiao_big) || 0,   xiao_small: Number(v.xiao_small) || 0,
-    init: !!s.safe_vault && ('zhong_small' in v || 'xiao_small' in v)   // 舊三格格式（big/zhong/xiao）當未設定，要去夾萬頁重設
-  };
+  const out = {};
+  window.HOUSES.forEach(h => {
+    out[h.key + '_big'] = Number(v[h.key + '_big']) || 0;
+    out[h.key + '_small'] = Number(v[h.key + '_small']) || 0;
+  });
+  out.init = !!s.safe_vault && window.HOUSES.some(h => (h.key + '_small') in v);   // 未設定過就去夾萬頁重設
+  return out;
 }
-function houseKey(h){ return h === '孝社' ? 'xiao' : 'zhong'; }
+function houseKey(h){ return window.houseKeyOf(h); }
 // ---- 流水賬（ledger 表：月結紀錄嘅根基；寫入失敗唔阻支錢流程）----
 let ledgerWarned = false;
 async function ledgerInsert(rows){
@@ -1099,7 +1104,7 @@ async function deductSafe(house, amount){
   const k = houseKey(house) + '_small';
   v[k] = Math.round((v[k] - amount) * 100) / 100;
   delete v.init;
-  await DB.setSetting('safe_vault', { zhong_big: v.zhong_big, zhong_small: v.zhong_small, xiao_big: v.xiao_big, xiao_small: v.xiao_small });
+  await DB.setSetting('safe_vault', v);   // v 已包晒所有社嘅 big/small key
   return v[k];   // 回傳扣完嘅代管現金現存（寫流水賬用）
 }
 
@@ -1161,10 +1166,10 @@ function archiveFileName(d){
 }
 
 // ---- Supabase Storage：PDF 上傳到 apply-archive bucket ----
-// 注意：Supabase Storage 唔支援中文路徑，所以用 zhong/xiao + 舍友編號（全部英文數字）
+// 注意：Supabase Storage 唔支援中文路徑，所以用社別英文代號 + 舍友編號（全部英文數字）
 const ARCHIVE_BUCKET = 'apply-archive';
 function archivePath(d, fname){
-  const house = d.house === '孝社' ? 'xiao' : (d.house === '忠社' ? 'zhong' : 'other');
+  const house = d.house ? houseKeyOf(d.house) : 'other';
   const pid = (d.payeeId || 'other').replace(/[^A-Za-z0-9_-]/g, '') || 'other';
   const safeName = fname.replace(/[^A-Za-z0-9._-]/g, '') || ('archive_' + Date.now() + '.pdf');
   return `${house}/${pid}/${safeName}`;
@@ -1381,7 +1386,7 @@ function fillSheet(d){
   $('p_no').textContent     = d.no || '';
   $('p_serial').textContent = d.serial || '';
   $('p_notion').textContent = d.notion || '';
-  $('p_house').textContent  = d.house || '忠社／孝社';
+  $('p_house').textContent  = d.house || '社別';
   $('p_house').style.color  = d.house ? '#000' : '#9ca3af';
   $('p_payee').textContent  = d.payee || '';
   $('p_payee2').textContent = d.payee || '';

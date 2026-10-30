@@ -19,6 +19,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/houses.js"></script>
 <script src="/signatures.js"></script>
 <style>
   body { font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif; }
@@ -154,8 +155,6 @@
     <select id="staffFilter" class="hidden px-3 py-2 rounded-lg text-sm text-slate-700"></select>
     <select id="f_house" class="px-3 py-2 rounded-lg text-sm text-slate-700">
       <option value="">全部社別</option>
-      <option value="忠社">忠社</option>
-      <option value="孝社">孝社</option>
     </select>
     <input id="f_from" type="date" class="px-3 py-2 rounded-lg text-sm text-slate-700" title="日期由">
     <input id="f_to" type="date" class="px-3 py-2 rounded-lg text-sm text-slate-700" title="日期至">
@@ -185,8 +184,7 @@
     </div>
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
       <div class="rounded-xl bg-amber-50 p-3" style="border:2px solid #141414;"><div class="text-xs text-slate-500">未結算總支出</div><div id="sum_total" class="text-xl font-black text-amber-600 mt-0.5">$0.00</div><div id="sum_count" class="text-xs text-slate-400 mt-0.5">0 張單</div></div>
-      <div class="rounded-xl bg-rose-50 p-3" style="border:2px solid #141414;"><div class="text-xs text-slate-500">忠社未結算</div><div id="sum_zhong" class="text-xl font-black text-rose-600 mt-0.5">$0.00</div><div id="sum_zhong_n" class="text-xs text-slate-400 mt-0.5">0 張單</div></div>
-      <div class="rounded-xl bg-blue-50 p-3" style="border:2px solid #141414;"><div class="text-xs text-slate-500">孝社未結算</div><div id="sum_xiao" class="text-xl font-black text-blue-600 mt-0.5">$0.00</div><div id="sum_xiao_n" class="text-xs text-slate-400 mt-0.5">0 張單</div></div>
+      <div id="sum_house_grid" class="contents"></div>
       <div class="rounded-xl bg-emerald-50 p-3" style="border:2px solid #141414;"><div class="text-xs text-slate-500">待結算同事（墊支未取返）</div><div id="sum_unsettled" class="text-xl font-black text-emerald-700 mt-0.5">0 人</div><div id="sum_unsettled_n" class="text-xs text-slate-400 mt-0.5">—</div></div>
     </div>
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
@@ -227,7 +225,7 @@
     </div>
 
     <div class="mt-10 text-center" style="white-space:nowrap;">
-      茲由<span id="p_house" class="fill" style="min-width:70px;">忠社／孝社</span>舍友
+      茲由<span id="p_house" class="fill" style="min-width:70px;">社別</span>舍友
       <span id="p_payee" class="fill" style="min-width:130px;"></span>
       之零用金戶口支付港幣$<span id="p_amount" class="fill" style="min-width:110px;"></span>。
     </div>
@@ -448,19 +446,18 @@ function statRows(){
 function renderStats(){
   const rows = statRows();
   const sum = arr => arr.reduce((a, r) => a + Number(r.amount || 0), 0);
-  const zhong = rows.filter(r => r.house === '忠社');
-  const xiao = rows.filter(r => r.house === '孝社');
   const pendingStaff = [...new Set(rows.map(r => r.staff || '（未填）'))].sort();
   $('sum_total').textContent = money(sum(rows));
   $('sum_count').textContent = rows.length + ' 張單';
-  $('sum_zhong').textContent = money(sum(zhong));
-  $('sum_zhong_n').textContent = zhong.length + ' 張單';
-  $('sum_xiao').textContent = money(sum(xiao));
-  $('sum_xiao_n').textContent = xiao.length + ' 張單';
+  // 分社統計卡：動態渲染全部社別
+  $('sum_house_grid').innerHTML = window.HOUSES.map(h => {
+    const hRows = rows.filter(r => r.house === h.name);
+    return `<div class="rounded-xl p-3" style="border:2px solid #141414; background:${h.soft};"><div class="text-xs text-slate-500">${h.name}</div><div class="text-xl font-black mt-0.5" style="color:${h.color};">${money(sum(hRows))}</div><div class="text-xs text-slate-400 mt-0.5">${hRows.length} 張單</div></div>`;
+  }).join('');
   $('sum_unsettled').textContent = pendingStaff.length + ' 人';
   $('sum_unsettled_n').textContent = pendingStaff.length ? pendingStaff.join('、') : '全部已結算';
 
-  // 按舍友（按社別分組：忠社 → 孝社 → 其他）
+  // 按舍友（按社別分組，動態社別）
   const byP = {};
   rows.forEach(r => {
     const k = r.payee || '（未填）';
@@ -471,25 +468,24 @@ function renderStats(){
   const pMax = pList.length ? pList[0][1].total : 0;
   const payeeRow = ([name, v]) => {
     const pct = pMax ? Math.max(4, Math.round(v.total / pMax * 100)) : 0;
-    const barCls = v.house === '孝社' ? 'bg-blue-400' : 'bg-rose-400';
     return `
     <div class="border-b border-slate-100 pb-1.5">
       <div class="flex items-center justify-between gap-2">
         <span class="min-w-0 truncate">${escapeHtml(name)} <span class="text-xs text-slate-400">${v.n} 張</span></span>
         <span class="shrink-0 font-bold">${money(v.total)}</span>
       </div>
-      <div class="mt-1 h-2 rounded-full bg-slate-100 overflow-hidden"><div class="h-full rounded-full ${barCls}" style="width:${pct}%"></div></div>
+      <div class="mt-1 h-2 rounded-full bg-slate-100 overflow-hidden"><div class="h-full rounded-full" style="background:${window.houseColor(v.house)}; width:${pct}%"></div></div>
     </div>`;
   };
-  const houseGroups = [['忠社', 'text-rose-600'], ['孝社', 'text-blue-600']];
   let payeeHtml = '';
-  houseGroups.forEach(([h, cls]) => {
+  window.HOUSE_NAMES.forEach(h => {
     const items = pList.filter(([, v]) => v.house === h);
     if (!items.length) return;
     const hTotal = items.reduce((a, [, v]) => a + v.total, 0);
-    payeeHtml += `<div class="flex justify-between items-baseline mt-1 mb-1"><span class="text-xs font-bold ${cls}">■ ${h}</span><span class="text-xs font-bold ${cls}">${money(hTotal)}</span></div>` + items.map(payeeRow).join('');
+    const c = window.houseColor(h);
+    payeeHtml += `<div class="flex justify-between items-baseline mt-1 mb-1"><span class="text-xs font-bold" style="color:${c}">■ ${h}</span><span class="text-xs font-bold" style="color:${c}">${money(hTotal)}</span></div>` + items.map(payeeRow).join('');
   });
-  const otherItems = pList.filter(([, v]) => v.house !== '忠社' && v.house !== '孝社');
+  const otherItems = pList.filter(([, v]) => !window.HOUSE_NAMES.includes(v.house));
   if (otherItems.length) payeeHtml += '<div class="text-xs font-bold text-slate-500 mt-1 mb-1">■ 其他</div>' + otherItems.map(payeeRow).join('');
   $('by_payee').innerHTML = payeeHtml || '<p class="text-slate-400">冇未結算數據。</p>';
 
@@ -608,13 +604,13 @@ async function loadRecords(){
         const v = await getSafeVault();
         const hint = $('safe_hint');
         if (v.init) {
-          const need = { zhong: 0, xiao: 0 };
-          allRows.forEach(r => { if (!r.settled_at) need[houseKey(r.house)] = r2(need[houseKey(r.house)] + Number(r.amount || 0)); });
+          const need = {};
+          allRows.forEach(r => { if (!r.settled_at) { const k = houseKey(r.house); need[k] = r2((need[k] || 0) + Number(r.amount || 0)); } });
           const cell = (label, have, want) => {
             const ok = have >= want - 0.005;
             return `<span class="${ok ? 'text-emerald-700' : 'text-red-600'}">${label}代管現金 ${money(have)}${want ? `（未結算 ${money(want)} ${ok ? '✅ 夠' : '⚠️ 唔夠'}）` : ''}</span>`;
           };
-          hint.innerHTML = '🏦 ' + cell('忠社', v.zhong_small, need.zhong) + ' ｜ ' + cell('孝社', v.xiao_small, need.xiao);
+          hint.innerHTML = '🏦 ' + window.HOUSES.map(h => cell(h.name, v[h.key + '_small'] || 0, need[h.key] || 0)).join(' ｜ ');
           hint.classList.remove('hidden');
         }
       } catch { /* 顯示唔到都唔阻主流程 */ }
@@ -624,6 +620,9 @@ async function loadRecords(){
     box.innerHTML = `<p class="text-sm text-red-500">${escapeHtml(e.message)}</p>`;
   }
 }
+
+// 社別篩選：動態填入全部社別（C 版七社）
+$('f_house').innerHTML = '<option value="">全部社別</option>' + window.HOUSE_NAMES.map(h => `<option value="${h}">${h}</option>`).join('');
 
 $('tabs').addEventListener('click', e => {
   const btn = e.target.closest('.tab-btn');
@@ -653,7 +652,7 @@ function fillSheet(d){
   $('p_no').textContent     = d.no || '';
   $('p_serial').textContent = d.serial || '';
   $('p_notion').textContent = d.notion || '';
-  $('p_house').textContent  = d.house || '忠社／孝社';
+  $('p_house').textContent  = d.house || '社別';
   $('p_house').style.color  = d.house ? '#000' : '#9ca3af';
   $('p_payee').textContent  = d.payee || '';
   $('p_payee2').textContent = d.payee || '';
@@ -732,7 +731,7 @@ $('r_list').addEventListener('click', async e => {
 // ====================== 批量操作（管理夾萬同工／管理級／admin） ======================
 const money = n => '$' + Number(n || 0).toFixed(2);
 const r2 = n => Math.round(n * 100) / 100;
-function houseKey(h){ return h === '孝社' ? 'xiao' : 'zhong'; }
+function houseKey(h){ return window.houseKeyOf(h); }
 let settleColsOk = true;
 const SETTLE_SQL = 'alter table applications add column if not exists settled_at timestamptz, add column if not exists settled_by text;';
 
@@ -745,20 +744,18 @@ async function getSettingValue(key){
 }
 async function getSafeVault(){
   const v = await getSettingValue('safe_vault');
-  if (v && typeof v === 'object') {
-    return {
-      zhong_big: Number(v.zhong_big) || 0, zhong_small: Number(v.zhong_small) || 0,
-      xiao_big: Number(v.xiao_big) || 0,   xiao_small: Number(v.xiao_small) || 0,
-      init: ('zhong_small' in v || 'xiao_small' in v)
-    };
-  }
-  return { zhong_big: 0, zhong_small: 0, xiao_big: 0, xiao_small: 0, init: false };
+  const out = { init: false };
+  window.HOUSES.forEach(h => {
+    out[h.key + '_big'] = (v && typeof v === 'object') ? Number(v[h.key + '_big']) || 0 : 0;
+    out[h.key + '_small'] = (v && typeof v === 'object') ? Number(v[h.key + '_small']) || 0 : 0;
+    if (v && typeof v === 'object' && (h.key + '_big' in v || h.key + '_small' in v)) out.init = true;
+  });
+  return out;
 }
 async function saveSafeVault(v){
-  const { error } = await sb.from('settings').upsert({ key: 'safe_vault', value: {
-    zhong_big: r2(v.zhong_big), zhong_small: r2(v.zhong_small),
-    xiao_big: r2(v.xiao_big),   xiao_small: r2(v.xiao_small)
-  } });
+  const val = {};
+  window.HOUSES.forEach(h => { val[h.key + '_big'] = r2(v[h.key + '_big']); val[h.key + '_small'] = r2(v[h.key + '_small']); });
+  const { error } = await sb.from('settings').upsert({ key: 'safe_vault', value: val });
   if (error) throw new Error(error.message);
 }
 let ledgerWarned = false;
@@ -894,11 +891,13 @@ if (CAN_SETTLE) {
     // 檢查代管現金夠唔夠錢結算（夾萬未設定就跳過檢查，照舊結算）
     const vault = await getSafeVault();
     if (vault.init) {
-      const need = { zhong: 0, xiao: 0 };
-      sel.forEach(r => { need[houseKey(r.house)] = r2(need[houseKey(r.house)] + Number(r.amount || 0)); });
+      const need = {};
+      sel.forEach(r => { const k = houseKey(r.house); need[k] = r2((need[k] || 0) + Number(r.amount || 0)); });
       const lacks = [];
-      if (need.zhong > vault.zhong_small) lacks.push(`忠社代管現金：需要 ${money(need.zhong)}，現存 ${money(vault.zhong_small)}（差 ${money(r2(need.zhong - vault.zhong_small))}）`);
-      if (need.xiao > vault.xiao_small) lacks.push(`孝社代管現金：需要 ${money(need.xiao)}，現存 ${money(vault.xiao_small)}（差 ${money(r2(need.xiao - vault.xiao_small))}）`);
+      window.HOUSES.forEach(h => {
+        const have = vault[h.key + '_small'] || 0, want = need[h.key] || 0;
+        if (want > have) lacks.push(`${h.name}代管現金：需要 ${money(want)}，現存 ${money(have)}（差 ${money(r2(want - have))}）`);
+      });
       if (lacks.length) { alert('代管現金唔夠錢，未能結算：\n' + lacks.join('\n') + '\n\n請通知管理級或以上同事去「🏦 夾萬・現存」頁由現存現金過錢俾代管現金。'); return; }
     }
     // 按同事（墊支人）分項：結算即係由夾萬攞錢俾返墊支嘅同事
@@ -933,15 +932,18 @@ if (CAN_SETTLE) {
       try {
         const vault = await getSafeVault();
         if (vault.init) {
-          const need = { zhong: 0, xiao: 0 };
-          targets.forEach(r => { need[houseKey(r.house)] = r2(need[houseKey(r.house)] + Number(r.amount || 0)); });
-          await saveSafeVault({
-            zhong_big: vault.zhong_big, zhong_small: r2(vault.zhong_small - need.zhong),
-            xiao_big: vault.xiao_big,   xiao_small: r2(vault.xiao_small - need.xiao)
+          const need = {};
+          targets.forEach(r => { const k = houseKey(r.house); need[k] = r2((need[k] || 0) + Number(r.amount || 0)); });
+          const next = {};
+          window.HOUSES.forEach(h => {
+            next[h.key + '_big'] = vault[h.key + '_big'];
+            next[h.key + '_small'] = r2((vault[h.key + '_small'] || 0) - (need[h.key] || 0));
           });
+          await saveSafeVault(next);
           deducted = true;
           // 流水賬：每張單一筆 settle，代管現金結餘逐張累扣
-          const run = { zhong: vault.zhong_small, xiao: vault.xiao_small };
+          const run = {};
+          window.HOUSES.forEach(h => { run[h.key] = vault[h.key + '_small'] || 0; });
           const now2 = new Date().toISOString();
           await ledgerInsert(targets.map(r => {
             const hk = houseKey(r.house);

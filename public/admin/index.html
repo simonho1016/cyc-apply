@@ -265,15 +265,23 @@
       </div>
     </div>
 
-    <!-- 簽名密碼（admin 專用；由支錢頁系統設定搬入） -->
-    <div id="cardSigPw" class="card bg-white p-5 space-y-3">
-      <h3 class="text-sm font-bold text-emerald-600 uppercase tracking-wide">🔏 簽名密碼</h3>
-      <p class="text-xs text-slate-500">只有<b>何文諾、何樂軒</b>有電子簽名圖。同事喺支錢頁揀佢哋做「支款人」時，要輸入呢度嘅密碼先用到對應簽名檔（本人用 Google 登入揀自己就唔使）。其他同事冇簽名檔，支錢時即場簽署，唔使密碼。同事姓名同職級喺上面「👥 帳號及權限管理」度改。</p>
-      <div class="space-y-2 text-sm">
-        <label class="flex items-center gap-2 flex-wrap"><span class="w-16 font-bold text-slate-700">何文諾</span><input id="sigpw_ml" type="text" autocomplete="off" class="flex-1 min-w-32 rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none" placeholder="簽名密碼"></label>
-        <label class="flex items-center gap-2 flex-wrap"><span class="w-16 font-bold text-slate-700">何樂軒</span><input id="sigpw_lh" type="text" autocomplete="off" class="flex-1 min-w-32 rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none" placeholder="簽名密碼"></label>
+    <!-- 簽名密碼（admin 專用；彩蛋：平時收埋，撳頁尾左下角小水管 5 次先彈出） -->
+    <div id="cardSigPw" class="fixed inset-0 z-50 hidden">
+      <div class="absolute inset-0 bg-black/50" id="sigpw_backdrop"></div>
+      <div class="absolute inset-0 flex items-center justify-center p-4">
+        <div class="card bg-white p-6 w-full max-w-md space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-emerald-600 uppercase tracking-wide">🔏 簽名密碼</h3>
+            <button id="sigpw_close" class="px-2.5 py-1 rounded-lg text-sm font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 transition">✕ 收埋</button>
+          </div>
+          <p class="text-xs text-slate-500">只有<b>何文諾、何樂軒</b>有電子簽名圖。同事喺支錢頁揀佢哋做「支款人」時，要輸入呢度嘅密碼先用到對應簽名檔（本人用 Google 登入揀自己就唔使）。其他同事冇簽名檔，支錢時即場簽署，唔使密碼。同事姓名同職級喺「👥 帳號及權限管理」度改。</p>
+          <div class="space-y-2 text-sm">
+            <label class="flex items-center gap-2 flex-wrap"><span class="w-16 font-bold text-slate-700">何文諾</span><input id="sigpw_ml" type="text" autocomplete="off" class="flex-1 min-w-32 rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none" placeholder="簽名密碼"></label>
+            <label class="flex items-center gap-2 flex-wrap"><span class="w-16 font-bold text-slate-700">何樂軒</span><input id="sigpw_lh" type="text" autocomplete="off" class="flex-1 min-w-32 rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none" placeholder="簽名密碼"></label>
+          </div>
+          <button id="sigpw_save" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition">儲存簽名密碼</button>
+        </div>
       </div>
-      <button id="sigpw_save" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition">儲存簽名密碼</button>
     </div>
 
     <!-- 電子存檔說明（admin 專用；由支錢頁系統設定搬入） -->
@@ -319,6 +327,19 @@
         <button id="gl_go" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-red-600 hover:bg-red-700 transition" disabled>執行轉正式版本</button>
       </div>
       <p id="gl_status" class="text-xs text-slate-500"></p>
+    </div>
+
+    <!-- 彩蛋：小水管（撳 5 次開簽名密碼；admin 專用） -->
+    <div class="pt-2 pb-1 flex items-end">
+      <button id="pipe_secret" type="button" title="🚰" class="opacity-40 hover:opacity-90 transition cursor-pointer select-none" style="line-height:0">
+        <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true">
+          <rect x="4" y="3" width="26" height="8" rx="2" fill="#16a34a"/>
+          <rect x="4" y="3" width="26" height="3" rx="1.5" fill="#4ade80"/>
+          <rect x="8" y="11" width="18" height="20" rx="2" fill="#16a34a"/>
+          <rect x="8" y="11" width="5" height="20" fill="#4ade80" opacity="0.7"/>
+          <rect x="4" y="9.5" width="26" height="2" fill="#14532d" opacity="0.35"/>
+        </svg>
+      </button>
     </div>
   </section>
 </main>
@@ -427,6 +448,7 @@ function showMain(){
   if (ADMIN_VIEW !== 'admin') {
     // 管理級：收埋 admin 專用區（帳號權限／模擬檢視／簽名密碼／電子存檔／轉正式／問題回報／回復原廠），唔可以刪除或結算
     ['cardRoles', 'cardSim', 'cardSigPw', 'cardArchive', 'cardGoLive', 'cardFeedback', 'cardReset'].forEach(id => { const el = $(id); if (el) el.classList.add('hidden'); });
+    $('pipe_secret').classList.add('hidden');   // 彩蛋水管都係 admin 專用
     $('del_sel_btn').classList.add('hidden');
     $('settle_btn').classList.add('hidden');
   } else {
@@ -1071,6 +1093,24 @@ $('sigpw_save').addEventListener('click', async () => {
     toast('已儲存簽名密碼，即時生效。');
   } catch (e) { alert('儲存失敗：' + e.message); }
 });
+
+// ---- 彩蛋：小水管撳 5 次彈出簽名密碼（兩次點擊相隔超過 2 秒會重新計）----
+let pipeClicks = 0, pipeTimer = null;
+$('pipe_secret').addEventListener('click', () => {
+  pipeClicks++;
+  clearTimeout(pipeTimer);
+  pipeTimer = setTimeout(() => { pipeClicks = 0; }, 2000);
+  const btn = $('pipe_secret');
+  btn.style.transform = `scale(${1 + pipeClicks * 0.08})`;   // 每撳一次大少少，有回饋
+  setTimeout(() => { btn.style.transform = ''; }, 180);
+  if (pipeClicks >= 5) {
+    pipeClicks = 0;
+    loadSigPw();
+    $('cardSigPw').classList.remove('hidden');
+  }
+});
+$('sigpw_close').addEventListener('click', () => $('cardSigPw').classList.add('hidden'));
+$('sigpw_backdrop').addEventListener('click', () => $('cardSigPw').classList.add('hidden'));
 
 // ---- 模擬檢視：寫入 cyc-sim，各頁面（前置頁／支錢／夾萬）會用呢個角色渲染 ----
 function refreshSimUI(){

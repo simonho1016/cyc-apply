@@ -857,16 +857,21 @@ const signCanvas = $('signCanvas');
 const sctx = signCanvas.getContext('2d');
 let signing = false, signDrawn = false, signLast = null;
 
+// 簽名板固定尺寸：以 iPhone 17 Pro 橫向螢幕（874×402 pt）為標準，
+// 減去標題列約 62pt → 簽名區固定 874×340；內部解像度固定 ×2，
+// 無論用咩裝置簽，輸出嘅簽名大細同比例都一致
+const SIGN_W = 874, SIGN_H = 340, SIGN_DPR = 2;
+
 function sizeSignCanvas(preserve){
   const prev = document.createElement('canvas');
   if (preserve && signCanvas.width) {
     prev.width = signCanvas.width; prev.height = signCanvas.height;
     prev.getContext('2d').drawImage(signCanvas, 0, 0);
   }
-  const dpr = window.devicePixelRatio || 1;
-  signCanvas.width = Math.max(1, Math.round(signCanvas.clientWidth * dpr));
-  signCanvas.height = Math.max(1, Math.round(signCanvas.clientHeight * dpr));
-  sctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  // 固定畫布解像度（唔再跟裝置尺寸），顯示大細由 CSS 拉放
+  signCanvas.width = SIGN_W * SIGN_DPR;
+  signCanvas.height = SIGN_H * SIGN_DPR;
+  sctx.setTransform(SIGN_DPR, 0, 0, SIGN_DPR, 0, 0);
   sctx.lineWidth = 3; sctx.lineCap = 'round'; sctx.lineJoin = 'round'; sctx.strokeStyle = '#111';
   if (preserve && prev.width) {
     sctx.save();
@@ -881,11 +886,12 @@ window.addEventListener('resize', () => {
 function signPos(e){
   const r = signCanvas.getBoundingClientRect();
   if ($('signModal').classList.contains('sign-rot')) {
+    // 簽名板順時針轉咗 90°：將螢幕座標逆轉換返入固定簽名區座標
     const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
     const dx = e.clientX - cx, dy = e.clientY - cy;
-    return { x: signCanvas.clientWidth / 2 + dy, y: signCanvas.clientHeight / 2 - dx };
+    return { x: SIGN_W * (0.5 + dy / r.height), y: SIGN_H * (0.5 - dx / r.width) };
   }
-  return { x: e.clientX - r.left, y: e.clientY - r.top };
+  return { x: (e.clientX - r.left) * SIGN_W / r.width, y: (e.clientY - r.top) * SIGN_H / r.height };
 }
 signCanvas.addEventListener('pointerdown', e => {
   e.preventDefault();
@@ -926,8 +932,7 @@ function rotateSignPad(){
   sctx.scale(scale, scale);
   sctx.drawImage(tmp, -w / 2, -h / 2);
   sctx.restore();
-  const dpr = window.devicePixelRatio || 1;
-  sctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  sctx.setTransform(SIGN_DPR, 0, 0, SIGN_DPR, 0, 0);
   sctx.lineWidth = 3; sctx.lineCap = 'round'; sctx.lineJoin = 'round'; sctx.strokeStyle = '#111';
 }
 $('signRotate').addEventListener('click', rotateSignPad);
@@ -993,7 +998,7 @@ function exportSignature(){
     }
   }
   if (maxX < 0) return null;
-  const pad = Math.round(10 * (window.devicePixelRatio || 1));
+  const pad = Math.round(10 * SIGN_DPR);
   minX = Math.max(0, minX - pad); minY = Math.max(0, minY - pad);
   maxX = Math.min(w - 1, maxX + pad); maxY = Math.min(h - 1, maxY + pad);
   const cw = maxX - minX + 1, ch = maxY - minY + 1;

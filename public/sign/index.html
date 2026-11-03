@@ -513,13 +513,19 @@ const STAFF_SLOTS = [
 ];
 function houseKeyNow(){ return window.houseKeyOf($('s_house').value); }
 function houseKey(h){ return window.houseKeyOf(h); }
-// 指定社別被指派嘅管理夾萬同工（負責職員括號預期姓名；收支紀錄表「經手人」都係佢哋）
+// 指定社別嘅「主責」管理夾萬同工（負責職員括號預期姓名；收支紀錄表「經手人」都係佢）
+// 每社最多一位：優先 staff_dir.primary 標記嘅主責同工；未設就用第一位獲指派嘅同工兜底
 function officersOf(hk){
-  return Object.keys(ROLES).filter(em => {
-    if (ROLES[em] !== 'cashier') return false;
+  const assigned = [], primary = [];
+  Object.keys(ROLES).forEach(em => {
+    if (ROLES[em] !== 'cashier') return;
     const c = CLOUD_STAFF_DIR[(em || '').toLowerCase()];
-    return c && !c.deleted && (Array.isArray(c.houses) && c.houses.length ? c.houses.includes(hk) : c.house === hk);
-  }).map(staffNameOf);
+    if (!c || c.deleted) return;
+    const hs = Array.isArray(c.houses) && c.houses.length ? c.houses : (c.house ? [c.house] : []);
+    if (!hs.includes(hk)) return;
+    (Array.isArray(c.primary) && c.primary.includes(hk) ? primary : assigned).push(staffNameOf(em));
+  });
+  return (primary.length ? primary : assigned).slice(0, 1);
 }
 function expectedOfficers(){ return officersOf(houseKeyNow()); }
 function canSignSlot(slot){

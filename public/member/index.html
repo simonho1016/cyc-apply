@@ -152,8 +152,11 @@
         <input id="q" type="search" placeholder="🔍 搜尋社別、編號或姓名…（例如：忠 / A16 / 林子誠）" class="flex-1 min-w-52 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none">
         <div id="houseChips" class="flex gap-1.5 flex-wrap"></div>
       </div>
-      <div id="memberList" class="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 text-sm max-h-64 overflow-y-auto border-t border-slate-100 pt-2"></div>
-      <p class="text-xs text-slate-400">非管理級同事只會見到自己所屬社別嘅舍友；已退出服務嘅舍友會灰顯，都可以查返歷史紀錄。</p>
+      <select id="memberSel" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm bg-white outline-none">
+        <option value="">載入中…</option>
+      </select>
+      <p id="memberCount" class="text-xs text-slate-400"></p>
+      <p class="text-xs text-slate-400">非管理級同事只會見到自己所屬社別嘅舍友；已退宿嘅舍友會獨立列喺最底「🚪 已退宿」組（或者撳「已退宿」篩選一次過睇晒），都可以查返歷史紀錄。</p>
     </div>
 
     <!-- 戶口摘要（舍友都可以睇呢版） -->
@@ -310,7 +313,7 @@ async function boot(){
     const c = em && dir && typeof dir === 'object' ? dir[em] : null;
     MY_KEYS = window.accessibleHouseKeys(ROLE_NOW, c);
     if (!membersDb || typeof membersDb !== 'object') {
-      $('memberList').innerHTML = '<p class="text-sm text-red-500 col-span-full py-2">未能讀取舍友名單，請聯絡 admin。</p>';
+      $('memberSel').innerHTML = '<option value="">未能讀取舍友名單，請聯絡 admin</option>';
       return;
     }
     MEMBERS = membersDb;
@@ -320,7 +323,7 @@ async function boot(){
       ALL_MEMBERS.push({ id: m.id || '', name: m.name, house: h.name, color: h.color, soft: h.soft, exited: !!m.exited });
     }));
     renderChips();
-    renderList();
+    renderOptions();
     $('mainScreen').classList.remove('hidden');
     // URL 參數：?id=A16（同事喺其他頁過嚟直達）
     try {
@@ -331,7 +334,7 @@ async function boot(){
       }
     } catch {}
   } catch (e) {
-    $('memberList').innerHTML = `<p class="text-sm text-red-500 col-span-full py-2">載入失敗：${escapeHtml(e.message)}</p>`;
+    $('memberSel').innerHTML = `<option value="">載入失敗：${escapeHtml(e.message)}</option>`;
     $('mainScreen').classList.remove('hidden');
   }
 }
@@ -343,47 +346,58 @@ function renderChips(){
     const on = CHIP_HOUSE === val;
     return `<button data-chip="${val}" class="chip-btn px-2.5 py-1 rounded-full text-xs font-bold transition ${on ? 'text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}"${on ? ` style="background:${color || '#334155'}"` : ''}>${label}</button>`;
   };
-  $('houseChips').innerHTML = btn('全部', '') + myHouses().map(h => btn(h.name, h.name, h.color)).join('');
+  $('houseChips').innerHTML = btn('全部', '') + myHouses().map(h => btn(h.name, h.name, h.color)).join('') + btn('🚪 已退宿', '__exited', '#64748b');
 }
 $('houseChips').addEventListener('click', e => {
   const b = e.target.closest('.chip-btn');
   if (!b) return;
   CHIP_HOUSE = b.dataset.chip;
   renderChips();
-  renderList();
+  renderOptions();
 });
 
-// ---- 舍友清單（搜尋社別／編號／姓名）----
-function renderList(){
-  const q = ($('q').value || '').trim().toLowerCase();
-  const list = ALL_MEMBERS.filter(m => {
-    if (CHIP_HOUSE && m.house !== CHIP_HOUSE) return false;
-    if (!q) return true;
-    return (m.name + ' ' + m.id + ' ' + m.house).toLowerCase().includes(q);
-  });
-  $('memberList').innerHTML = list.length ? list.map(m => `
-    <button class="mem-btn text-left px-2 py-1.5 rounded-lg transition hover:bg-sky-50 ${m.exited ? 'opacity-50' : ''}" data-key="${escapeHtml(m.id || m.name)}">
-      <span class="inline-block w-1.5 h-1.5 rounded-full mr-1" style="background:${m.color}"></span><b>${escapeHtml(m.name)}</b>
-      <span class="text-xs text-slate-400">${escapeHtml(m.id)} · ${m.house.replace(/社$/, '')}${m.exited ? ' · 已退出' : ''}</span>
-    </button>`).join('') : '<p class="text-xs text-slate-400 col-span-full py-2">冇符合嘅舍友。</p>';
+// ---- 舍友下拉選單（搜尋社別／編號／姓名；已退宿獨立一組）----
+function matchMember(m, q){
+  if (CHIP_HOUSE === '__exited') { if (!m.exited) return false; }
+  else if (CHIP_HOUSE && m.house !== CHIP_HOUSE) return false;
+  if (!q) return true;
+  return (m.name + ' ' + m.id + ' ' + m.house).toLowerCase().includes(q);
 }
-$('q').addEventListener('input', renderList);
-$('memberList').addEventListener('click', e => {
-  const b = e.target.closest('.mem-btn');
-  if (!b) return;
-  const m = ALL_MEMBERS.find(x => (x.id || x.name) === b.dataset.key);
+function renderOptions(){
+  const q = ($('q').value || '').trim().toLowerCase();
+  const sel = $('memberSel');
+  const optHtml = m => `<option value="${escapeHtml(m.id || m.name)}">${escapeHtml(m.id)} ${escapeHtml(m.name)}（${m.house}${m.exited ? ' · 已退宿' : ''}）</option>`;
+  let html = '<option value="">— 請揀舍友 —</option>';
+  let count = 0;
+  const grp = (label, list) => {
+    if (!list.length) return '';
+    count += list.length;
+    return `<optgroup label="${label}">${list.map(optHtml).join('')}</optgroup>`;
+  };
+  if (CHIP_HOUSE === '__exited') {
+    html += grp('🚪 已退宿', ALL_MEMBERS.filter(m => matchMember(m, q)));
+  } else {
+    myHouses().forEach(h => {
+      if (CHIP_HOUSE && h.name !== CHIP_HOUSE) return;
+      html += grp(h.name, ALL_MEMBERS.filter(m => !m.exited && m.house === h.name && matchMember(m, q)));
+    });
+    html += grp('🚪 已退宿', ALL_MEMBERS.filter(m => m.exited && matchMember(m, q)));
+  }
+  sel.innerHTML = html;
+  if (SEL) sel.value = SEL.id || SEL.name;
+  $('memberCount').textContent = count ? `共 ${count} 位舍友${q ? '（已篩選）' : ''}` : '冇符合嘅舍友。';
+}
+$('q').addEventListener('input', renderOptions);
+$('memberSel').addEventListener('change', e => {
+  const m = ALL_MEMBERS.find(x => (x.id || x.name) === e.target.value);
   if (m) selectMember(m);
 });
 
 // ====================== 揀咗舍友：摘要＋紀錄 ======================
 function selectMember(m){
   SEL = m;
-  document.querySelectorAll('.mem-btn').forEach(b => {
-    const on = b.dataset.key === (m.id || m.name);
-    b.classList.toggle('ring-2', on);
-    b.classList.toggle('ring-sky-400', on);
-    b.classList.toggle('bg-sky-50', on);
-  });
+  const selBox = $('memberSel');
+  if (selBox) selBox.value = m.id || m.name;
   $('sum_house').textContent = m.house;
   $('sum_house').style.background = m.color;
   $('sum_name').textContent = m.name;
@@ -524,21 +538,24 @@ function renderHistory(rows){
 let LAST_ROWS = [];
 const fmtMoney = n => Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 function fmtDHM(d){ const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
-// 經手人＝該社管理夾萬同工（冇例外）；未指派就先留空
-let OFFICERS_CACHE = {};   // houseKey → [姓名...]
+// 經手人＝該社「主責」管理夾萬同工（每社只有一位）；未設主責就用第一位獲指派嘅同工兜底；成個過程最多一個名
+let OFFICERS_CACHE = {};   // houseKey → [姓名]（最多一個）
 async function officersOf(hk){
   if (OFFICERS_CACHE[hk]) return OFFICERS_CACHE[hk];
   const out = [];
   try {
     const [roles, dir] = await Promise.all([getSettingValue('roles'), getSettingValue('staff_dir')]);
     if (roles && typeof roles === 'object') {
+      const assigned = [], primary = [];
       Object.keys(roles).forEach(em => {
         if (roles[em] !== 'cashier') return;
         const c = dir && typeof dir === 'object' ? dir[String(em).toLowerCase()] : null;
         if (!c || c.deleted || !c.name) return;
         const hs = Array.isArray(c.houses) && c.houses.length ? c.houses : (c.house ? [c.house] : []);
-        if (hs.includes(hk)) out.push(c.name);
+        if (!hs.includes(hk)) return;
+        (Array.isArray(c.primary) && c.primary.includes(hk) ? primary : assigned).push(c.name);
       });
+      out.push(...(primary.length ? primary : assigned).slice(0, 1));
     }
   } catch {}
   OFFICERS_CACHE[hk] = out;

@@ -209,7 +209,7 @@
     <!-- 帳號及權限管理（admin 專用） -->
     <div id="cardRoles" class="card bg-white p-5 space-y-3">
       <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wide">👥 帳號及權限管理</h3>
-      <p class="text-xs text-slate-500">五層權限：<b>admin</b>（所有權限）＞ <b>管理級</b>（管理夾萬同工所有功能 ＋ 夾萬「現存→代管」過錢）＞ <b>管理夾萬同工</b>（支錢、舍友存入、製作及下載文件）＞ <b>社工</b>（基本權限 ＋ 月結簽署，負責「社工簽署」位）＝ <b>導師</b>（基本權限：支錢、檢視文件、夾萬唯讀）。每位同事可以設定<b>所屬社別</b>：其他同事嘅社別會做支錢頁嘅預設社別；管理夾萬同工另外有「管夾萬」勾選（<b>可以管多過一個社</b>），過錢收款人同月結「負責職員」會按社別自動帶出。所有 <b>@sbccyc.org.hk</b> 網域登入嘅同事，冇明確指派時會按職級自動分流：職級係「社工／專責個案社工」→ 社工，其餘 → 導師。新同事第一次登入後會出現喺「未登記同事」區，由 admin 補返姓名同職級。admin 可以新增、修改、刪除任何帳號，<b>包括新增其他 admin</b>；ho.ml／ho.lh 係永久 admin，唔可以改。設定喺同事下次登入時生效。</p>
+      <p class="text-xs text-slate-500">五層權限：<b>admin</b>（所有權限）＞ <b>管理級</b>（管理夾萬同工所有功能 ＋ 夾萬「現存→代管」過錢）＞ <b>管理夾萬同工</b>（支錢、舍友存入、製作及下載文件）＞ <b>社工</b>（基本權限 ＋ 月結簽署，負責「社工簽署」位）＝ <b>導師</b>（基本權限：支錢、檢視文件、夾萬唯讀）。每位同事可以設定<b>所屬社別</b>：其他同事嘅社別會做支錢頁嘅預設社別；管理夾萬同工另外有「管夾萬」勾選（<b>可以管多過一個社</b>），過錢收款人同月結「負責職員」會按社別自動帶出；已勾選嘅社隔籬有 <b>☆／★主責</b> 標記——<b>每社一位主責同工</b>，文件上嘅「經手人」同月結「負責職員」括號姓名只會顯示主責同工（冇設就用第一位獲指派嘅同工兜底）。所有 <b>@sbccyc.org.hk</b> 網域登入嘅同事，冇明確指派時會按職級自動分流：職級係「社工／專責個案社工」→ 社工，其餘 → 導師。新同事第一次登入後會出現喺「未登記同事」區，由 admin 補返姓名同職級。admin 可以新增、修改、刪除任何帳號，<b>包括新增其他 admin</b>；ho.ml／ho.lh 係永久 admin，唔可以改。設定喺同事下次登入時生效。</p>
       <div id="role_list" class="space-y-2 text-sm"></div>
       <div id="seen_wrap" class="hidden space-y-2">
         <div class="text-xs font-bold text-amber-600">⚠️ 未登記同事（已登入過但未設定姓名／職級）</div>
@@ -877,7 +877,7 @@ $('settle_ok').addEventListener('click', async () => {
 });
 
 // ---- 帳號及權限管理 ----
-// settings keys：roles（電郵→admin/manager/cashier/sw/tutor，冇＝按職級推導：社工/專責個案社工→sw 社工，其餘→tutor 導師）、staff_dir（電郵→{name,title,house?}；house＝管理夾萬同工負責嘅社別 key；{deleted:true}＝隱藏預設同事）、staff_seen（登入過嘅電郵→{name,last}，前置頁自動記錄）
+// settings keys：roles（電郵→admin/manager/cashier/sw/tutor，冇＝按職級推導：社工/專責個案社工→sw 社工，其餘→tutor 導師）、staff_dir（電郵→{name,title,house?,houses?,primary?}；house＝預設社別 key；houses＝所屬／管轄社別陣列；primary＝主責同工社別陣列（文件「經手人」，每社一位）；{deleted:true}＝隱藏預設同事）、staff_seen（登入過嘅電郵→{name,last}，前置頁自動記錄）
 // 五層權限：admin ＞ manager 管理級（管理夾萬同工所有功能＋夾萬過錢）＞ cashier 管理夾萬同工（支錢、存入、文件）＞ sw 社工（基本＋月結簽署）＝ tutor 導師（基本）
 const ROLE_LABELS = { admin: 'admin', manager: '管理級', cashier: '管理夾萬同工', sw: '社工', tutor: '導師' };
 const VALID_ROLES = ['admin', 'manager', 'cashier', 'sw', 'tutor'];
@@ -927,7 +927,12 @@ const titleSel = (email, cur) => `<select class="title_sel shrink-0 rounded-lg b
 </select>`;
 // 同事社別多選勾選（houses 陣列；所有同事都可以屬多過一個社）
 // 管理夾萬同工＝負責嘅夾萬（過錢收款人按社別自動揀）；其他同事＝所屬社別（支錢頁預設＋資料瀏覽範圍）
-const houseMulti = (email, curArr, isCashier) => `<span class="house_multi shrink-0 inline-flex items-center gap-1.5 flex-wrap rounded-lg border border-amber-300 bg-amber-50 px-2 py-1 text-xs" data-email="${email}" title="${isCashier ? '管理邊幾個社嘅夾萬（可多選）' : '所屬社別（可多選）：支錢預設社別＋可以睇邊啲社嘅資料'}"><span class="font-bold text-amber-700">${isCashier ? '管夾萬' : '社別'}:</span>${window.HOUSES.map(h => `<label class="inline-flex items-center gap-0.5"><input type="checkbox" class="house_chk accent-amber-600" value="${h.key}"${curArr.includes(h.key) ? ' checked' : ''}>${h.name.replace(/社$/, '')}</label>`).join('')}</span>`;
+// 管理夾萬同工每個已勾選嘅社可以撳 ★ 做「主責」：文件上嘅「經手人」／月結「負責職員」括號姓名只會顯示主責同工（每社一位）
+const primaryOf = em => (STAFF_DIR[em] && !STAFF_DIR[em].deleted && Array.isArray(STAFF_DIR[em].primary)) ? STAFF_DIR[em].primary : [];
+const houseMulti = (email, curArr, isCashier) => {
+  const prim = primaryOf(email);
+  return `<span class="house_multi shrink-0 inline-flex items-center gap-1.5 flex-wrap rounded-lg border border-amber-300 bg-amber-50 px-2 py-1 text-xs" data-email="${email}" title="${isCashier ? '管理邊幾個社嘅夾萬（可多選）；★＝主責同工（文件上嘅經手人）' : '所屬社別（可多選）：支錢預設社別＋可以睇邊啲社嘅資料'}"><span class="font-bold text-amber-700">${isCashier ? '管夾萬' : '社別'}:</span>${window.HOUSES.map(h => `<label class="inline-flex items-center gap-0.5"><input type="checkbox" class="house_chk accent-amber-600" value="${h.key}"${curArr.includes(h.key) ? ' checked' : ''}>${h.name.replace(/社$/, '')}</label>${isCashier && curArr.includes(h.key) ? `<button type="button" class="primary_tag rounded px-1 font-bold transition ${prim.includes(h.key) ? 'text-amber-600 bg-amber-100' : 'text-slate-300 hover:text-amber-500'}" data-email="${email}" data-house="${h.key}" title="${prim.includes(h.key) ? '佢係' + h.name + '主責同工（文件經手人）；撳一下取消' : '設為' + h.name + '主責同工（文件經手人）'}">${prim.includes(h.key) ? '★主責' : '☆'}</button>` : ''}`).join('')}</span>`;
+};
 const delBtn = email => `<button class="staff_del shrink-0 px-2.5 py-1 rounded-lg bg-red-50 text-red-600 text-xs font-bold hover:bg-red-100 transition" data-email="${email}">刪除</button>`;
 async function saveRoles(){
   const { error } = await sb.from('settings').upsert({ key: 'roles', value: ROLES_MAP });
@@ -1009,7 +1014,9 @@ async function onHousesChange(box){
   try {
     const c = STAFF_DIR[em] && !STAFF_DIR[em].deleted ? STAFF_DIR[em] : {};
     const house = houses.includes(c.house) ? c.house : (houses[0] || '');
-    STAFF_DIR[em] = { ...c, name: c.name || name, title: c.title || (entry ? entry.title : '') || '', house, houses };
+    // 取消勾選嘅社，一併清走主責標記
+    const primary = (Array.isArray(c.primary) ? c.primary : []).filter(x => houses.includes(x));
+    STAFF_DIR[em] = { ...c, name: c.name || name, title: c.title || (entry ? entry.title : '') || '', house, houses, primary };
     await saveDir();
     toast(`已更新 ${name} 嘅社別：${houses.length ? houses.map(window.houseNameOf).join('、') : '（全部取消）'}。`);
     loadRoles();
@@ -1023,6 +1030,36 @@ $('seen_list').addEventListener('change', e => {
   const rs = e.target.closest('.role_sel'), ts = e.target.closest('.title_sel'), hc = e.target.closest('.house_chk');
   if (rs) onRoleChange(rs); else if (ts) onTitleChange(ts); else if (hc) onHousesChange(hc.closest('.house_multi'));
 });
+// ★主責同工標記（管理夾萬同工專用；每社得一位，設新主責會自動除低其他同事喺嗰個社嘅主責）
+async function onPrimaryToggle(btn){
+  const em = btn.dataset.email, hk = btn.dataset.house;
+  const c = STAFF_DIR[em];
+  if (!c || c.deleted || !c.name) return;
+  const cur = Array.isArray(c.primary) ? c.primary : [];
+  let next;
+  if (cur.includes(hk)) {
+    next = cur.filter(x => x !== hk);
+  } else {
+    next = [...cur, hk];
+    Object.keys(STAFF_DIR).forEach(o => {
+      if (o === em) return;
+      const oc = STAFF_DIR[o];
+      if (oc && Array.isArray(oc.primary) && oc.primary.includes(hk)) {
+        oc.primary = oc.primary.filter(x => x !== hk);
+      }
+    });
+  }
+  STAFF_DIR[em] = { ...c, primary: next };
+  try {
+    await saveDir();
+    toast(cur.includes(hk)
+      ? `已取消 ${c.name} 嘅${window.houseNameOf(hk)}主責；文件經手人會用返第一位獲指派嘅同工。`
+      : `已設定 ${c.name} 為${window.houseNameOf(hk)}主責同工；該社文件「經手人」會顯示佢嘅姓名。`);
+    loadRoles();
+  } catch (err) { alert('儲存失敗：' + err.message); loadRoles(); }
+}
+$('role_list').addEventListener('click', e => { const b = e.target.closest('.primary_tag'); if (b) onPrimaryToggle(b); });
+$('seen_list').addEventListener('click', e => { const b = e.target.closest('.primary_tag'); if (b) onPrimaryToggle(b); });
 // 刪除同事資料（名冊＋權限一齊刪；預設 7 人用隱藏標記；永久 admin 唔刪得）
 async function onStaffDel(btn){
   const em = btn.dataset.email;

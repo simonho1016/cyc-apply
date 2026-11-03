@@ -204,9 +204,6 @@
     </div>
 
   </section>
-
-  <!-- 展示模式退出掣（展示模式時先見到） -->
-  <button id="presentOff" class="hidden fixed bottom-4 right-4 z-40 px-4 py-2 rounded-xl text-sm font-bold text-white bg-slate-700 hover:bg-slate-800 transition shadow-lg">← 退出顯示模式</button>
 </main>
 
 <!-- 列印預覽層（舍友零用金收支紀錄表） -->
@@ -470,8 +467,15 @@ async function loadHistory(){
     const { data, error } = await q;
     if (error) throw new Error(error.message);
     const rows = (data || []).filter(r => keys.includes(r.member_id || '') || keys.includes(r.member_name || ''));
+    // 支出單嘅原因（類別／其他說明／備註）：用 serial 對返 applications
+    const serials = [...new Set(rows.filter(r => r.kind === 'expense' && r.serial).map(r => r.serial))];
+    const appMap = {};
+    if (serials.length) {
+      const { data: apps } = await sb.from('applications').select('serial,cats,cat_other,remark').in('serial', serials).limit(1000);
+      (apps || []).forEach(a => { if (a.serial) appMap[a.serial] = a; });
+    }
     LAST_ROWS = rows;   // 列印用
-    renderHistory(rows);
+    renderHistory(rows, appMap);
     renderStats(rows);
   } catch (e) {
     box.innerHTML = `<p class="text-sm text-red-500 py-2">讀取失敗：${escapeHtml(e.message)}</p>`;
@@ -495,7 +499,8 @@ function renderStats(rows){
     card('紀錄筆數', rows.length + ' 筆', 'text-slate-700');
 }
 
-function renderHistory(rows){
+function renderHistory(rows, appMap){
+  appMap = appMap || {};
   $('his_range').textContent = (() => {
     const { from, to } = rangeVals();
     return from || to ? `（${from || '開戶'} 至 ${to || '今日'}）` : '（由開戶至今）';
@@ -525,11 +530,25 @@ function renderHistory(rows){
       r.staff2 ? '→ ' + r.staff2 : '',
       r.note || ''
     ].filter(Boolean).join(' · ');
-    return `<div class="flex items-center gap-2 border-b border-slate-100 pb-1.5">
-      <span class="shrink-0 w-20 text-xs text-slate-400">${fmtD(r.created_at)}</span>
-      <span class="shrink-0 rounded-full px-2 py-0.5 text-xs font-bold ${cls}">${label}</span>
-      <span class="flex-1 min-w-0 truncate text-xs text-slate-500">${escapeHtml(meta)}${balAfter ? ` <span class="text-slate-400">｜${balAfter}</span>` : ''}</span>
-      <span class="shrink-0 text-right">${amtHtml}</span>
+    // 支錢原因（類別＋其他說明＋備註）獨立一行深色顯示
+    let reasonHtml = '';
+    if (r.kind === 'expense') {
+      const app = appMap[r.serial || ''];
+      if (app) {
+        const reason = [(app.cats || []).join('、'), app.cat_other, app.remark].filter(Boolean).join('　');
+        if (reason) reasonHtml = `<div class="mt-0.5 text-xs font-bold text-slate-700 break-words">支錢原因：${escapeHtml(reason)}</div>`;
+      }
+    }
+    // 電話版都可以睇晒全部字：第一行日期＋類型＋金額，第二行起係原因同詳細資料（自動摺行，唔再截斷）
+    return `<div class="border-b border-slate-100 pb-1.5">
+      <div class="flex items-center gap-2">
+        <span class="shrink-0 w-20 text-xs text-slate-400">${fmtD(r.created_at)}</span>
+        <span class="shrink-0 rounded-full px-2 py-0.5 text-xs font-bold ${cls}">${label}</span>
+        <span class="flex-1"></span>
+        <span class="shrink-0 text-right">${amtHtml}</span>
+      </div>
+      ${reasonHtml}
+      <div class="mt-0.5 text-xs text-slate-500 break-words">${escapeHtml(meta)}${balAfter ? ` <span class="text-slate-400">｜${balAfter}</span>` : ''}</div>
     </div>`;
   }).join('');
 }
@@ -676,14 +695,17 @@ $('sheet_close').addEventListener('click', () => {
   document.body.classList.remove('print-statement');
 });
 
-// ---- 舍友展示模式 ----
-$('presentOn').addEventListener('click', () => {
-  document.body.classList.add('present');
-  $('presentOff').classList.remove('hidden');
-});
-$('presentOff').addEventListener('click', () => {
-  document.body.classList.remove('present');
-  $('presentOff').classList.add('hidden');
+// ---- 舍友展示模式（同一粒掣切換：📱 舍友顯示模式 ⇄ ← 返回）----
+const presentBtn = $('presentOn');
+const presentHint = presentBtn.nextElementSibling;
+presentBtn.addEventListener('click', () => {
+  const on = document.body.classList.toggle('present');
+  presentBtn.textContent = on ? '← 返回' : '📱 舍友顯示模式';
+  presentBtn.classList.toggle('bg-slate-700', on);
+  presentBtn.classList.toggle('text-white', on);
+  presentBtn.classList.toggle('bg-sky-50', !on);
+  presentBtn.classList.toggle('text-sky-700', !on);
+  if (presentHint) presentHint.classList.toggle('hidden', on);
 });
 
 setRange('', '');

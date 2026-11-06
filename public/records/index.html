@@ -154,7 +154,8 @@
       <button data-tab="settled" class="tab-btn px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">✅ 已結算</button>
     </div>
     <select id="staffFilter" class="hidden px-3 py-2 rounded-lg text-sm text-slate-700"></select>
-    <select id="f_house" class="px-3 py-2 rounded-lg text-sm text-slate-700">
+    <div id="house_tabs" class="flex gap-2 flex-wrap"></div>
+    <select id="f_house" class="hidden px-3 py-2 rounded-lg text-sm text-slate-700">
       <option value="">全部社別</option>
     </select>
     <input id="f_from" type="date" class="px-3 py-2 rounded-lg text-sm text-slate-700" title="日期由">
@@ -365,6 +366,7 @@ async function ensureStaffDir(){
       const names = MY_KEYS.map(window.houseNameOf).filter(n => window.HOUSE_NAMES.includes(n));
       if (names.length) $('f_house').innerHTML = '<option value="">全部社別</option>' + names.map(h => `<option value="${h}">${h}</option>`).join('');
     }
+    renderHouseTabs();   // 收窄社別後重繪分頁掣
   } catch { STAFF_DIR_CLOUD = {}; }
 }
 // 權限基礎過濾：管理夾萬同工＝所管社別嘅單；社工／導師＝自己嘅單；admin／管理級＝全部
@@ -657,6 +659,26 @@ async function loadRecords(){
 
 // 社別篩選：動態填入全部社別（C 版七社）
 $('f_house').innerHTML = '<option value="">全部社別</option>' + window.HOUSE_NAMES.map(h => `<option value="${h}">${h}</option>`).join('');
+
+// 社別分頁掣（同「夾萬・現存」一樣嘅分頁形式；底層仍然係 f_house select，所有篩選邏輯唔使郁）
+function renderHouseTabs(){
+  const sel = $('f_house'), box = $('house_tabs');
+  if (!sel || !box) return;
+  const cur = sel.value;
+  box.innerHTML = [...sel.options].map(o => {
+    const on = o.value === cur;
+    const color = o.value ? window.houseColor(o.value) : '#334155';
+    return `<button type="button" data-h="${o.value}" class="house-tab px-4 py-2 rounded-lg text-sm transition ${on ? 'font-bold text-white' : 'font-medium bg-slate-100 text-slate-600 hover:bg-slate-200'}"${on ? ` style="background:${color}"` : ''}>${o.textContent}</button>`;
+  }).join('');
+}
+$('house_tabs').addEventListener('click', e => {
+  const b = e.target.closest('.house-tab');
+  if (!b) return;
+  $('f_house').value = b.dataset.h;
+  renderHouseTabs();
+  $('f_house').dispatchEvent(new Event('change'));
+});
+renderHouseTabs();
 
 $('tabs').addEventListener('click', e => {
   const btn = e.target.closest('.tab-btn');

@@ -189,7 +189,8 @@
     <div class="bg-white rounded-2xl p-4 space-y-3">
       <div class="flex items-end gap-2 flex-wrap">
         <label class="block"><span class="text-xs font-medium text-slate-500">社別</span>
-          <select id="s_house" class="mt-1 px-3 py-2 text-sm outline-none"></select></label>
+          <div id="s_house_tabs" class="mt-1 flex gap-2 flex-wrap"></div>
+          <select id="s_house" class="hidden"></select></label>
         <label class="block"><span class="text-xs font-medium text-slate-500">月份</span>
           <input id="s_month" type="month" class="mt-1 px-3 py-2 text-sm outline-none"></label>
         <button id="s_load" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-violet-600 hover:bg-violet-700 transition">載入名單</button>
@@ -231,7 +232,8 @@
         <p class="text-xs text-slate-500">輸出同舊系統一樣格式嘅社別月結單（戶口資料、戶口轉賬紀錄、舍友戶口紀錄、三級簽署欄）。<b>承前結存</b>由「結存起點」同過往流水計出。</p>
         <div class="flex items-end gap-2 flex-wrap">
           <label class="block"><span class="text-xs font-medium text-slate-500">社別</span>
-            <select id="ms_house" class="mt-1 rounded-lg px-3 py-2 text-sm outline-none"></select></label>
+            <div id="ms_house_tabs" class="mt-1 flex gap-2 flex-wrap"></div>
+            <select id="ms_house" class="hidden"></select></label>
           <label class="block"><span class="text-xs font-medium text-slate-500">月份</span>
             <input id="ms_month" type="month" class="mt-1 rounded-lg px-3 py-2 text-sm outline-none"></label>
           <button id="ms_go" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition">預覽月結</button>
@@ -244,7 +246,8 @@
         <p class="text-xs text-slate-500">每人每月一版 A4：承前結餘、逐筆存入／支出、結餘、分類小計同簽署欄，同舊系統「舍友零用金收支紀錄表」格式一樣。可以勾選個別舍友列印；內容多過一版會自動收窄，保證每人啱啱一頁。</p>
         <div class="flex items-end gap-2 flex-wrap">
           <label class="block"><span class="text-xs font-medium text-slate-500">社別</span>
-            <select id="mr_house" class="mt-1 rounded-lg px-3 py-2 text-sm outline-none"></select></label>
+            <div id="mr_house_tabs" class="mt-1 flex gap-2 flex-wrap"></div>
+            <select id="mr_house" class="hidden"></select></label>
           <label class="block"><span class="text-xs font-medium text-slate-500">月份</span>
             <input id="mr_month" type="month" class="mt-1 rounded-lg px-3 py-2 text-sm outline-none"></label>
           <button id="mr_go" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 transition">預覽收支紀錄表</button>
@@ -453,6 +456,7 @@ function staffNameOf(em){
         $(id).innerHTML = myNames.map(h => `<option>${h}</option>`).join('');
         $(id).value = myNames.includes(cur) ? cur : myNames[0];
       });
+      renderAllHouseTabs();   // 收窄社別後重繪分頁掣
       if (ROLE_NOW !== 'tutor') loadSignRows();
       if (CAN_REPORT) loadMemberPicker();
     }
@@ -679,6 +683,7 @@ $('goReport').addEventListener('click', () => {
   // 同頁底部就係月結報告區：同步社別月份再捲落去
   const house = $('s_house').value, month = $('s_month').value;
   $('ms_house').value = house; $('mr_house').value = house;
+  renderAllHouseTabs();   // 同步社別後重繪分頁掣
   if (month) { $('ms_month').value = month; $('mr_month').value = month; }
   loadMemberPicker();
   $('reportZone').scrollIntoView({ behavior: 'smooth' });
@@ -1413,6 +1418,29 @@ $('sheet_print').addEventListener('click', () => window.print());
 ['s_house', 'ms_house', 'mr_house'].forEach(id => {
   $(id).innerHTML = window.HOUSE_NAMES.map(h => `<option>${h}</option>`).join('');
 });
+
+// 社別分頁掣（同「夾萬・現存」一樣嘅分頁形式；底層仍然係三個 select，所有邏輯唔使郁）
+function renderHouseTabsFor(id){
+  const sel = $(id), box = $(id + '_tabs');
+  if (!sel || !box) return;
+  const cur = sel.value;
+  box.innerHTML = [...sel.options].map(o => {
+    const on = o.text === cur;
+    const color = window.houseColor(o.text);
+    return `<button type="button" data-h="${o.text}" class="house-tab px-4 py-2 rounded-lg text-sm transition ${on ? 'font-bold text-white' : 'font-medium bg-slate-100 text-slate-600 hover:bg-slate-200'}"${on ? ` style="background:${color}"` : ''}>${o.text}</button>`;
+  }).join('');
+}
+function renderAllHouseTabs(){ ['s_house', 'ms_house', 'mr_house'].forEach(renderHouseTabsFor); }
+['s_house', 'ms_house', 'mr_house'].forEach(id => {
+  $(id + '_tabs').addEventListener('click', e => {
+    const b = e.target.closest('.house-tab');
+    if (!b) return;
+    $(id).value = b.dataset.h;
+    $(id).dispatchEvent(new Event('change'));
+    renderAllHouseTabs();   // s_house 改咗會同步 ms／mr，所以三組都重繪
+  });
+});
+renderAllHouseTabs();
 $('s_month').value = new Date().toLocaleDateString('sv').slice(0, 7);
 $('ms_month').value = new Date().toLocaleDateString('sv').slice(0, 7);
 $('mr_month').value = new Date().toLocaleDateString('sv').slice(0, 7);
@@ -1427,6 +1455,7 @@ try {
     }
   }
   if (q.get('month')) { $('s_month').value = q.get('month'); $('mr_month').value = q.get('month'); $('ms_month').value = q.get('month'); }
+  renderAllHouseTabs();   // URL 參數改咗社別後重繪分頁掣
 } catch {}
 if (ROLE_NOW !== 'tutor') loadSignRows();
 if (CAN_REPORT) loadMemberPicker();

@@ -185,6 +185,12 @@
 
   <div id="signMain" class="hidden space-y-4">
 
+    <!-- 區塊標題：月結報告簽署（大字＋底框） -->
+    <div class="rounded-xl border-2 border-violet-500 bg-violet-50 px-4 py-3">
+      <h2 class="text-xl font-black text-violet-800">✍️ 月結報告簽署</h2>
+      <p class="text-xs font-medium text-violet-600 mt-0.5">揀社別月份 → 建立名單 → 舍友逐個簽名 → 三個職位簽署；全部簽齊先可以喺下方列印月結文件</p>
+    </div>
+
     <!-- 揀社別＋月份 -->
     <div class="bg-white rounded-2xl p-4 space-y-3">
       <div class="flex items-end gap-2 flex-wrap">
@@ -228,8 +234,10 @@
 
       <!-- 社別月結 -->
       <div class="bg-white rounded-2xl p-5 space-y-3">
-        <h3 class="text-sm font-bold text-emerald-700 uppercase tracking-wide">🧾 零用月結紀錄（社別）</h3>
-        <p class="text-xs text-slate-500">輸出同舊系統一樣格式嘅社別月結單（戶口資料、戶口轉賬紀錄、舍友戶口紀錄、三級簽署欄）。<b>承前結存</b>由「結存起點」同過往流水計出。</p>
+        <div class="rounded-xl border-2 border-emerald-500 bg-emerald-50 px-4 py-3">
+          <h3 class="text-xl font-black text-emerald-800">🧾 零用月結紀錄（社別）</h3>
+          <p class="text-xs font-medium text-emerald-700 mt-0.5">輸出同舊系統一樣格式嘅社別月結單（戶口資料、戶口轉賬紀錄、舍友戶口紀錄、三級簽署欄）。<b>承前結存</b>由「結存起點」同過往流水計出。</p>
+        </div>
         <div class="flex items-end gap-2 flex-wrap">
           <label class="block"><span class="text-xs font-medium text-slate-500">社別</span>
             <div id="ms_house_tabs" class="mt-1 flex gap-2 flex-wrap"></div>
@@ -242,8 +250,10 @@
 
       <!-- 舍友收支紀錄表 -->
       <div class="bg-white rounded-2xl p-5 space-y-3">
-        <h3 class="text-sm font-bold text-teal-700 uppercase tracking-wide">📄 舍友零用金收支紀錄表</h3>
-        <p class="text-xs text-slate-500">每人每月一版 A4：承前結餘、逐筆存入／支出、結餘、分類小計同簽署欄，同舊系統「舍友零用金收支紀錄表」格式一樣。可以勾選個別舍友列印；內容多過一版會自動收窄，保證每人啱啱一頁。</p>
+        <div class="rounded-xl border-2 border-teal-500 bg-teal-50 px-4 py-3">
+          <h3 class="text-xl font-black text-teal-800">📄 舍友零用金收支紀錄表</h3>
+          <p class="text-xs font-medium text-teal-700 mt-0.5">每人每月一版 A4：承前結餘、逐筆存入／支出、結餘、分類小計同簽署欄，同舊系統「舍友零用金收支紀錄表」格式一樣。可以勾選個別舍友列印；內容多過一版會自動收窄，保證每人啱啱一頁。</p>
+        </div>
         <div class="flex items-end gap-2 flex-wrap">
           <label class="block"><span class="text-xs font-medium text-slate-500">社別</span>
             <div id="mr_house_tabs" class="mt-1 flex gap-2 flex-wrap"></div>

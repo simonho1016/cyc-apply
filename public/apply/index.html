@@ -255,7 +255,7 @@
       <!-- 暫存單（舍友未能即時簽署時先儲存，之後開返完成） -->
       <div id="draftPanel" class="no-print hidden bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
         <button id="draftToggle" class="w-full flex items-center justify-between gap-2 text-sm font-bold text-amber-700">
-          <span>📝 暫存單（<span id="draftCount">0</span>）· 舍友可以簽嗰陣撳「開返」繼續</span>
+          <span>📝 暫存單（<span id="draftCount">0</span>）· 只限自己存取 · 舍友可以簽嗰陣撳「開返」繼續</span>
           <span id="draftArrow" class="shrink-0">▾ 展開</span>
         </button>
         <div id="draftList" class="hidden mt-3 space-y-2"></div>
@@ -990,22 +990,24 @@ async function loadDrafts(){
 async function saveDrafts(list){ await DB.setSetting('apply_drafts', list); }
 
 async function renderDraftPanel(){
-  const list = await loadDrafts();
+  // 暫存單只限自己存取：只顯示自己暫存嘅單，其他同事（包括管理級）都唔會見到
+  const me = staffUser || '';
+  const all = await loadDrafts();
+  const list = all.filter(d => me && (d.created_by || '') === me);
   $('draftPanel').classList.toggle('hidden', !list.length);
   $('draftCount').textContent = list.length;
   const box = $('draftList');
   if (!list.length) { box.innerHTML = ''; box._rows = []; return; }
-  const canDelAll = ['admin','manager','cashier'].includes(sessionRole());
   box.innerHTML = list.map(d => `
     <div class="flex items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm">
       <div class="min-w-0">
         <span class="font-bold text-slate-800">${escapeHtml(d.house || '')} ${escapeHtml(d.payee || '')}</span>
         <span class="font-bold text-amber-700"> $${escapeHtml(d.amount || '')}</span>
-        <div class="text-xs text-slate-500 mt-0.5">${escapeHtml(d.date || '')} · ${escapeHtml((d.cats || []).join('、')) || '未揀類別'} · 由 ${escapeHtml(d.created_by || '?')} 暫存 · ${fmtTime(d.created_at)}</div>
+        <div class="text-xs text-slate-500 mt-0.5">${escapeHtml(d.date || '')} · ${escapeHtml((d.cats || []).join('、')) || '未揀類別'} · 暫存於 ${fmtTime(d.created_at)}</div>
       </div>
       <div class="flex gap-1.5 shrink-0">
         <button data-draft="open" data-id="${d.id}" class="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 text-xs font-bold hover:bg-blue-100 transition">開返</button>
-        ${(canDelAll || (staffUser && staffUser === d.created_by)) ? `<button data-draft="del" data-id="${d.id}" class="px-3 py-1.5 rounded-lg bg-red-50 text-red-500 text-xs font-bold hover:bg-red-100 transition">🗑</button>` : ''}
+        <button data-draft="del" data-id="${d.id}" class="px-3 py-1.5 rounded-lg bg-red-50 text-red-500 text-xs font-bold hover:bg-red-100 transition">🗑</button>
       </div>
     </div>`).join('');
   box._rows = list;
@@ -1326,7 +1328,12 @@ async function loadHistory(){
   const box = $('s_list');
   box.innerHTML = '<p class="text-sm text-slate-400">載入中…</p>';
   try {
-    const rows = await DB.list({ status: 'done', limit: 50 });
+    let rows = await DB.list({ status: 'done', limit: 50 });
+    // 支出及列印紀錄只限自己；管理夾萬同工／管理級／admin 可以睇全部
+    if (['tutor', 'sw'].includes(ROLE_NOW)) {
+      const me = staffNameOf(sessionEmail());
+      rows = rows.filter(r => me && (r.staff || '') === me);
+    }
     if (!rows.length) { box.innerHTML = '<p class="text-sm text-slate-400 text-center mt-8">未有列印記錄。</p>'; return; }
     box.innerHTML = rows.map(r => `
       <div class="bg-white border border-slate-200 rounded-2xl p-4 text-sm shadow-sm">
